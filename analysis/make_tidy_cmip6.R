@@ -3,10 +3,16 @@ library(dplyr)
 library(ggplot2)
 
 # list demo file path
-path <- "/data/scratch/CMIP6ng/cmip6-ng/pr/day/native/"
+path_cmip6 <- "~/data/cmip6-ng/"
 
-## Precipitation ---------------
-files <- list.files(path, pattern = "pr_day", full.names = TRUE)
+## Evapotranspiration
+varnam <- "evspsbl"
+res <- "mon"
+files <- list.files(
+  paste0(path_cmip6, varnam, "/", res, "/native/"),
+  pattern = ".nc",
+  full.names = TRUE
+  )
 
 # load and convert
 df <- map2tidy(
@@ -20,5 +26,10 @@ df <- map2tidy(
   outdir = "/data/scratch/CMIP6ng/cmip6_tidy/",
   fileprefix = "pr_day_CESM2_historical_r1i1p1f1_native"
 )
+
+## Precipitation ---------------
+files <- list.files(path, pattern = "pr_day", full.names = TRUE)
+
+
 
 
