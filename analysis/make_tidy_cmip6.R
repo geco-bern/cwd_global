@@ -1,6 +1,5 @@
 library(map2tidy)
 library(dplyr)
-library(ggplot2)
 
 # list demo file path
 path <- "/data/scratch/CMIP6ng/cmip6-ng/pr/day/native/"
@@ -18,7 +17,8 @@ df <- map2tidy(
   timedimnam = "time",
   do_chunks = TRUE,
   outdir = "/data/scratch/CMIP6ng/cmip6_tidy/",
-  fileprefix = "pr_day_CESM2_historical_r1i1p1f1_native"
+  fileprefix = "pr_day_CESM2_historical_r1i1p1f1_native_",
+  ncores = 4     # number of cores
 )
 
 
