@@ -1,7 +1,8 @@
 cwd_byilon <- function(
     ilon,
     indir,
-    outdir
+    outdir,
+    fileprefix
     ){
 
   # load function that will be applied to time series
@@ -45,7 +46,7 @@ cwd_byilon <- function(
     dplyr::mutate(data = purrr::map(data, ~my_cwd(.)))
 
   # write (complemented) data to file. Give it some meaningful name and the index counter
-  path <- paste0(outdir, "/evspsbl_cum_", ilon, ".rds")
+  path <- paste0(outdir, "/", fileprefix, "_", ilon, ".rds")
   message(
     paste0(
       "Writing file ", path, " ..."

@@ -6,7 +6,7 @@
 # 3. total number of longitude indices
 
 # Example:
-# >./apply_cwd_global.R 1 3 360
+# >./get_cwd_annmax.R 1 3 360
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
@@ -19,7 +19,7 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/cwd_byilon.R"))
+source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
 
 print("getting data for longitude indices:")
 vec_index <- map2tidy::get_index_by_chunk(
@@ -42,7 +42,7 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_byilon = cwd_byilon   # make the function known for each core
+    cwd_annmax_byilon = cwd_annmax_byilon   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -51,9 +51,9 @@ out <- tibble(ilon = vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
-    ~cwd_byilon(
+    ~cwd_annmax_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
+      indir = "~/data/cmip6-ng/tidy/cwd/",
       outdir = "~/data/cmip6-ng/tidy/cwd/",
       fileprefix = "evspsbl_cum"
       ))
@@ -64,9 +64,9 @@ out <- tibble(ilon = vec_index) |>
 # out <- tibble(ilon = vec_index) |>
 #   dplyr::mutate(out = purrr::map(
 #     ilon,
-#     ~cwd_byilon(
+#     ~cwd_annmax_byilon(
 #       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
+#       indir = "~/data/cmip6-ng/tidy/cwd/",
 #       outdir = "~/data/cmip6-ng/tidy/cwd/",
 #       fileprefix = "evspsbl_cum"
 #     ))

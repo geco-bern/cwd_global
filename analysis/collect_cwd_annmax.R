@@ -6,7 +6,7 @@
 # 3. total number of longitude indices
 
 # Example:
-# >./apply_cwd_global.R 1 3 360
+# >./get_cwd_annmax.R 1 3 360
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
@@ -19,7 +19,7 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/cwd_byilon.R"))
+source(paste0(here::here(), "/R/collect_cwd_annmax_byilon.R"))
 
 print("getting data for longitude indices:")
 vec_index <- map2tidy::get_index_by_chunk(
@@ -42,32 +42,44 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_byilon = cwd_byilon   # make the function known for each core
+    collect_cwd_annmax_byilon = collect_cwd_annmax_byilon   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
-out <- tibble(ilon = vec_index) |>
+df <- tibble(ilon =  vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
-    ~cwd_byilon(
+    ~collect_cwd_annmax_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
+      indir = "~/data/cmip6-ng/tidy/cwd/",
       fileprefix = "evspsbl_cum"
       ))
-    )
+    ) |>
+  collect() |>
+  tidyr::unnest(out)
+
+readr::write_rds(
+  df,
+  paste0(
+    indir,
+    fileprefix,
+    "_ANNMAX.rds"
+  )
+)
 
 
 # # un-parallel alternative
-# out <- tibble(ilon = vec_index) |>
+# df <- tibble(ilon = seq(60)) |>     # vec_index
 #   dplyr::mutate(out = purrr::map(
 #     ilon,
-#     ~cwd_byilon(
+#     ~collect_cwd_annmax_byilon(
 #       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
+#       indir = "~/data/cmip6-ng/tidy/cwd/",
 #       fileprefix = "evspsbl_cum"
 #     ))
-#   )
+#   ) |>
+#   tidyr::unnest(out)
+#
+# format(object.size(df), units = "MB")

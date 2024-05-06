@@ -5,7 +5,7 @@ my_cwd <- function(df){
 
   # just an example!
   out <- df |>
-    mutate(evspsbl_cum = cumsum(evspsbl)) |>
+    mutate(evspsbl_cum = evspsbl) |>
 
     # reduce size - important
     select(time, evspsbl_cum)
