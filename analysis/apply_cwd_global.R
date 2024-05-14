@@ -53,7 +53,7 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
+      indir = "~/data/cmip6-ng/tidy/evspsbl/", #change indir to variable-names (multiple params)
       outdir = "~/data/cmip6-ng/tidy/cwd/",
       fileprefix = "evspsbl_cum"
       ))

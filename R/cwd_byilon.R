@@ -13,13 +13,61 @@ cwd_byilon <- function(
   # read evapotranspiration file tidy
   filnam <- list.files(
     indir,
-    pattern = paste0("evspsbl_mon_CESM2_historical_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
     )
   df_evap <- readr::read_rds(filnam)
 
-  # read other required files (precipitation, temperature, ...
 
+  # read precipitation file tidy
+  filnam <- list.files(
+    indir,
+    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_prec <- readr::read_rds(filnam)
+
+
+  # read temperature file tidy
+  filnam <- list.files(
+    indir,
+    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_tas <- readr::read_rds(filnam)
+
+
+  # read radiation files tidy
+  filnam <- list.files(
+    indir,
+    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_rlus <- readr::read_rds(filnam)
+
+  filnam <- list.files(
+    indir,
+    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_rlds <- readr::read_rds(filnam)
+
+  filnam <- list.files(
+    indir,
+    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_rsds <- readr::read_rds(filnam)
+
+  filnam <- list.files(
+    indir,
+    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_rsus <- readr::read_rds(filnam)
+
+
+  # resolution adjustments
   # # merge all such that monthly data is repeated for each day within month
   # df <- df_prec |>  # one of the daily data frames
   #   tidyr::unnest(data) |>  # must unnest to join by date
