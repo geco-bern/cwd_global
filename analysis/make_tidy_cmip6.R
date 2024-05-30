@@ -3,7 +3,8 @@ library(dplyr)
 library(stringr)
 
 # list demo file path
-path_cmip6 <- "~/data_download/CMIP6ng_download/cmip6-ng/"
+# adjust path to where your cmip6 data is located
+path_cmip6 <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
 
 ## Evapotranspiration --------------------------------------------------------
 varnam <- "evspsbl"
@@ -27,7 +28,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/evspsbl/",
+  outdir = "/data_1/CMIP6/tidy/evspsbl/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -55,7 +56,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/pr/",
+  outdir = "/data_1/CMIP6/tidy/pr/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -83,7 +84,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/tas/",
+  outdir = "/data_1/CMIP6/tidy/tas/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -113,7 +114,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/rlus/",
+  outdir = "/data_1/CMIP6/tidy/rlus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -141,7 +142,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/rlds/",
+  outdir = "data_1/CMIP6/tidy/rlds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -169,7 +170,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/rsds/",
+  outdir = "data_1/CMIP6/tidy/rsds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -197,7 +198,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/rsus/",
+  outdir = "data_1/CMIP6/tidy/rsus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -224,7 +225,7 @@ df <- map2tidy(
   timenam = "time",
   timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/elevation/",
+  outdir = "data_1/CMIP6/tidy/elevation/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
