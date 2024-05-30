@@ -1,48 +1,52 @@
-my_cwd <- function(df_prec, df_evap, df_tas){
+my_cwd <- function(df){
 
   # loading libraries
-  library(terra)
-  library(readr)
   library(tidyr)
-  library(ggplot2)
-  library(viridis)
-  library(viridisLite)
-  library(weathermetrics)
-  library(ncdf4)
-  library(chron)
-  library(RColorBrewer)
-  library(lattice)
   library(cwd)
-  library(lubridate)
   library(rpmodel)
-
-  # column renaming and unit conversions
-
-  # evapotranspiration
-  colnames(df_evap) <- c("date", "evapotranspiration") # column renaming
-  df_evap$evapotranspiration <- df_evap$evapotranspiration * 86400 # conversion to mm day-1
-
-  # precipitation
-  colnames(df_prec) <- c("date", "precipitation") # column renaming
-  df_prec$precipitation <- df_prec$precipitation * 86400 # conversion to mm day-1
-
-  # temperature
-  colnames(df_tas) <- c("date", "temperature") # column renaming
-  df_tas$temperature <- df_tas$temperature - 273.15 # conversion to °C
-
-  # time-range adjustments
+  library(dplyr)
 
 
-  # arguments:
-  # df: a data frame. must contain certain columns with specific names used here
+  # nested dataframe is called `df` with the column with the list of variables called `data`
+  vars_df <- unnest(df, data)
 
-  # just an example!
-  out <- df |>
-    mutate(evspsbl_cum = evspsbl) |>
 
-    # reduce size - important
-    select(time, evspsbl_cum)
+  # unit conversions
+  ## evapotranspiration
+  vars_df$evap <- vars_df$evap * 86400 # conversion to mm day-1
+
+  ## precipitation
+  vars_df$prec <- vars_df$prec * 86400 # conversion to mm day-1
+
+  ## temperature
+  vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
+
+
+  # snow simulation
+  vars_df <- vars_df |>
+    mutate(precipitation = ifelse(tas < 0, 0, prec),
+           snow = ifelse(tas < 0, prec, 0)) |>
+    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_tas = "tas")
+
+
+  vars_df <- vars_df |>
+    mutate(wbal = liquid_to_soil - evap)
+
+
+  # cwd
+  ## calculate cumulative water deficit
+  out_cwd <- cwd(vars_df,
+                 varname_wbal = "wbal",
+                 varname_date = "time",
+                 thresh_terminate = 0.0,
+                 thresh_drop = 0.0)
+
+  out_cwd$inst <- out_cwd$inst |>
+    filter(len >= 20)
+
+  out_cwd <- out_cwd |>
+    select(lon, lat, time, deficit)
 
   # return a data frame
-  return(out)
+  return(out_cwd)
 }

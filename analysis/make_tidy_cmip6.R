@@ -202,3 +202,30 @@ df <- map2tidy(
   single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
 )
+
+## Elevation -------------------------------------------------------------
+varnam <- "elevation"
+filnam <- list.files(
+  paste0(path_cmip6, varnam, "/"),
+  pattern = ".nc",
+  full.names = TRUE
+)
+
+if (length(filnam) != 1){
+  stop("Should find only a single file.")
+}
+
+# load and convert
+df <- map2tidy(
+  nclist = filnam,
+  varnam = "elevation",
+  lonnam = "lon",
+  latnam = "lat",
+  timenam = "time",
+  timedimnam = "time",
+  do_chunks = TRUE,
+  outdir = "~/data/cmip6-ng/tidy/elevation/",
+  fileprefix = str_remove(basename(filnam), ".nc"),
+  single_basedate = TRUE
+  # ncores = 2  # parallel::detectCores()
+)

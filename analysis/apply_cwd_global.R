@@ -53,9 +53,18 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/", #change indir to variable-names (multiple params)
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      indir_evspsbl = "~/data/cmip6-ng/tidy/evspsbl/", # reads in variables
+      indir_tas = "~/data/cmip6-ng/tidy/tas/",
+      indir_prec = "~/data/cmip6-ng/tidy/pr/",
+      indir_rlus = "~/data/cmip6-ng/tidy/rlus/",
+      indir_rlds = "~/data/cmip6-ng/tidy/rlds/",
+      indir_rsds = "~/data/cmip6-ng/tidy/rsds/",
+      indir_rsus = "~/data/cmip6-ng/tidy/rsus/",
+      indir_elevation = "~/data/cmip6-ng/tidy/elevation/",
+      outdir_cwd = "~/data/cmip6-ng/tidy/cwd/",
+      outdir_pcwd = "~/data/cmip6-ng/tidy/pcwd/",
+      fileprefix_cwd = "cwd",
+      fileprefix_pcwd = "pcwd"
       ))
     )
 

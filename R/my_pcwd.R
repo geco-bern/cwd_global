@@ -1,75 +1,60 @@
 # my pcwd
 
-my_pcwd <- function(df_prec, df_evap, df_tas, df_rlus, df_rlds, df_rsds, df_rsus){
+my_pcwd <- function(df){
 
   # loading libraries
-  library(terra)
-  library(readr)
   library(tidyr)
-  library(ggplot2)
-  library(viridis)
-  library(viridisLite)
-  library(weathermetrics)
-  library(ncdf4)
-  library(chron)
-  library(RColorBrewer)
-  library(lattice)
   library(cwd)
-  library(lubridate)
   library(rpmodel)
-  library(bigleaf)
+  library(dplyr)
 
-  # column renaming and unit conversions
 
-  ## evapotranspiration
-  colnames(df_evap) <- c("date", "evapotranspiration") # column renaming
-  df_evap$evapotranspiration <- df_evap$evapotranspiration * 86400 # conversion to mm day-1
+  # nested dataframe is called `df` with the column with the list of variables called `data`
+  vars_df <- unnest(df, data)
 
+
+  # unit conversions
   ## precipitation
-  colnames(df_prec) <- c("date", "precipitation") # column renaming
-  df_prec$precipitation <- df_prec$precipitation * 86400 # conversion to mm day-1
+  vars_df$prec <- vars_df$prec * 86400 # conversion to mm day-1
 
   ## temperature
-  colnames(df_tas) <- c("date", "temperature") # column renaming
-  df_tas$temperature <- df_tas$temperature - 273.15 # conversion to °C
-
-  ## radiation
-  colnames(df_rlus) <- c("date", "up_longwave_radiation") # column renaming
-  colnames(df_rlds) <- c("date", "down_longwave_radiation") # column renaming
-  colnames(df_rsds) <- c("date", "down_shortwave_radiation") # column renaming
-  colnames(df_rsus) <- c("date", "up_shortwave_radiation") # column renaming
-
-  ### merge radiation variables into one dataframe
-  radiation_df <- merge(merge(merge(df_rlus, df_rlds, by = "date"), df_rsds, by = "date"), df_rsus, by = "date")
-
-  ### calculate net radiation and add to dataframe
-  radiation_df$net_radiation <- (radiation_df$down_shortwave_radiation - radiation_df$up_shortwave_radiation) + (radiation_df$down_longwave_radiation- radiation_df$up_longwave_radiation)
-
-  net_radiation_df <- select(radiation_df, date, net_radiation)
+  vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
 
 
-  # time-range adjustments
+  # pet-calculation
+  ## calculate surface pressure
+  vars_df$patm <- calc_patm(vars_df$elevation)
 
-  ## create vars_df
-
-
-  # PET Calculation
-
-  ## calculate equilibrium evapotranspiration (eet) using the equilibrium.ET function
-  vars_df$eet <- equilibrium.ET(
-    Tair = vars_df$temperature,
-    Rn = vars_df$rnet
-  )
-
-  ## convert from energy units (W/m²) to mass units (mm/day)
-  ### 1 W/m² is approximately equal to 0.0354 mm/day (latent heat flux conversion)
-  eet_mm_day <- eet * 0.0354
-
-  ## remove energy units row from dataframe
-  vars_df <- select(vars_df, -rnet)
-
-  ## calculate factor 1.26 * eet
-  vars_df$potential_evapotranspiration <- vars_df$eet * 1.26
+  ## apply pet() function
+  vars_df <- vars_df |>
+    mutate(pet = 30 * 30 * 24 * pet(net_radiation, tas, patm))
 
 
+  # snow simulation
+  vars_df <- vars_df |>
+    mutate(precipitation = ifelse(tas < 0, 0, prec),
+           snow = ifelse(tas < 0, prec, 0)) |>
+    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
+
+
+  vars_df <- vars_df |>
+    mutate(wbal_pet = liquid_to_soil - pet)
+
+
+  # pcwd
+  ## calculate potential cumulative water deficit
+  out_pcwd <- cwd(vars_df,
+                  varname_wbal = "wbal_pet",
+                  varname_date = "time",
+                  thresh_terminate = 0.0,
+                  thresh_drop = 0.0)
+
+  out_pcwd$inst <- out_pcwd$inst |>
+    filter(len >= 20)
+
+  out_pcwd <- out_pcwd |>
+    select(lon, lat, time, deficit)
+
+  # return a data frame
+  return(out_pcwd)
 }
