@@ -1,6 +1,7 @@
-# my pcwd
+#' @export
 
-my_pcwd <- function(df){
+
+my_pcwd <- function(df_vars){
 
   # loading libraries
   library(tidyr)
@@ -10,12 +11,12 @@ my_pcwd <- function(df){
 
 
   # nested dataframe is called `df` with the column with the list of variables called `data`
-  vars_df <- unnest(df, data)
+  vars_df <- unnest(df_vars)
 
 
   # unit conversions
   ## precipitation
-  vars_df$prec <- vars_df$prec * 86400 # conversion to mm day-1
+  vars_df$pr <- vars_df$pr * 86400 # conversion to mm day-1
 
   ## temperature
   vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
@@ -32,8 +33,8 @@ my_pcwd <- function(df){
 
   # snow simulation
   vars_df <- vars_df |>
-    mutate(precipitation = ifelse(tas < 0, 0, prec),
-           snow = ifelse(tas < 0, prec, 0)) |>
+    mutate(precipitation = ifelse(tas < 0, 0, pr),
+           snow = ifelse(tas < 0, pr, 0)) |>
     simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env Rscript
+#' @export
+
 
 # script is called with three arguments:
 # 1. counter for chunks
@@ -12,13 +14,15 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+args <- c(1, 1, nlon)
 
+#' @import dyplr map2tidy multidplyr
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
+#' @importFrom here here
 source(paste0(here::here(), "/R/cwd_byilon.R"))
 
 print("getting data for longitude indices:")
@@ -53,16 +57,17 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_byilon(
       .,
-      indir_evspsbl = "~/data/cmip6-ng/tidy/evspsbl/", # reads in variables
-      indir_tas = "~/data/cmip6-ng/tidy/tas/",
-      indir_prec = "~/data/cmip6-ng/tidy/pr/",
-      indir_rlus = "~/data/cmip6-ng/tidy/rlus/",
-      indir_rlds = "~/data/cmip6-ng/tidy/rlds/",
-      indir_rsds = "~/data/cmip6-ng/tidy/rsds/",
-      indir_rsus = "~/data/cmip6-ng/tidy/rsus/",
-      indir_elevation = "~/data/cmip6-ng/tidy/elevation/",
-      outdir_cwd = "~/data/cmip6-ng/tidy/cwd/",
-      outdir_pcwd = "~/data/cmip6-ng/tidy/pcwd/",
+      # read in variables
+      indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
+      indir_tas = "/data_1/CMIP6/tidy/tas/",
+      indir_prec = "/data_1/CMIP6/tidy/pr/",
+      indir_rlus = "/data_1/CMIP6/tidy/rlus/",
+      indir_rlds = "/data_1/CMIP6/tidy/rlds/",
+      indir_rsds = "/data_1/CMIP6/tidy/rsds/",
+      indir_rsus = "/data_1/CMIP6/tidy/rsus/",
+      indir_elevation = "/data_1/CMIP6/tidy/elevation/",
+      outdir_cwd = "/data_1/CMIP6/tidy/cwd/",
+      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
       fileprefix_cwd = "cwd",
       fileprefix_pcwd = "pcwd"
       ))
