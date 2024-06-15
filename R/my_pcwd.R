@@ -1,7 +1,7 @@
 #' @export
 
 
-my_pcwd <- function(df_vars){
+my_pcwd <- function(data){
 
   # loading libraries
   library(tidyr)
@@ -10,8 +10,8 @@ my_pcwd <- function(df_vars){
   library(dplyr)
 
 
-  # nested dataframe is called `df` with the column with the list of variables called `data`
-  vars_df <- unnest(df_vars)
+  # convert tibble to dataframe
+  vars_df <- as.data.frame(data)
 
 
   # unit conversions
@@ -24,7 +24,9 @@ my_pcwd <- function(df_vars){
 
   # pet-calculation
   ## calculate surface pressure
+  source(paste0(here::here(), "/R/calc_patm.R"))
   vars_df$patm <- calc_patm(vars_df$elevation)
+
 
   ## apply pet() function
   vars_df <- vars_df |>
@@ -53,9 +55,10 @@ my_pcwd <- function(df_vars){
   out_pcwd$inst <- out_pcwd$inst |>
     filter(len >= 20)
 
-  out_pcwd <- out_pcwd |>
-    select(lon, lat, time, deficit)
+  out_pcwd$df <- out_pcwd$df |>
+    select(time, deficit)
+
 
   # return a data frame
-  return(out_pcwd)
+  return(out_pcwd$df)
 }

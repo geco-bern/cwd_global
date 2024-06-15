@@ -28,7 +28,7 @@ cwd_byilon <- function(
   # read evapotranspiration file tidy
   filnam <- list.files(
     indir_evspsbl,
-    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
     )
   df_evap <- readr::read_rds(filnam)
@@ -37,7 +37,7 @@ cwd_byilon <- function(
   # read precipitation file tidy
   filnam <- list.files(
     indir_prec,
-    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_prec <- readr::read_rds(filnam)
@@ -46,7 +46,7 @@ cwd_byilon <- function(
   # read temperature file tidy
   filnam <- list.files(
     indir_tas,
-    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_tas <- readr::read_rds(filnam)
@@ -55,28 +55,28 @@ cwd_byilon <- function(
   # read radiation files tidy
   filnam <- list.files(
     indir_rlus,
-    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rlus <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rlds,
-    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rlds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsds,
-    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rsds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsus,
-    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 1, ".rds"),
+    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rsus <- readr::read_rds(filnam)
@@ -97,7 +97,7 @@ cwd_byilon <- function(
   elevation <- ncvar_get(df_elevation, "elevation")
 
   # create a grid of longitude and latitude values
-  lon_lat_grid <- expand.grid(longitude = lon, latitude = lat)
+  lon_lat_grid <- expand.grid(lon = lon, lat = lat)
 
   # convert the elevation matrix into a vector
   elev_vector <- as.vector(elevation)
@@ -113,7 +113,7 @@ cwd_byilon <- function(
   df_rlds <- df_rlds |> tidyr::unnest(data)
   df_rlus <- df_rlus |> tidyr::unnest(data)
   df_evap <- df_evap |> tidyr::unnest(data)
-  df_prec <- df_prec |> tidyr::unnest(data) #lon lat pr time
+  df_prec <- df_prec |> tidyr::unnest(data) # lon lat pr time
   df_tas <- df_tas |> tidyr::unnest(data)
 
 
@@ -161,19 +161,20 @@ cwd_byilon <- function(
   ## extract current longitude value from elevation
   ### sort the dataframe by longitude
   df_sorted <- df_elevation |>
-    arrange(longitude)
-
-  ### reverse the order of latitude values within each longitude group: doesnt work yet
-  df_sorted <- df_sorted |>
-    #group_by(longitude) |>
-    arrange(latitude) #, .by_group = TRUE, .groups = 'drop')
+    arrange(lon)
 
   ### create same indices for same values
   df_sorted <- df_sorted |>
-    mutate(index = as.integer(factor(longitude, levels = unique(longitude))))
+    mutate(index = as.integer(factor(lon, levels = unique(lon))))
 
   ### extract values that match current ilon
-  matching_values <- df_sorted[df_sorted$longitude == ilon, ]
+  #ilon <- 1 # for testing
+  matching_values <- df_sorted[df_sorted$index == ilon, ]
+
+  ### reverse the order of latitude values
+  matching_values_sorted <- matching_values |>
+    arrange(lat) |>
+    select(-index)
 
   ## aggregating df_net_radiation to have just one record per month by taking the mean
   df_net_radiation_unique <- df_net_radiation |>
@@ -187,8 +188,21 @@ cwd_byilon <- function(
   df_pcwd <- df_prec |>  # one of the daily data frames
     left_join(df_net_radiation_unique, by = join_by(lon, lat, year, month))|>
     left_join(df_tas, by = join_by(lon, lat, time))|>
-    #left_join(df_elevation, by = join_by(lon, lat))|>
+    left_join(matching_values_sorted, by = join_by(lon, lat))|>
     dplyr::select(-year, -month)
+
+  ## time range adjustments
+  ### identify rows with any NA values
+  df_with_na <- df_cwd |>
+    filter(if_any(everything(), is.na))
+
+  ### remove rows where NA values
+  # Remove rows with any NA values
+  df_cwd <- df_cwd |>
+    drop_na()
+
+  df_pcwd <- df_pcwd |>
+    drop_na()
 
 
   # out_cwd
@@ -205,6 +219,13 @@ cwd_byilon <- function(
     #' @importFrom purrr map
     mutate(data = purrr::map(data, ~my_cwd(.)))
 
+
+  # for testing
+  #first_row_tibble <- out_cwd %>%
+  #  pull(data) %>%
+  #  .[[1]]
+
+  # saveRDS(first_row_tibble, paste0(here::here(), "/data/test_tibble.rds"))
 
   # out pcwd
   out_pcwd <- df_pcwd |>
@@ -223,7 +244,7 @@ cwd_byilon <- function(
   path_cwd <- paste0(outdir_cwd, "/", fileprefix_cwd, "_", ilon, ".rds")
   message(
     paste0(
-      "Writing file ", path, " ..."
+      "Writing file ", path_cwd , " ..."
     )
   )
   #' @importFrom readr write_rds
@@ -237,7 +258,7 @@ cwd_byilon <- function(
   path_pcwd <- paste0(outdir_pcwd, "/", fileprefix_pcwd, "_", ilon, ".rds")
   message(
     paste0(
-      "Writing file ", path, " ..."
+      "Writing file ", path_pcwd, " ..."
     )
   )
   readr::write_rds(

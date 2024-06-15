@@ -53,8 +53,10 @@ df <- tibble(ilon =  vec_index) |>
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      indir_cwd = "/data_1/CMIP6/tidy/cwd/",
+      indir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
+      fileprefix_cwd = "cwd",
+      fileprefix_pcwd = "pcwd"
       ))
     ) |>
   collect() |>

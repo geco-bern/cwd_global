@@ -30,7 +30,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/evspsbl/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -58,7 +59,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/pr/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -86,7 +88,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/tas/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -116,7 +119,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/rlus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -144,7 +148,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/rlds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -172,7 +177,8 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/rsds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
@@ -200,6 +206,7 @@ df <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data_1/CMIP6/tidy/rsus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  single_basedate = TRUE,
+  overwrite = TRUE
   # ncores = 2  # parallel::detectCores()
 )

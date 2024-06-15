@@ -1,8 +1,11 @@
 cwd_annmax_byilon <- function(
     ilon,
-    indir,
-    outdir,
-    fileprefix
+    indir_cwd,
+    indir_pcwd,
+    outdir_cwd,
+    outdir_pcwd,
+    fileprefix_cwd,
+    fileprefix_pcwd
     ){
 
   # function to get annual maximum

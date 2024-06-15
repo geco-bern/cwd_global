@@ -14,7 +14,7 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+nlon <- 1  # 288 # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
 args <- c(1, 1, nlon)
 
 #' @import dyplr map2tidy multidplyr

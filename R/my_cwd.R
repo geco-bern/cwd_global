@@ -1,7 +1,7 @@
 #' @export
 
 
-my_cwd <- function(df){
+my_cwd <- function(data){
 
   # loading libraries
   library(tidyr)
@@ -9,9 +9,12 @@ my_cwd <- function(df){
   library(rpmodel)
   library(dplyr)
 
+  # for testing read in rds tibble
+  # test_tibble <- readRDS(paste0(here::here(), "/data/test_tibble.rds"))
 
-  # nested dataframe is called `df` with the column with the list of variables called `data`
-  vars_df <- unnest(df, data)
+
+  # convert tibble to dataframe
+  vars_df <- as.data.frame(data)
 
 
   # unit conversions
@@ -29,7 +32,7 @@ my_cwd <- function(df){
   vars_df <- vars_df |>
     mutate(precipitation = ifelse(tas < 0, 0, pr),
            snow = ifelse(tas < 0, pr, 0)) |>
-    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_tas = "tas")
+    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
 
   vars_df <- vars_df |>
@@ -47,9 +50,10 @@ my_cwd <- function(df){
   out_cwd$inst <- out_cwd$inst |>
     filter(len >= 20)
 
-  out_cwd <- out_cwd |>
-    select(lon, lat, time, deficit)
+  out_cwd$df <- out_cwd$df |>
+    select(time, deficit)
 
-  # return a data frame
-  return(out_cwd)
+
+  # return data frame
+  return(out_cwd$df)
 }
