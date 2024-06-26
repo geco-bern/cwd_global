@@ -1,0 +1,109 @@
+---
+title: "Fluxnet Comparison"
+author: "Patricia Gribi"
+date: "2024-06-26"
+output: html_document
+---
+
+# Data Info
+
+https://fluxnet.org/data/fluxnet2015-dataset/subset-data-product/
+
+site info: https://fluxnet.org/sites/siteinfo/DE-Tha 
+
+MDS: gapfilled using MDS method
+
+
+# Preparing Fluxnet data
+
+```{r}
+
+# data reading
+fluxnet <- read.csv(paste0(here::here(),"/data-raw/FLX_DE-Tha_FLUXDATAKIT_FULLSET_DD_1996_2020_2-3.csv"), header=TRUE)
+
+
+# variable selection
+fluxnet <- fluxnet |>
+  dplyr::select(
+  TIMESTAMP,
+  P_F, # precipitation (mm d-1)
+  LE_F_MDS, # latent heat flux (W m-2)
+  TA_F_MDS, # temperature (°C)
+  NETRAD) # net radiation (W m-2)
+
+```
+
+units are correct, Lat, Long:	50.9626, 13.5651
+
+
+## PET and ET Calculation
+
+
+```{r}
+
+elevation <- 385
+
+patm <- calc_patm(elevation)
+
+
+# ET -----------------------------------
+
+## Convert latent heat flux (W/m2) to evapotranspiration in mass units (mm/d).
+
+le_to_et <- function(le, tc, patm){
+  1000 * 60 * 60 * 24 * le / (cwd::calc_enthalpy_vap(tc) * cwd::calc_density_h2o(tc, patm)) # warum * 1000?
+}
+
+fluxnet <- fluxnet |>
+  mutate(et = le_to_et(LE_F_MDS, TA_F_MDS, patm))
+
+
+# PET ----------------------------------
+
+## apply pet() function
+  fluxnet <- fluxnet |>
+    mutate(pet = 60 * 60 * 24 * pet(NETRAD, tas, patm))
+
+```
+
+
+# Reading CMIP6 data
+
+```{r}
+
+cwd <- readRDS("/data_1/CMIP6/tidy/cwd/cwd_10.rds")
+
+pcwd <- readRDS("/data_1/CMIP6/tidy/pcwd/pcwd_10.rds")
+
+# extract latitude 13.5651
+
+
+
+
+```
+
+
+## Plot 
+
+
+```{r}
+
+fluxnet$date <- as.Date(as.character(fluxnet$TIMESTAMP), format = "%Y%m%d")
+
+
+year_fluxnet <- fluxnet |>
+  mutate(year = year(date)) |>
+  group_by(year) |>
+  summarise(et = sum(et), pet = sum(pet), prec = sum(P_F))
+
+
+year_fluxnet |>
+  pivot_longer(cols = c(et, pet, prec), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Annual totals of et, pet and prec")+
+  labs(y = "Flux (mm/yr)")
+
+```
+
+

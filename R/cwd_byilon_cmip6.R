@@ -100,10 +100,13 @@ cwd_byilon <- function(
   lon_lat_grid <- expand.grid(lon = lon, lat = lat)
 
   # convert the elevation matrix into a vector
+  ## matrix(latitude,longitude)
   elev_vector <- as.vector(elevation)
 
   # Combine the grid and elevation data into a dataframe
   df_elevation <- cbind(lon_lat_grid, elevation = elev_vector)
+  ## replace na-values with 0
+  df_elevation[is.na(df_elevation)] <- 0
 
 
   # unnest all the data frames
@@ -127,17 +130,10 @@ cwd_byilon <- function(
     mutate(year = lubridate::year(time), month = lubridate::month(time))|>
     select(-time)
 
-  ## aggregating df_evap to have just one record per month by taking the mean
-  df_evap_unique <- df_evap |>
-    group_by(lon, lat, year, month) |>
-    summarise(evspsbl = mean(evspsbl, na.rm = TRUE), .groups = 'drop')
-
-  ## linear interpolation for missing months????????????????????????????????????
-
   ## cwd
   ### merge all such that monthly data is repeated for each day within month
   df_cwd <- df_prec |>
-    left_join(df_evap_unique, by = join_by(lon, lat, year, month)) |>
+    left_join(df_evap, by = join_by(lon, lat, year, month)) |>
     left_join(df_tas, by = join_by(lon, lat, time))|>
     dplyr::select(-year, -month)
 
@@ -168,41 +164,29 @@ cwd_byilon <- function(
     mutate(index = as.integer(factor(lon, levels = unique(lon))))
 
   ### extract values that match current ilon
-  #ilon <- 1 # for testing
+  #ilon <- 10 # for testing
   matching_values <- df_sorted[df_sorted$index == ilon, ]
 
   ### reverse the order of latitude values
   matching_values_sorted <- matching_values |>
     arrange(lat) |>
-    select(-index)
+    select(-index, -lon, -lat) |>
+    mutate(index = row_number())
 
-  ## aggregating df_net_radiation to have just one record per month by taking the mean
-  df_net_radiation_unique <- df_net_radiation |>
-    group_by(lon, lat, year, month) |>
-    summarise(net_radiation = mean(net_radiation, na.rm = TRUE), .groups = 'drop')
+  ### create index column to join with elevation data
+  df_prec_index <- as.data.frame(df_prec) |>
+    mutate(index = as.integer(factor(lat, levels = unique(lat))))
 
-  ## linear interpolation for missing months????????????????????????????????????
 
   ## pcwd
   ### merge all such that monthly data is repeated for each day within month
-  df_pcwd <- df_prec |>  # one of the daily data frames
-    left_join(df_net_radiation_unique, by = join_by(lon, lat, year, month))|>
+  df_pcwd <- df_prec_index |>  # one of the daily data frames
+    left_join(df_net_radiation, by = join_by(lon, lat, year, month))|>
     left_join(df_tas, by = join_by(lon, lat, time))|>
-    left_join(matching_values_sorted, by = join_by(lon, lat))|>
-    dplyr::select(-year, -month)
+    left_join(matching_values_sorted, by = join_by(index))|>
+    dplyr::select(-year, -month, -index)
 
-  ## time range adjustments
-  ### identify rows with any NA values
-  df_with_na <- df_cwd |>
-    filter(if_any(everything(), is.na))
-
-  ### remove rows where NA values
-  # Remove rows with any NA values
-  df_cwd <- df_cwd |>
-    drop_na()
-
-  df_pcwd <- df_pcwd |>
-    drop_na()
+  df_pcwd <- as_tibble(df_pcwd)
 
 
   # out_cwd
@@ -224,8 +208,8 @@ cwd_byilon <- function(
   #first_row_tibble <- out_cwd %>%
   #  pull(data) %>%
   #  .[[1]]
-
   # saveRDS(first_row_tibble, paste0(here::here(), "/data/test_tibble.rds"))
+
 
   # out pcwd
   out_pcwd <- df_pcwd |>

@@ -30,7 +30,7 @@ my_pcwd <- function(data){
 
   ## apply pet() function
   vars_df <- vars_df |>
-    mutate(pet = 30 * 30 * 24 * pet(net_radiation, tas, patm))
+    mutate(pet = 60 * 60 * 24 * pet(net_radiation, tas, patm))
 
 
   # snow simulation

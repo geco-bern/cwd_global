@@ -47,29 +47,52 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
-df <- tibble(ilon =  vec_index) |>
+## cwd
+df_cwd <- tibble(ilon =  vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir_cwd = "/data_1/CMIP6/tidy/cwd/",
-      indir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
-      fileprefix_cwd = "cwd",
-      fileprefix_pcwd = "pcwd"
+      indir = "/data_1/CMIP6/tidy/cwd/",
+      fileprefix = "cwd",
       ))
     ) |>
   collect() |>
   tidyr::unnest(out)
 
 readr::write_rds(
-  df,
+  df_cwd,
   paste0(
     indir,
     fileprefix,
     "_ANNMAX.rds"
   )
 )
+
+## pcwd
+df_pcwd <- tibble(ilon =  vec_index) |>
+  multidplyr::partition(cl) |>
+  dplyr::mutate(out = purrr::map(
+    ilon,
+    ~collect_cwd_annmax_byilon(
+      .,
+      indir = "/data_1/CMIP6/tidy/pcwd/",
+      fileprefix = "pcwd"
+    ))
+  ) |>
+  collect() |>
+  tidyr::unnest(out)
+
+readr::write_rds(
+  df_pcwd,
+  paste0(
+    indir,
+    fileprefix,
+    "_ANNMAX.rds"
+  )
+)
+
 
 
 # # un-parallel alternative
