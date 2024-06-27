@@ -92,8 +92,8 @@ cwd_byilon <- function(
   df_elevation <- ncdf4::nc_open(filnam)
 
   # extract variables
-  lon <- ncvar_get(df_elevation, "longitude")
-  lat <- ncvar_get(df_elevation, "latitude")
+  lon <- ncvar_get(df_elevation, "easting")
+  lat <- ncvar_get(df_elevation, "northing")
   elevation <- ncvar_get(df_elevation, "elevation")
 
   # create a grid of longitude and latitude values
@@ -164,7 +164,7 @@ cwd_byilon <- function(
     mutate(index = as.integer(factor(lon, levels = unique(lon))))
 
   ### extract values that match current ilon
-  #ilon <- 10 # for testing
+  #ilon <- 155 # for testing
   matching_values <- df_sorted[df_sorted$index == ilon, ]
 
   ### reverse the order of latitude values
@@ -205,10 +205,19 @@ cwd_byilon <- function(
 
 
   # for testing
-  #first_row_tibble <- out_cwd %>%
+  # tibble <- out_cwd %>%
   #  pull(data) %>%
   #  .[[1]]
-  # saveRDS(first_row_tibble, paste0(here::here(), "/data/test_tibble.rds"))
+  # saveRDS(tibble, paste0(here::here(), "/data-raw/vars_tibble.rds"))
+
+  # for comparison with fluxnet data
+  ## extract nearest latitude 50.9 and write to rds files
+  #start <- 50
+  #end <- 51
+  #extracted_cwd <- df_cwd[(df_cwd$lat >= start) & (df_cwd$lat <= end), ]
+  #extracted_pcwd <- df_pcwd[(df_pcwd$lat >= start) & (df_pcwd$lat <= end), ]
+  #saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_cwd.rds"))
+  #saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_pcwd.rds"))
 
 
   # out pcwd
