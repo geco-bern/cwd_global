@@ -12,8 +12,8 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+args <- c(1, 1, nlon)
 
 library(dplyr)
 library(map2tidy)
@@ -29,7 +29,7 @@ vec_index <- map2tidy::get_index_by_chunk(
   )
 
 # number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+ncores <- 40 #2 # parallel::detectCores()
 
 # parallelize job
 # set up the cluster, sending required objects to each core

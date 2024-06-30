@@ -1,7 +1,7 @@
 collect_cwd_annmax_byilon <- function(
     ilon,
     indir,
-    fileprefix,
+    fileprefix
 ){
 
   # read annual time series file
