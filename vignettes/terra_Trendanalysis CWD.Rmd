@@ -1,0 +1,373 @@
+---
+title: "Trendanalysis CWD"
+author: "Patricia Gribi"
+date: "2024-07-01"
+output: html_document
+---
+
+# Read Files
+
+```{r}
+
+# loading libraries
+library(ggplot2)
+library(dplyr)
+library(terra)
+library(tidyr)
+library(shiny)
+library(broom)
+library(maps)
+library(grid)
+
+
+#read raster file
+cwd_rast <- rast("/data_1/CMIP6/tidy/cwd/evspsbl_cum_ANNMAX.nc")
+pcwd_rast <- rast("/data_1/CMIP6/tidy/pcwd/pot_evspsbl_cum_ANNMAX.nc")
+
+crs(cwd_rast) <- "EPSG:4326"  # WGS 84
+crs(pcwd_rast) <- "EPSG:4326"  # WGS 84
+
+# read rds file
+cwd_df <- readr::read_rds("/data_1/CMIP6/tidy/cwd/cwd_ANNMAX.rds")
+pcwd_df <- readr::read_rds("/data_1/CMIP6/tidy/pcwd/pcwd_ANNMAX.rds")
+
+cwd_df <- cwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_cwd = "max_deficit")
+
+pcwd_df <- pcwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_pcwd = "max_deficit")
+
+
+combined_df <- cwd_df |>  # one of the daily data frames
+    left_join(pcwd_df, by = join_by(lon, lat, year))
+
+# information about the data
+print(cwd_rast)
+print(pcwd_rast)
+
+# combined raster with both variables
+combined_rast <- c(cwd_rast, pcwd_rast)
+print(combined_rast)
+
+```
+
+# Apply a land mask?
+
+
+
+
+# Global CWD Plot Over Time
+
+```{r}
+
+# global plot
+
+ui <- fluidPage(
+  titlePanel("Annual Max. Cumulative Water Deficit"),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("year", "Select Year:",
+                  min = 2015, max = 2100, value = 2015,
+                  step = 1, sep = "")
+    ),
+    mainPanel(
+      plotOutput("cwdPlot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$cwdPlot <- renderPlot({
+    # Calculate the layer index based on the selected year
+    layer_index <- input$year - 2015 + 1
+
+    # Extract the specific layer for the selected year
+    cwd_layer <- cwd_rast[[layer_index]]
+
+    # Create the plot
+    ggplot() +
+      tidyterra::geom_spatraster(data = cwd_layer) +
+      scale_fill_viridis_c(
+        na.value = NA,
+        name = "annual max. Cumulative Water Deficit (mm/day) \n"
+      ) +
+      theme_bw() +
+      theme(
+        legend.position = "bottom",
+        legend.text = element_text(size = 10),  # Adjust the size of the legend text
+        legend.title = element_text(size = 12), # Adjust the size of the legend title
+        legend.key.width = unit(2, "cm"),       # Increase the width of the legend keys
+        legend.key.height = unit(0.5, "cm")     # Adjust the height of the legend keys
+      ) +
+      guides(
+        fill = guide_colorbar(
+          title.position = "top",
+          title.hjust = 0.5,
+          label.hjust = 0.5,
+          label.vjust = 0.5,
+          barwidth = unit(15, "cm"),           # Increase the width of the color bar
+          barheight = unit(0.5, "cm")          # Adjust the height of the color bar
+        )
+      )
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+# Global PCWD Plot Over Time
+
+```{r}
+
+# global plot
+
+ui <- fluidPage(
+  titlePanel("Annual Max. Potential Cumulative Water Deficit"),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("year", "Select Year:",
+                  min = 2015, max = 2100, value = 2015,
+                  step = 1, sep = "")
+    ),
+    mainPanel(
+      plotOutput("pcwdPlot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$pcwdPlot <- renderPlot({
+    # Calculate the layer index based on the selected year
+    layer_index <- input$year - 2015 + 1
+
+    # Extract the specific layer for the selected year
+    pcwd_layer <- pcwd_rast[[layer_index]]
+
+    # Create the plot
+    ggplot() +
+      tidyterra::geom_spatraster(data = pcwd_layer) +
+      scale_fill_viridis_c(
+        na.value = NA,
+        name = "annual max. Potential Cumulative Water Deficit (mm/day) \n"
+      ) +
+      theme_bw() +
+      theme(
+        legend.position = "bottom",
+        legend.text = element_text(size = 10),  # Adjust the size of the legend text
+        legend.title = element_text(size = 12), # Adjust the size of the legend title
+        legend.key.width = unit(2, "cm"),       # Increase the width of the legend keys
+        legend.key.height = unit(0.5, "cm")     # Adjust the height of the legend keys
+      ) +
+      guides(
+        fill = guide_colorbar(
+          title.position = "top",
+          title.hjust = 0.5,
+          label.hjust = 0.5,
+          label.vjust = 0.5,
+          barwidth = unit(15, "cm"),           # Increase the width of the color bar
+          barheight = unit(0.5, "cm")          # Adjust the height of the color bar
+        )
+      )
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+
+
+# CWD Plot at a Specific Gridpoint Over Time
+
+
+```{r}
+
+# Define the UI
+ui <- fluidPage(
+  titlePanel("Annual Max CWD Over Time"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("lon", "Select Longitude:", choices = unique(cwd_df$lon)),
+      selectInput("lat", "Select Latitude:", choices = unique(cwd_df$lat))
+    ),
+    mainPanel(
+      plotOutput("deficitPlot")
+    )
+  )
+)
+
+# Define the server
+server <- function(input, output, session) {
+  
+  # Update latitude choices based on selected longitude
+  observeEvent(input$lon, {
+    updateSelectInput(session, "lat", choices = unique(cwd_df[cwd_df$lon == input$lon, "lat"]))
+  })
+  
+  # Render the plot
+  output$deficitPlot <- renderPlot({
+    req(input$lon, input$lat)  # Ensure that both lon and lat are selected
+    
+    subset_data <- cwd_df[cwd_df$lon == input$lon & cwd_df$lat == input$lat, ]
+    
+    subset_data_pcwd <- pcwd_df[pcwd_df$lon == input$lon & pcwd_df$lat == input$lat,]
+    
+    #ggplot(subset_data, aes(x = year, y = max_deficit_cwd)) +
+      #geom_line() +
+      #labs(title = paste("Max Deficit Over Time at Lon:", input$lon, "Lat:", input$lat),
+           #x = "Year",
+           #y = "Max Deficit (mm/day)")
+    
+    ggplot() +
+      geom_line(data = subset_data, aes(x = year, y = max_deficit_cwd), color = "blue") +
+      geom_line(data = subset_data_pcwd, aes(x = year, y = max_deficit_pcwd), color = "red") +
+      labs(title = paste("Max Deficit Over Time at Lon:", input$lon, "Lat:", input$lat),
+          x = "Year",
+          y = "Max Deficit (mm/day)")
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+```
+
+# CWD Plot at a Specific Gridpoint Over Time with Trend-Line
+
+not fully working
+
+
+```{r}
+
+# Define the UI
+ui <- fluidPage(
+  titlePanel("Annual Max CWD Over Time"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("lon", "Select Longitude:", choices = unique(cwd_df$lon)),
+      selectInput("lat", "Select Latitude:", choices = unique(cwd_df$lat))
+    ),
+    mainPanel(
+      plotOutput("deficitPlot")
+    )
+  )
+)
+
+# Define the server
+server <- function(input, output, session) {
+  
+  # Update latitude choices based on selected longitude
+  observeEvent(input$lon, {
+    updateSelectInput(session, "lat", choices = unique(cwd_df[cwd_df$lon == input$lon, "lat"]))
+  })
+  
+  # Render the plot
+  output$deficitPlot <- renderPlot({
+    req(input$lon, input$lat)  # Ensure that both lon and lat are selected
+    
+    subset_data <- cwd_df[cwd_df$lon == input$lon & cwd_df$lat == input$lat, ]
+    
+    subset_data_pcwd <- pcwd_df[pcwd_df$lon == input$lon & pcwd_df$lat == input$lat,]
+    
+    ggplot() +
+      geom_line(data = subset_data, aes(x = year, y = max_deficit_cwd), color = "blue") +
+      geom_smooth(data = subset_data, aes(x = year, y = max_deficit_cwd), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
+      geom_line(data = subset_data_pcwd, aes(x = year, y = max_deficit_pcwd), color = "red") +
+      geom_smooth(data = subset_data_pcwd, aes(x = year, y = max_deficit_pcwd), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
+      labs(title = paste("Max Deficit Over Time at Lon:", input$lon, "Lat:", input$lat),
+           x = "Year",
+           y = "Max Deficit (mm/day)") +
+      theme_minimal()
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+
+```
+
+
+
+
+
+# CWD Trendanalysis
+
+
+```{r}
+
+time <- seq(as.Date("2015-01-01"), as.Date("2100-01-01"), by = "years")
+
+# Function to calculate the slope of the trend
+calculate_slope <- function(x) {
+  if (all(is.na(x))) {
+    return(NA)
+  } else {
+    time <- 1:length(x)
+    fit <- lm(x ~ time)
+    return(coef(fit)[2]) # Extract the slope
+  }
+}
+
+# Apply the function to each pixel
+trend_rast <- app(cwd_rast, calculate_slope)
+
+```
+
+```{r}
+
+# Convert raster to a data frame for ggplot
+trend_df <- as.data.frame(trend_rast, xy = TRUE)
+names(trend_df)[3] <- "trend"
+
+# Plot the trend raster with the world map underlay
+ggplot() +
+  geom_tile(data = trend_df, aes(x = ifelse(x > 180, x - 360, x), y = y, fill = trend)) + # Adjust longitudes > 180
+  borders("world", colour = "black", fill = NA, size = 0.3) + # Add thin black world map borders
+  scale_fill_viridis_c(
+    na.value = NA,
+    name = "Trend in Cumulative Water Deficit (mm/day/year)"
+  ) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) + # Ensure correct aspect ratio and alignment
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 10, r = 10, b = 10, l = 10), # Increase legend margins
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    plot.margin = margin(t = 10, r = 10, b = 10, l = 10) # Increase plot margins
+  ) +
+  guides(
+    fill = guide_colorbar(
+      title.position = "top",
+      title.hjust = 0.5,
+      label.hjust = 0.5,
+      label.vjust = 0.5,
+      barwidth = unit(15, "cm"), # Increase the width of the color bar
+      barheight = unit(0.5, "cm") # Adjust the height of the color bar
+    )
+  ) +
+  labs(
+    x = "Longitude",
+    y = "Latitude"
+  )
+
+
+```
+
+The magnitude of the slope indicates the rate of increase. A larger positive slope means a steeper increase.
+
+# Analyse the trend dataframe
+
+```{r}
+
+trend_df_sorted <- trend_df |>
+  arrange(desc(trend))
+
+
+```
+
+

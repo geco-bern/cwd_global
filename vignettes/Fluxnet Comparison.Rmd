@@ -57,7 +57,7 @@ patm <- calc_patm(elevation)
 ## Convert latent heat flux (W/m2) to evapotranspiration in mass units (mm/d).
 
 le_to_et <- function(le, tc, patm){
-  1000 * 60 * 60 * 24 * le / (cwd::calc_enthalpy_vap(tc) * cwd::calc_density_h2o(tc, patm)) # warum * 1000?
+  1000 * 60 * 60 * 24 * le / (cwd::calc_enthalpy_vap(tc) * cwd::calc_density_h2o(tc, patm)) 
 }
 
 fluxnet <- fluxnet |>
@@ -120,7 +120,6 @@ cmip6 <- cmip6 |>
 #tas = mean(TA_F_MDS), netrad = mean(NETRAD)
 
 # data preparation
-
 year_fluxnet <- fluxnet |>
   mutate(year = lubridate::year(TIMESTAMP)) |>
   group_by(year) |>
@@ -134,7 +133,6 @@ year_cmip6 <- cmip6 |>
 
 
 # plot
-
 year_fluxnet |>
   tidyr::pivot_longer(cols = c(et, pet, prec), names_to = "Flux") |> 
   ggplot(aes(x = year, y = value, color = Flux)) +
@@ -148,8 +146,6 @@ year_cmip6 |>
   geom_line() +
   ggtitle("Mean Annual Fluxes CMIP6")+
   labs(y = "Flux (mm/yr)")
-
-
 
 
 ```
@@ -174,40 +170,85 @@ deficit_cmip6 <- deficit_pcwd |>
   left_join(deficit_cwd, by = join_by(lon, lat, time))
 
 
-# extract nearest latitude 50.9 and write to rds files
+# extract nearest latitude 50.9 
 start <- 50
 end <- 51
 deficit_cmip6 <- deficit_cmip6[(deficit_cmip6$lat >= start) & (deficit_cmip6$lat <= end), ]
 
+
 # time-range adjustment (2015-2020)
 deficit_cmip6 <- deficit_cmip6 |>
   mutate(year = lubridate::year(time))|>
-  filter((year >= 2015) & (year <= 2020))
+  filter((year >= 2015) & (year <= 2020))|>
+  group_by(year) |>
+  summarise(deficit_cwd = mean(deficit), deficit_pcwd = mean(deficit_pcwd)) 
 
-
+  
 # get cwd of fluxnet data
-
 ## snow simulation
-  fluxnet <- fluxnet |>
-    mutate(precipitation = ifelse(TA_F_MDS < 0, 0, P_F),
-           snow = ifelse(TA_F_MDS < 0, P_F, 0)) |>
-    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "TA_F_MDS")
+fluxnet <- fluxnet |>
+  mutate(precipitation = ifelse(TA_F_MDS < 0, 0, P_F),
+         snow = ifelse(TA_F_MDS < 0, P_F, 0)) |>
+  cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "TA_F_MDS")
 
 
-  fluxnet <- fluxnet |>
-    mutate(wbal = liquid_to_soil - et)
+fluxnet <- fluxnet |>
+  mutate(wbal = liquid_to_soil - et)
 
 
-  # cwd
-  ## calculate cumulative water deficit
-  out_cwd_fluxnet <- cwd::cwd(fluxnet,
-                 varname_wbal = "wbal",
-                 varname_date = "TIMESTAMP",
-                 thresh_terminate = 0.0,
-                 thresh_drop = 0.0)
+# cwd
+## calculate cumulative water deficit
+out_cwd_fluxnet <- cwd::cwd(fluxnet,
+               varname_wbal = "wbal",
+               varname_date = "TIMESTAMP",
+               thresh_terminate = 0.0,
+               thresh_drop = 0.0)
 
-  out_cwd_fluxnet$inst <- out_cwd_fluxnet$inst |>
-    filter(len >= 20)
+out_cwd_fluxnet$inst <- out_cwd_fluxnet$inst |>
+  filter(len >= 20)
+
+out_cwd_fluxnet$df <- out_cwd_fluxnet$df |>
+  select(TIMESTAMP, deficit)
+
+full_data <- out_cwd_fluxnet$df
+  
+```
+
+
+
+
+```{r}
+
+# data preparation
+full_data <- full_data |>
+  mutate(year = lubridate::year(TIMESTAMP)) |>
+  group_by(year) |>
+  filter(year >= 2015) |> 
+  summarise(deficit_fluxnet = mean(deficit))
+
+# join cmip6-deficit
+full_data <- full_data |>
+  left_join(deficit_cmip6, by = join_by(year))
+
+
+# plot
+full_data |>
+  tidyr::pivot_longer(cols = c(deficit_fluxnet, deficit_cwd, deficit_pcwd), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Comparison Mean Annual Fluxes ")+
+  labs(y = "Flux (mm/yr)")
+
+
+deficit_cmip6 |>
+  tidyr::pivot_longer(cols = c(deficit_cwd, deficit_pcwd), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Comparison Mean Annual Fluxes ")+
+  labs(y = "Flux (mm/yr)")
+
+
+
 
 
 ```
