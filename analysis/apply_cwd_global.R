@@ -1,37 +1,37 @@
 #!/usr/bin/env Rscript
 
-# script is called with three arguments:
-# 1. counter for chunks
-# 2. total number of chunks
-# 3. total number of longitude indices
+# script is called without any arguments
+# (By specifying overwrite you can choose within the script to avoid calculating
+# or recalculate previous results)
 
 # Example:
-# >./apply_cwd_global.R 1 3 360
-
-# to receive arguments to script from the shell
-args = commandArgs(trailingOnly=TRUE)
-
-# # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+# >./apply_cwd_global.R
 
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
 source(paste0(here::here(), "/R/cwd_byilon.R"))
+indir  <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/evspsbl/"
+outdir <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+dir.create(outdir, showWarnings = FALSE)
+
+filnams <- list.files(
+  indir,
+  pattern = "evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_.*rds",
+  full.names = TRUE
+)
+list_LON <- gsub(".*(LON_[//-//.//+0-9]*).rds", "\\1", filnams)
+# as.numeric(gsub("LON_","",list_LON))
 
 print("getting data for longitude indices:")
-vec_index <- map2tidy::get_index_by_chunk(
-  as.integer(args[1]),  # counter for chunks
-  as.integer(args[2]),  # total number of chunks
-  as.integer(args[3])   # total number of longitude indices
-  )
-
 # number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+ncores <- 6 # parallel::detectCores()
 
 # parallelize job
+# load function that will be applied to time series
+source(paste0(here::here(), "/R/my_cwd.R"))
+
 # set up the cluster, sending required objects to each core
 cl <- multidplyr::new_cluster(ncores) |>
   multidplyr::cluster_library(c("map2tidy",
@@ -42,32 +42,29 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_byilon = cwd_byilon   # make the function known for each core
+    my_cwd = my_cwd,   # make the function known for each core
+    cwd_byLON = cwd_byLON,   # make the function known for each core
+    indir = indir,
+    outdir = outdir
     )
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
-out <- tibble(ilon = vec_index) |>
+out <- tibble(LON_string = list_LON) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_byilon(
+    LON_string,
+    ~cwd_byLON(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      indir = indir,
+      outdir = outdir,
+      fileprefix = "evspsbl_cum",
+      overwrite = FALSE
       ))
-    )
+    ) |>
+  collect() # collect partitioned data.frame
 
+out |> unnest(out)
+# out |> unnest(out) |> unnest(data)
 
-# # un-parallel alternative
-# out <- tibble(ilon = vec_index) |>
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~cwd_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   )
+# TO CHECK: readRDS("/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd//evspsbl_cum_LON_+0.000.rds") |> unnest(data)
