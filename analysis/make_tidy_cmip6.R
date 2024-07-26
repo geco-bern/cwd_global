@@ -3,7 +3,9 @@ library(dplyr)
 library(stringr)
 
 # list demo file path
-path_cmip6 <- "~/data/cmip6-ng/"
+# path_cmip6 <- "~/data/cmip6-ng/"
+# path_cmip6 <- "/data/scratch/CMIP6ng/cmip6-ng/"
+path_cmip6 <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
 
 ## Evapotranspiration -----------------
 varnam <- "evspsbl"
@@ -19,19 +21,21 @@ if (length(filnam) != 1){
 }
 
 # load and convert
-df <- map2tidy(
+res_evspsbl <- map2tidy(
   nclist = filnam,
   varnam = "evspsbl",
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/evspsbl/",
+  outdir = "/data_2/scratch/fbernhard/cmip6-ng/tidy/evspsbl/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
-  # ncores = 2  # parallel::detectCores()
+  ncores = 12  # parallel::detectCores()
 )
+
+# Check if any unsuccessful:
+tidyr::unnest(res_evspsbl, data) |>
+  filter(!grepl("Written",data))
 
 ## Precipitation ---------------
 varnam <- "pr"
@@ -47,17 +51,18 @@ if (length(filnam) != 1){
 }
 
 # load and convert
-df <- map2tidy(
+res_pr <- map2tidy(
   nclist = filnam,
   varnam = "pr",
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/",
+  outdir = "/data_2/scratch/fbernhard/cmip6-ng/tidy/pr/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
-  # ncores = 2  # parallel::detectCores()
+  ncores = 12  # parallel::detectCores()
 )
+# Check if any unsuccessful:
+tidyr::unnest(res_pr, data) |>
+  filter(!grepl("Written",data))
 
