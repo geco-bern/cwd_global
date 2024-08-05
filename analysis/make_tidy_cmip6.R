@@ -25,11 +25,11 @@ df <- map2tidy(
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  timedimnam = "time",
+  # timedimnam = "time",
   do_chunks = TRUE,
   outdir = "~/data/cmip6-ng/tidy/evspsbl/",
-  fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
+  fileprefix = str_remove(basename(filnam), ".nc")
+  # single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
 )
 
