@@ -3,7 +3,7 @@ library(dplyr)
 library(stringr)
 
 # list demo file path
-path_cmip6 <- "~/data/cmip6-ng/"
+path_cmip6 <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
 
 ## Evapotranspiration -----------------
 varnam <- "evspsbl"
@@ -27,7 +27,7 @@ df <- map2tidy(
   timenam = "time",
   # timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/evspsbl/",
+  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
   fileprefix = str_remove(basename(filnam), ".nc")
   # single_basedate = TRUE
   # ncores = 2  # parallel::detectCores()
@@ -53,11 +53,11 @@ df <- map2tidy(
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  timedimnam = "time",
+  # timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "~/data/cmip6-ng/tidy/",
+  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  single_basedate = TRUE
-  # ncores = 2  # parallel::detectCores()
+  # single_basedate = TRUE
+  ncores = 48 # parallel::detectCores()
 )
 

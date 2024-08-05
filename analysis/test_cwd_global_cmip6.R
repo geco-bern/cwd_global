@@ -14,6 +14,8 @@ loc <- fdk_site_info %>%
   filter(sitename == site) %>%
   select(lon, lat)
 
+## Read from original NetCDF files---------------
+
 # load files
 rasta_et <- rast("/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc")
 rasta_pr <- rast("/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/pr/day/native/pr_day_CESM2_ssp585_r1i1p1f1_native.nc")
@@ -96,3 +98,36 @@ adf %>%
   ) %>%
   ggplot(aes(year, flux, color = type)) +
   geom_line()
+
+
+## Read from tidy files---------------
+filnam_et <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_+10.000.rds"
+filnam_pr <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/pr_day_CESM2_ssp585_r1i1p1f1_native_LON_+10.000.rds"
+
+df_et <- readr::read_rds(filnam_et) %>%
+  mutate(lat_int = as.integer(lat)) %>%
+  filter(lat_int == 51)
+
+df_pr <- readr::read_rds(filnam_pr) %>%
+  mutate(lat_int = as.integer(lat)) %>%
+  filter(lat_int == 51)
+
+df_fromtidy <- df_pr %>%
+  unnest(data) %>%
+  mutate(date = ymd(stringr::str_sub(datetime, start = 1, end = 10))) %>%
+  mutate(month = month(date), year = year(date)) %>%
+  left_join(
+    df_et %>%
+      unnest(data) %>%
+      mutate(date = ymd(stringr::str_sub(datetime, start = 1, end = 10))) %>%
+      mutate(month = month(date), year = year(date)),
+    join_by(lon, lat, lat_int, year, month)
+  ) %>%
+  select(lon, lat, month, year, pr, et = evspsbl) %>%
+  mutate(
+    pr = pr * 60 * 60 * 24,
+    et = et * 60 * 60 * 24
+  )
+
+head(df %>% select(pr, et))
+head(df_fromtidy %>% select(pr, et))
