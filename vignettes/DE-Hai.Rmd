@@ -11,139 +11,104 @@ Lat, Long:	51.0792, 10.4522
 CMIP6 data: lat 51.4, 10
 
 
-```{r}
-
-
-# Fluxnet Data
-
-library(dplyr)
-library(ggplot2)
-
-# data reading
-fluxnet <- read.csv(paste0(here::here(),"/data-raw/FLX_DE-Tha_FLUXDATAKIT_FULLSET_DD_1996_2020_2-3.csv"), header=TRUE)
-
-
-# variable selection
-fluxnet <- fluxnet |>
-  dplyr::select(
-  TIMESTAMP,
-  P_F, # precipitation (mm d-1)
-  LE_F_MDS, # latent heat flux (W m-2)
-  TA_F_MDS, # temperature (°C)
-  NETRAD) # net radiation (W m-2)
-
-
-
-
-
-```
-
-
-
-## PET and ET Calculation
-
-
-```{r}
-
-elevation <- 430
-
-source(paste0(here::here(), "/R/calc_patm.R"))
-patm <- calc_patm(elevation)
-
-
-# ET -----------------------------------
-
-## Convert latent heat flux (W/m2) to evapotranspiration in mass units (mm/d).
-
-le_to_et <- function(le, tc, patm){
-  1000 * 60 * 60 * 24 * le / (cwd::calc_enthalpy_vap(tc) * cwd::calc_density_h2o(tc, patm)) 
-}
-
-fluxnet <- fluxnet |>
-  mutate(et = le_to_et(LE_F_MDS, TA_F_MDS, patm))
-
-
-# PET ----------------------------------
-
-## apply pet() function
-  fluxnet <- fluxnet |>
-    mutate(pet = 60 * 60 * 24 * cwd::pet(NETRAD, TA_F_MDS, patm))
-
-```
-
 
 # Reading CMIP6 data
 
 ```{r}
 
-# data reading
-cwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_DE-Hai_cwd.rds"))
-#pcwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_DE-Hai_pcwd.rds"))
+library(ncdf4)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(tidyverse)
 
-cmip6 <- cwd |>
-  left_join(pcwd, by = join_by(lon, lat, time, pr, tas))
+
+# data reading
+
+## evapotranspiration (kg m-2 s-1)
+evspsbl_CMIP6ng_data <- nc_open("/data_1/CMIP6/data_download/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc") 
+
+## precipitation (kg m-2 s-1)
+pr_CMIP6ng_data <- nc_open("/data_1/CMIP6/data_download/cmip6-ng/pr/day/native/pr_day_CESM2_ssp585_r1i1p1f1_native.nc")
+
+
+# gridpoint extraction
+gridpoint_extraction <- function(data, variable, longitude= 10.4522, latitude=51.0792) {
+
+  # indices of the grid point
+  start_lon <- longitude
+  start_lat <- latitude
+
+
+  # get days
+  var_dates <- as.Date(data$dim$time$vals, origin = '1850-01-01')
+
+  # get values at location lon lat
+  var_output <- ncvar_get(data, varid = variable,
+                          start= c(which.min(abs(data$dim$lon$vals - start_lon)), # closest lon taken
+                                   which.min(abs(data$dim$lat$vals - start_lat)),  # closest lat taken
+                                   1),
+                          # specifies number of elements to be retrieved along each dimension.
+                          count = c(1,1,-1))  # 1: one element retrieved along lat and lon dim (single grid cell), -1: all available time steps retrieved.
+
+  # create dataframe
+  var <- data.frame(dates= var_dates, variable = var_output)
+
+  return(var)
+}
+
+df_evap <- gridpoint_extraction(evspsbl_CMIP6ng_data, "evspsbl") # lon=116.25, lat=-21.2)
+df_prec <- gridpoint_extraction(pr_CMIP6ng_data, "pr") # lon=116.25, lat=-21.2)
+
+
+# resolution adjustments
+## extract year and month from the dates column
+df_prec <- df_prec |>
+    mutate(year = lubridate::year(dates), month = lubridate::month(dates))|>
+    rename(pr = variable)
+
+df_evap <- df_evap |>
+    mutate(year = lubridate::year(dates), month = lubridate::month(dates))|>
+    select(-dates) |>
+    rename(evspsbl = variable)
+
+## merge all such that monthly data is repeated for each day within month
+df_cwd <- df_prec |>
+  left_join(df_evap, by = join_by(year, month)) |>
+  dplyr::select(-year, -month)
 
 
 # unit conversions
 ## evapotranspiration
-cmip6$evspsbl <- cmip6$evspsbl * 86400 # conversion to mm day-1
+df_cwd$evspsbl <- df_cwd$evspsbl * 86400 # conversion to mm day-1
 
 ## precipitation
-cmip6$pr <- cmip6$pr * 86400 # conversion to mm day-1
-
-## temperature
-cmip6$tas <- cmip6$tas - 273.15 # conversion to °C
-
-
-# time-range adjustment (2015-2020)
-cmip6 <- cmip6 |>
-  mutate(year = lubridate::year(time))|>
-  filter((year >= 2015) & (year <= 2020))
-
-
-# pet
-## apply pet() function
-patm_cmip6 <- calc_patm(cmip6$elevation[1])
-
-cmip6 <- cmip6 |>
-  mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm_cmip6))
-
+df_cwd$pr <- df_cwd$pr * 86400 # conversion to mm day-1
 
 ```
 
 
-## Plot 
+## Annual totals of evapotranspiration and precipitation
 
+```{r, warning=FALSE}
 
-```{r}
-
-# data preparation
-year_fluxnet <- fluxnet |>
-  mutate(year = lubridate::year(TIMESTAMP)) |>
-  group_by(year) |>
-  filter(year >= 2015) |> 
-  summarise(et = sum(et), prec = sum(P_F))
-
-year_cmip6 <- cmip6 |>
-  mutate(year = lubridate::year(time)) |>
+ann_df_cwd <- df_cwd |>
+  mutate(year = year(dates)) |>
   group_by(year) |>
   summarise(et = sum(evspsbl), prec = sum(pr))
 
 
-# plot
-year_fluxnet |>
-  tidyr::pivot_longer(cols = c(et, prec), names_to = "Flux") |> 
+
+ann_df_cwd |>
+  pivot_longer(cols = c(et, prec), names_to = "Flux") |> 
   ggplot(aes(x = year, y = value, color = Flux)) +
   geom_line() +
-  ggtitle("Annual Totals Fluxnet")+
+  ggtitle("Annual totals of et and prec")+
   labs(y = "Flux (mm/yr)")
-
-year_cmip6 |>
-  tidyr::pivot_longer(cols = c(et, prec), names_to = "Flux") |> 
-  ggplot(aes(x = year, y = value, color = Flux)) +
-  geom_line() +
-  ggtitle("Annual Totals CMIP6")+
-  labs(y = "Flux (mm/yr)")
-
 
 ```
+
+
+
+
