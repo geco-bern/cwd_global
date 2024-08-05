@@ -150,14 +150,14 @@ cmip6 <- cmip6 |>
 year_cmip6 <- cmip6 |>
   mutate(year = lubridate::year(time)) |>
   group_by(year) |>
-  summarise(et = mean(evspsbl),  pet = mean(pet), prec = mean(pr))
+  summarise(et = sum(evspsbl),  pet = sum(pet), prec = sum(pr))
 
 
 year_cmip6 |>
   tidyr::pivot_longer(cols = c(et, pet, prec), names_to = "Flux") |> 
   ggplot(aes(x = year, y = value, color = Flux)) +
   geom_line() +
-  ggtitle("Mean Annual Fluxes Australia (Lon: 116.25, Lat: -21.2)")+
+  ggtitle("Annual Totals Australia (Lon: 116.25, Lat: -21.2)")+
   labs(y = "Flux (mm/yr)")
 
 ```

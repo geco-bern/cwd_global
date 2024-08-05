@@ -101,7 +101,7 @@ ggplot() +
   borders("world", colour = "black", fill = NA, size = 0.3) + # Add thin black world map borders
   scale_fill_viridis_c(
     na.value = NA,
-    name = "Average CWD 2085-2100 (mm/day)"
+    name = "Average CWD 2095-2100 (mm/day)"
   ) +
   coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) + # Ensure correct aspect ratio and alignment
   theme_bw() +

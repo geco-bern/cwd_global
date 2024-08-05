@@ -28,7 +28,7 @@ cwd_byilon <- function(
   # read evapotranspiration file tidy
   filnam <- list.files(
     indir_evspsbl,
-    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
     )
   df_evap <- readr::read_rds(filnam)
@@ -37,7 +37,7 @@ cwd_byilon <- function(
   # read precipitation file tidy
   filnam <- list.files(
     indir_prec,
-    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_prec <- readr::read_rds(filnam)
@@ -46,7 +46,7 @@ cwd_byilon <- function(
   # read temperature file tidy
   filnam <- list.files(
     indir_tas,
-    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_tas <- readr::read_rds(filnam)
@@ -55,28 +55,28 @@ cwd_byilon <- function(
   # read radiation files tidy
   filnam <- list.files(
     indir_rlus,
-    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_rlus <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rlds,
-    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_rlds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsds,
-    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_rsds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsus,
-    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
     full.names = TRUE
   )
   df_rsus <- readr::read_rds(filnam)
@@ -164,7 +164,7 @@ cwd_byilon <- function(
     mutate(index = as.integer(factor(lon, levels = unique(lon))))
 
   ### extract values that match current ilon
-  ilon <- 94 # for testing
+  ilon <- 9 # for testing
   matching_values <- df_sorted[df_sorted$index == ilon, ]
 
   ### reverse the order of latitude values
@@ -212,12 +212,12 @@ cwd_byilon <- function(
 
   # for comparison with fluxnet data
   ## extract nearest latitude and write to rds files
-  start <- -22
-  end <- -21
+  start <- 51
+  end <- 52
   extracted_cwd <- df_cwd[(df_cwd$lat >= start) & (df_cwd$lat <= end), ]
   extracted_pcwd <- df_pcwd[(df_pcwd$lat >= start) & (df_pcwd$lat <= end), ]
-  saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_cwd.rds"))
-  saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_pcwd.rds"))
+  saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_DE-Hai_cwd.rds"))
+  saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_DE-Hai_pcwd.rds"))
 
 
   # out pcwd
