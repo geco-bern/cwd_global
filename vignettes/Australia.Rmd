@@ -1,0 +1,330 @@
+---
+title: "Australia"
+author: "Patricia Gribi"
+date: "2024-07-25"
+output: html_document
+---
+
+
+```{r}
+
+# loading libraries
+library(ggplot2)
+library(dplyr)
+library(terra)
+library(tidyr)
+library(cwd)
+library(rpmodel)
+
+
+# read rds files
+
+## annmax files
+cwd_df <- readr::read_rds("/data_1/CMIP6/tidy/cwd/cwd_ANNMAX.rds")
+pcwd_df <- readr::read_rds("/data_1/CMIP6/tidy/pcwd/pcwd_ANNMAX.rds")
+
+
+cwd_df <- cwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_cwd = "max_deficit")
+
+pcwd_df <- pcwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_pcwd = "max_deficit")
+
+
+combined_annmax_df <- cwd_df |>  # one of the daily data frames
+    left_join(pcwd_df, by = join_by(lon, lat, year))
+
+
+```
+
+
+
+# Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(94, -22) 
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = mean(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "Deficit CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "Deficit PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "Deficit CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "Deficit PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "Deficit CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "Deficit PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Australia (Longitude 116.25, Latitude -21.2)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 116.25
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 
+start <- -22
+end <- -21
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max Deficit CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max Deficit PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max Deficit CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max Deficit PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max Deficit CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max Deficit PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Australia (Longitude 116.25, Latitude -21.2)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+
+# Reading CMIP6 data
+
+```{r}
+
+# data reading
+cwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_cwd.rds"))
+pcwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_pcwd.rds"))
+
+cmip6 <- cwd |>
+  left_join(pcwd, by = join_by(lon, lat, time, pr, tas))
+
+
+# unit conversions
+## evapotranspiration
+cmip6$evspsbl <- cmip6$evspsbl * 86400 # conversion to mm day-1
+
+## precipitation
+cmip6$pr <- cmip6$pr * 86400 # conversion to mm day-1
+
+## temperature
+cmip6$tas <- cmip6$tas - 273.15 # conversion to °C
+
+
+# pet
+## apply pet() function
+source(paste0(here::here(), "/R/calc_patm.R"))
+patm_cmip6 <- calc_patm(cmip6$elevation[1])
+
+cmip6 <- cmip6 |>
+  mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm_cmip6))
+
+
+```
+
+-21.20140, 116.2604
+
+```{r}
+
+year_cmip6 <- cmip6 |>
+  mutate(year = lubridate::year(time)) |>
+  group_by(year) |>
+  summarise(et = mean(evspsbl),  pet = mean(pet), prec = mean(pr))
+
+
+year_cmip6 |>
+  tidyr::pivot_longer(cols = c(et, pet, prec), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Mean Annual Fluxes Australia (Lon: 116.25, Lat: -21.2)")+
+  labs(y = "Flux (mm/yr)")
+
+```
+
+# Comparison with Original Data (before map2tidy) and after map2tidy
+
+```{r}
+
+# data reading
+original_evspsbl <- read.csv("/home/patricia/bachelor_thesis_patriciagribi/data/gridpoint_evspsbl.csv", header=TRUE)
+original_pr <- read.csv("/home/patricia/bachelor_thesis_patriciagribi/data/gridpoint_pr.csv", header=TRUE)
+
+after_map2tidy_evspsbl <- readr::read_rds("/data_1/CMIP6/tidy/evspsbl/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_94.rds")
+after_map2tidy_pr <- readr::read_rds("/data_1/CMIP6/tidy/pr/pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_94.rds")
+
+
+# after map2tidy data
+after_map2tidy_evspsbl <- after_map2tidy_evspsbl |> tidyr::unnest(data)
+after_map2tidy_pr <- after_map2tidy_pr |> tidyr::unnest(data) 
+
+after_map2tidy_pr <- after_map2tidy_pr |>
+    mutate(year = lubridate::year(time), month = lubridate::month(time))
+
+after_map2tidy_evspsbl <- after_map2tidy_evspsbl |>
+    mutate(year = lubridate::year(time), month = lubridate::month(time))|>
+    select(-time)
+
+after_map2tidy_data <- after_map2tidy_pr |>
+    left_join(after_map2tidy_evspsbl, by = join_by(lon, lat, year, month)) |>
+    dplyr::select(-year, -month)
+
+# filter lat
+after_map2tidy_data <- after_map2tidy_data[grepl("^-21.2", after_map2tidy_data$lat), ]
+
+
+## unit conversions
+after_map2tidy_data$evspsbl <- after_map2tidy_data$evspsbl * 86400 # conversion to mm day-1
+after_map2tidy_data$pr <- after_map2tidy_data$pr * 86400 # conversion to mm day-1
+
+year_after_map2tidy_data <- after_map2tidy_data |>
+  mutate(year = lubridate::year(time)) |>
+  group_by(year) |>
+  summarise(et_after_map2tidy = mean(evspsbl), prec_after_map2tidy = mean(pr))
+
+
+# original data
+## renaming
+original_evspsbl <- original_evspsbl|> rename(evspsbl = variable)
+original_pr <- original_pr|> rename(pr = variable)
+
+original_pr <- original_pr |>
+    mutate(year = lubridate::year(dates), month = lubridate::month(dates))
+
+original_evspsbl <- original_evspsbl |>
+    mutate(year = lubridate::year(dates), month = lubridate::month(dates))|>
+    select(-dates)
+
+## cwd
+### merge all such that monthly data is repeated for each day within month
+original_data <- original_pr |>
+    left_join(original_evspsbl, by = join_by(year, month)) |>
+    dplyr::select(-year, -month)
+
+## unit conversions
+original_data$evspsbl <- original_data$evspsbl * 86400 # conversion to mm day-1
+original_data$pr <- original_data$pr * 86400 # conversion to mm day-1
+
+## plot original data
+year_original_data <- original_data |>
+  mutate(year = lubridate::year(dates)) |>
+  group_by(year) |>
+  summarise(et = mean(evspsbl), prec = mean(pr))
+
+
+year_original_data |>
+  tidyr::pivot_longer(cols = c(et, prec), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Original Data Mean Annual Fluxes Australia (Lon: 116.25, Lat: -21.2)")+
+  labs(y = "Flux (mm/yr)")
+
+```
+
+# Comparison between Original Data and Extracted Data
+
+```{r}
+
+year_cmip6 <- year_cmip6 |> rename(et_cwd = et, pr_cwd = prec)
+
+year_original_data <- year_original_data |> rename(et_org = et, pr_org = prec)
+
+# join to one full data set to compare
+comparison <- year_cmip6 |>
+  left_join(year_original_data, by= join_by(year))
+
+comparison <- comparison |>
+  left_join(year_after_map2tidy_data, by= join_by(year))
+
+# plot
+comparison |>
+  tidyr::pivot_longer(cols = c(et_cwd, pr_cwd, pr_org, et_org,  et_after_map2tidy, , prec_after_map2tidy), names_to = "Flux") |> 
+  ggplot(aes(x = year, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Mean Annual Fluxes Australia (Lon: 116.25, Lat: -21.2)")+
+  labs(y = "Flux (mm/yr)")
+
+```
+
+
+
+
+# CWD
+
+```{r}
+
+# snow simulation
+  cmip6 <- cmip6 |>
+    mutate(precipitation = ifelse(tas < 0, 0, pr),
+           snow = ifelse(tas < 0, pr, 0)) |>
+    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
+
+
+  cmip6 <- cmip6 |>
+    mutate(wbal = liquid_to_soil - evspsbl)
+
+
+  # cwd
+  ## calculate cumulative water deficit
+  out_cwd <- cwd(cmip6,
+                 varname_wbal = "wbal",
+                 varname_date = "time",
+                 thresh_terminate = 0.0,
+                 thresh_drop = 0.0)
+
+  out_cwd$inst <- out_cwd$inst |>
+    filter(len >= 20)
+
+  out_cwd$df <- out_cwd$df |>
+    select(time, precipitation, deficit)
+
+```
+
+
+
+
+```{r}
+
+out_cwd$df |>
+  tidyr::pivot_longer(cols = c(deficit, precipitation), names_to = "Flux") |> 
+  ggplot(aes(x = time, y = value, color = Flux)) +
+  geom_line() +
+  ggtitle("Mean Annual Fluxes CMIP6")+
+  labs(y = "Flux (mm/yr)")
+
+ggplot() +
+  geom_rect(
+    data = out_cwd$inst,
+    aes(xmin = date_start, xmax = date_end, ymin = -99, ymax = 99999),
+    fill = rgb(0,0,0,0.3),
+    color = NA) +
+  geom_line(data  =  out_cwd$df, aes(time, precipitation), size  =  0.3, color = "royalblue") +
+  geom_line(data  =  out_cwd$df, aes(time, deficit), color = "tomato") +
+  coord_cartesian(ylim = c(0, 170)) +
+  theme_classic() +
+  labs(x = "Date", y = "Cumulative water deficit (mm)")
+
+
+
+```
+

@@ -20,7 +20,7 @@ library(maps)
 library(grid)
 
 
-#read raster file
+# read raster file
 cwd_rast <- rast("/data_1/CMIP6/tidy/cwd/evspsbl_cum_ANNMAX.nc")
 pcwd_rast <- rast("/data_1/CMIP6/tidy/pcwd/pot_evspsbl_cum_ANNMAX.nc")
 

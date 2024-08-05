@@ -36,9 +36,9 @@ fluxnet <- fluxnet |>
 
 ```
 
-units are correct, Lat, Long:	50.9626, 13.5651 (Longitude +180 = 193.5651)
+units are correct, Lat, Lon:	50.9626, 13.5651 
 
-used lon 155 from cmip data and lat 50/51.
+used lon 11 from cmip data and lat 50/51.
 
 
 ## PET and ET Calculation
@@ -78,8 +78,8 @@ fluxnet <- fluxnet |>
 ```{r}
 
 # data reading
-cwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_cwd.rds"))
-pcwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_pcwd.rds"))
+cwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_fluxnetcomp_cwd.rds"))
+pcwd <- readRDS(paste0(here::here(),"/data-raw/extracted_vars_fluxnetcomp_pcwd.rds"))
 
 cmip6 <- cwd |>
   left_join(pcwd, by = join_by(lon, lat, time, pr, tas))
@@ -158,8 +158,8 @@ year_cmip6 |>
 
 # read cmip6 deficit data
 
-deficit_cwd <- readRDS("/data_1/CMIP6/tidy/cwd/cwd_155.rds")
-deficit_pcwd <- readRDS("/data_1/CMIP6/tidy/pcwd/pcwd_155.rds")
+deficit_cwd <- readRDS("/data_1/CMIP6/tidy/cwd/cwd_11.rds")
+deficit_pcwd <- readRDS("/data_1/CMIP6/tidy/pcwd/pcwd_11.rds")
 
 deficit_cwd <- deficit_cwd |> tidyr::unnest(data)
 deficit_pcwd <- deficit_pcwd |> tidyr::unnest(data)

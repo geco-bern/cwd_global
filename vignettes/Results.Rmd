@@ -1,0 +1,400 @@
+---
+title: "Results"
+author: "Patricia Gribi"
+date: "2024-07-24"
+output: html_document
+---
+
+von 5 Hauptklimazonen
+
+```{r}
+
+# loading libraries
+library(ggplot2)
+library(dplyr)
+library(terra)
+library(tidyr)
+
+
+# read rds files
+
+## annmax files
+cwd_df <- readr::read_rds("/data_1/CMIP6/tidy/cwd/cwd_ANNMAX.rds")
+pcwd_df <- readr::read_rds("/data_1/CMIP6/tidy/pcwd/pcwd_ANNMAX.rds")
+
+
+cwd_df <- cwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_cwd = "max_deficit")
+
+pcwd_df <- pcwd_df |>
+  select(-ilon)|>
+  rename(max_deficit_pcwd = "max_deficit")
+
+
+combined_annmax_df <- cwd_df |>  # one of the daily data frames
+    left_join(pcwd_df, by = join_by(lon, lat, year))
+
+
+```
+
+
+# Desert
+
+## Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(4, 28)
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = mean(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Algeria (Longitude 3.75, Latitude 28.7)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 3.75
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 50.4 
+start <- 28
+end <- 29
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Algeria (Longitude 3.75, Latitude 28.7)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+Möglicherweise stimmt das schon denn in der Sahara ist das CWD aufgrund fehlenden Wassers limitiert. Und wäre PCWD nicht, wenn es nicht wasser limitiert wäre?
+
+
+
+# Tropics
+
+## Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(247, -8)
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = mean(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Brasil (Longitude 307.5, Latitude -7)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 307.5
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 
+start <- -9
+end <- -8
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Brasil (Longitude 307.5, Latitude -7)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+das pcwd kann hier doch gar nicht sein... warum so hohe Werte?
+
+
+
+# Ice 
+
+## Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(45, -81)
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = mean(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Antarctica (Longitude 55, Latitude -80.6)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 55
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 
+start <- -81
+end <- -80
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Antarctica (Longitude 55, Latitude -80.6)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+
+# Tundra
+
+## Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(90, 71)
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = mean(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Russia (Longitude 111.25, Latitude 71.2)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 111.25
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 
+start <- 71
+end <- 72
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Russia (Longitude 111.25, Latitude 71.2)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+# Temperate Forest
+
+Czech Republic, 
+selected because very near to Tharandt site of fluxnet data
+
+ilon 11 * 1.25 = 13.75
+latitude 50.41885
+
+## Annual Mean CWD & PCWD Time Series
+
+```{r}
+
+source(paste0(here::here(), "/R/get_coords.R"))
+
+combined_df <- get_coords(12, 50)
+
+combined_mean_df <- combined_df |>
+      mutate(year = lubridate::year(time)) |>
+      group_by(year) |>
+      summarise(mean_cwd_deficit = max(deficit_cwd), mean_pcwd_deficit = mean(deficit_pcwd))
+
+ggplot(combined_mean_df, aes(x = year)) +
+  geom_line(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_line(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_point(aes(y = mean_cwd_deficit, color = "CWD"), size = 0.5) +  
+  geom_point(aes(y = mean_pcwd_deficit, color = "PCWD"), size = 0.5) + 
+  geom_smooth(aes(y = mean_cwd_deficit, color = "CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  geom_smooth(aes(y = mean_pcwd_deficit, color = "PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + 
+  labs(title = "Annual Mean CWD and PCWD Values",
+       subtitle = "Location: Czech Republic (Longitude 13.75, Latitude 50.4)",
+       x = "Year",
+       y = "Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+
+## Annual Max CWD & PCWD Time Series
+
+```{r}
+
+# extract longitude
+lon <- 13.75
+
+combined_annmax_df <- combined_annmax_df[combined_annmax_df$lon == lon, ]
+
+# extract nearest latitude 50.4 
+start <- 50
+end <- 51
+combined_annmax_df <- combined_annmax_df[(combined_annmax_df$lat >= start) & (combined_annmax_df$lat <= end), ]
+
+
+ggplot(combined_annmax_df, aes(x = year)) +
+  geom_line(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add a line for max_deficit_cwd
+  geom_line(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add a line for max_deficit_pcwd
+  geom_point(aes(y = max_deficit_cwd, color = "Max CWD")) +  # Add points for max_deficit_cwd
+  geom_point(aes(y = max_deficit_pcwd, color = "Max PCWD")) + # Add points for max_deficit_pcwd
+  geom_smooth(aes(y = max_deficit_cwd, color = "Max CWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_cwd
+  geom_smooth(aes(y = max_deficit_pcwd, color = "Max PCWD"), method = "lm", se = FALSE, linetype = "dashed", size = 0.5) + # Add trendline for max_deficit_pcwd
+  labs(title = "Annual Max CWD and PCWD Values",
+       subtitle = "Location: Czech Republic (Longitude 13.75, Latitude 50.4)",
+       x = "Year",
+       y = "Max Deficit (mm/day)",
+       color = "Legend") +
+  theme_minimal() +    # Use a minimal theme for a clean look
+  theme(axis.title.x = element_text(margin = margin(t = 15)),
+        axis.title.y = element_text(margin = margin(r = 15)))
+
+```
+
+
+
+
+
+
+
+
+
+
+
