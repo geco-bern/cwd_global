@@ -9,10 +9,15 @@ library(lubridate)
 # specify test site
 site <- "DE-Hai"
 
-# get location
-loc <- fdk_site_info %>%
-  filter(sitename == site) %>%
-  select(lon, lat)
+#get location
+#loc <- fdk_site_info %>%
+#  filter(sitename == site) %>%
+#  select(lon, lat)
+
+loc <- data.frame(
+  lon = 116.25,
+  lat = -21.20419
+)
 
 # load files
 rasta_et <- rast("/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc")

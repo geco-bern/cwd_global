@@ -25,12 +25,14 @@ library(tidyverse)
 
 
 # data reading
+#115.65, -31.375
 
 ## evapotranspiration (kg m-2 s-1)
-evspsbl_CMIP6ng_data <- nc_open("/data_1/CMIP6/data_download/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc") 
+#evspsbl_CMIP6ng_data <- nc_open("/data_1/CMIP6/data_download/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc") 
+evspsbl_CMIP6ng_data <- nc_open("/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/evspsbl/mon/native/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native.nc") 
 
 ## precipitation (kg m-2 s-1)
-pr_CMIP6ng_data <- nc_open("/data_1/CMIP6/data_download/cmip6-ng/pr/day/native/pr_day_CESM2_ssp585_r1i1p1f1_native.nc")
+pr_CMIP6ng_data <- nc_open("/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/pr/day/native/pr_day_CESM2_ssp585_r1i1p1f1_native.nc")
 
 
 # gridpoint extraction
@@ -58,8 +60,8 @@ gridpoint_extraction <- function(data, variable, longitude= 10.4522, latitude=51
   return(var)
 }
 
-df_evap <- gridpoint_extraction(evspsbl_CMIP6ng_data, "evspsbl") # lon=116.25, lat=-21.2)
-df_prec <- gridpoint_extraction(pr_CMIP6ng_data, "pr") # lon=116.25, lat=-21.2)
+df_evap <- gridpoint_extraction(evspsbl_CMIP6ng_data, "evspsbl", lon=115.65, lat=-31.375)
+df_prec <- gridpoint_extraction(pr_CMIP6ng_data, "pr", lon=115.65, lat=-31.375)
 
 
 # resolution adjustments
@@ -82,9 +84,11 @@ df_cwd <- df_prec |>
 # unit conversions
 ## evapotranspiration
 df_cwd$evspsbl <- df_cwd$evspsbl * 86400 # conversion to mm day-1
+#df_cwd$evspsbl <- df_cwd$evspsbl * 60 * 60 * 24
 
 ## precipitation
 df_cwd$pr <- df_cwd$pr * 86400 # conversion to mm day-1
+#df_cwd$pr <- df_cwd$pr * 60 * 60 * 24
 
 ```
 

@@ -39,15 +39,16 @@ combined_annmax_df <- cwd_df |>  # one of the daily data frames
 
 ```
 
-
+115.65
+-31.375
 
 # Annual Mean CWD & PCWD Time Series
 
 ```{r}
 
 source(paste0(here::here(), "/R/get_coords.R"))
-
-combined_df <- get_coords(94, -22) 
+#94, -22
+combined_df <- get_coords(93, -32) 
 
 combined_mean_df <- combined_df |>
       mutate(year = lubridate::year(time)) |>
@@ -72,7 +73,7 @@ ggplot(combined_mean_df, aes(x = year)) +
 
 ```
 
-
+115.65, lat=-31.375
 
 ## Annual Max CWD & PCWD Time Series
 
@@ -132,6 +133,31 @@ cmip6$pr <- cmip6$pr * 86400 # conversion to mm day-1
 cmip6$tas <- cmip6$tas - 273.15 # conversion to °C
 
 
+# cwd reset
+## average monthly P-ET over the first 30 years of the time series
+
+new_cmip6 <- cmip6 |>
+  mutate(year = lubridate::year(time)) |>
+  mutate(month = lubridate::month(time))|>
+  mutate(pr_et = pr-evspsbl)|>
+  filter(year < 2045)|>
+  group_by(month) |>
+  summarize(mean_pr_et = mean(pr_et))
+  
+ 
+## which month P-ET maximal
+max_index <- which.max(new_cmip6$mean_pr_et)
+max_month <- new_cmip6$month[max_index]
+
+## set param doy_reset on first day of this month
+# doy_reset Day-of-year (integer) when deficit is to be reset to zero each year
+
+date_str <- paste0("2015-", "0",max_month, "-01")
+date_obj <- as.Date(date_str, format = "%Y-%m-%d")
+day_of_year <- lubridate::yday(date_obj)
+day_of_year <- as.integer(day_of_year)
+
+
 # pet
 ## apply pet() function
 source(paste0(here::here(), "/R/calc_patm.R"))
@@ -150,11 +176,11 @@ cmip6 <- cmip6 |>
 year_cmip6 <- cmip6 |>
   mutate(year = lubridate::year(time)) |>
   group_by(year) |>
-  summarise(et = sum(evspsbl),  pet = sum(pet), prec = sum(pr))
+  summarise(et = sum(evspsbl), prec = sum(pr))
 
 
 year_cmip6 |>
-  tidyr::pivot_longer(cols = c(et, pet, prec), names_to = "Flux") |> 
+  tidyr::pivot_longer(cols = c(et, prec), names_to = "Flux") |> 
   ggplot(aes(x = year, y = value, color = Flux)) +
   geom_line() +
   ggtitle("Annual Totals Australia (Lon: 116.25, Lat: -21.2)")+
@@ -290,7 +316,8 @@ comparison |>
                  varname_wbal = "wbal",
                  varname_date = "time",
                  thresh_terminate = 0.0,
-                 thresh_drop = 0.0)
+                 thresh_drop = 0.0,
+                 doy_reset= day_of_year)
 
   out_cwd$inst <- out_cwd$inst |>
     filter(len >= 20)
@@ -309,7 +336,7 @@ out_cwd$df |>
   tidyr::pivot_longer(cols = c(deficit, precipitation), names_to = "Flux") |> 
   ggplot(aes(x = time, y = value, color = Flux)) +
   geom_line() +
-  ggtitle("Mean Annual Fluxes CMIP6")+
+  ggtitle("Annual CWD CMIP6")+
   labs(y = "Flux (mm/yr)")
 
 ggplot() +

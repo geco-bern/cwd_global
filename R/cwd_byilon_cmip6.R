@@ -28,7 +28,7 @@ cwd_byilon <- function(
   # read evapotranspiration file tidy
   filnam <- list.files(
     indir_evspsbl,
-    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
     full.names = TRUE
     )
   df_evap <- readr::read_rds(filnam)
@@ -37,7 +37,7 @@ cwd_byilon <- function(
   # read precipitation file tidy
   filnam <- list.files(
     indir_prec,
-    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
     full.names = TRUE
   )
   df_prec <- readr::read_rds(filnam)
@@ -46,7 +46,7 @@ cwd_byilon <- function(
   # read temperature file tidy
   filnam <- list.files(
     indir_tas,
-    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
     full.names = TRUE
   )
   df_tas <- readr::read_rds(filnam)
@@ -205,19 +205,19 @@ cwd_byilon <- function(
 
 
   # for testing
-  # tibble <- out_cwd %>%
-  #  pull(data) %>%
-  #  .[[1]]
-  # saveRDS(tibble, paste0(here::here(), "/data-raw/vars_tibble.rds"))
+  #tibble <- out_cwd %>%
+    #pull(data) %>%
+    #.[[1]]
+  #saveRDS(tibble, paste0(here::here(), "/data/test_tibble.rds"))
 
   # for comparison with fluxnet data
   ## extract nearest latitude and write to rds files
-  start <- 51
-  end <- 52
+  start <- -22
+  end <- -21
   extracted_cwd <- df_cwd[(df_cwd$lat >= start) & (df_cwd$lat <= end), ]
   extracted_pcwd <- df_pcwd[(df_pcwd$lat >= start) & (df_pcwd$lat <= end), ]
-  saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_DE-Hai_cwd.rds"))
-  saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_DE-Hai_pcwd.rds"))
+  saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_cwd.rds"))
+  saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_pcwd.rds"))
 
 
   # out pcwd
