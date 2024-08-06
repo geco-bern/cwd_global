@@ -12,7 +12,13 @@ site <- "DE-Hai"
 # get location
 loc <- fdk_site_info %>%
   filter(sitename == site) %>%
-  select(lon, lat)
+  select(lon, lat) %>%
+
+  # test
+  mutate(
+    lon = 116.25,
+    lat = -21.20419
+  )
 
 ## Read from original NetCDF files---------------
 
