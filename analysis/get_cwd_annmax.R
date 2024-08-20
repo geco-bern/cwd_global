@@ -1,19 +1,26 @@
 #!/usr/bin/env Rscript
 
-# script is called with three arguments:
-# 1. counter for chunks
-# 2. total number of chunks
-# 3. total number of longitude indices
+# script is called with three arguments for parallelization:
+# 1. counter for chunks (e.g. # of each compute node)
+# 2. total number of chunks (e.g. number of total compute nodes)
 
-# Example:
-# >./get_cwd_annmax.R 1 3 360
+# Note that these arguments can be used to distribute over multiple nodes.
+# Distribution over CPU cores of a single node is handled by multidplyr
+# and argument ncores in the script.
+
+# Example for 4 CPU-nodes:
+# >./get_cwd_annmax.R 1 4
+# >./get_cwd_annmax.R 2 4
+# >./get_cwd_annmax.R 3 4
+# >./get_cwd_annmax.R 4 4
+
+# Example for 1 CPU-nodes:
+# >./get_cwd_annmax.R 1 1
+# # When using this script directly from RStudio, not from the shell, specify
+# args <- c(1, 1)
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
-
-# # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
 
 library(dplyr)
 library(map2tidy)
@@ -21,19 +28,33 @@ library(multidplyr)
 
 source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
 
-print("getting data for longitude indices:")
+indir  <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+outdir <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+
+
+# 1) Define filenames of files to process:  -------------------------------
+filnams <- list.files(
+  indir,
+  pattern = "evspsbl_cum_LON_[0-9.+-]*.rds", # make sure not to include _ANNMAX.rds
+  full.names = TRUE
+)
+# filnams = filnams[1:5] # for development
+
+
+# 2) Setup parallelization ------------------------------------------------
+# 2a) Split job onto multiple nodes
+#     i.e. only consider a subset of the files (others might be treated by another compute node)
 vec_index <- map2tidy::get_index_by_chunk(
-  as.integer(args[1]),  # counter for chunks
-  as.integer(args[2]),  # total number of chunks
-  as.integer(args[3])   # total number of longitude indices
-  )
+  as.integer(args[1]),  # counter for compute node
+  as.integer(args[2]),  # total number of compute node
+  length(filnams)       # total number of longitude indices
+)
 
-# number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+# 2b) Parallelize job across cores on a single node
+ncores <- 2 # parallel::detectCores() # number of cores of parallel threads
 
-# parallelize job
-# set up the cluster, sending required objects to each core
 cl <- multidplyr::new_cluster(ncores) |>
+  # set up the cluster by sending required objects to each core
   multidplyr::cluster_library(c("map2tidy",
                                 "dplyr",
                                 "purrr",
@@ -42,32 +63,26 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_annmax_byilon = cwd_annmax_byilon   # make the function known for each core
-    )
+    cwd_annmax_byLON = cwd_annmax_byLON,   # make the function known for each core
+    outdir           = outdir
+  )
 
-# distribute computation across the cores, calculating for all longitudinal
-# indices of this chunk
-out <- tibble(ilon = vec_index) |>
-  multidplyr::partition(cl) |>
+
+# 3) Process files --------------------------------------------------------
+out <- tibble(in_fname = filnams[vec_index]) |> # TODO: in_fname is a much cleaner solution (also adapt in apply_cwd_global.R and cwd_byilon.R)
+  multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_annmax_byilon(
-      .,
-      indir = "~/data/cmip6-ng/tidy/cwd/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
-      ))
-    )
+    in_fname,
+    ~cwd_annmax_byLON(
+      filnam = .,
+      outdir = outdir,
+      overwrite = FALSE
+    ))
+  ) |>
+  collect() # collect partitioned data.frame
+
+out |> unnest(out)
 
 
-# # un-parallel alternative
-# out <- tibble(ilon = vec_index) |>
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~cwd_annmax_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/cwd/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   )
+
+
