@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# script is called with three arguments for parallelization:
+# script is called with two arguments for parallelization:
 # 1. counter for chunks (e.g. # of each compute node)
 # 2. total number of chunks (e.g. number of total compute nodes)
 

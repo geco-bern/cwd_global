@@ -9,7 +9,8 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-indir  <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+indir   <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+outfile <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/evspsbl_cum_global.nc"
 
 # 1) Define filenames of files to process:  -------------------------------
 filnams <- list.files(
@@ -51,9 +52,52 @@ global_df <- lapply(filnams,
               function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
   bind_rows()
 
-readr::write_rds(global_df,
-                 file.path(indir,paste0(fileprefix, "_ANNMAX.rds"))
+# readr::write_rds(global_df,
+#                  file.path(indir,paste0(fileprefix, "_ANNMAX.rds"))
+# Instead of writing rds file, directly save as NetCDF:
 
+
+# 4) Output to single, global NetCDF file ---------------------------------
+library(rgeco)  # get it from https://github.com/geco-bern/rgeco
+
+# create object that can be used with write_nc2()
+global_df <- global_df |>
+  select(lon, lat, year, evspsbl_cum) |>
+  arrange(year, lat, lon)
+
+arr <- array(
+  unlist(global_df$evspsbl_cum),
+  dim = c(
+    length(unique(global_df$lon)),
+    length(unique(global_df$lat)),
+    length(unique(global_df$year))
+  )
+)
+
+# image(arr[,,1])
+
+# create object for use in rgeco::write_nc2()
+obj <- list(
+  lon = sort(unique(global_df$lon)),
+  lat = sort(unique(global_df$lat)),
+  time = lubridate::ymd(
+    paste0(
+      sort(unique(global_df$year)),
+      "-01-01"   # taking first of January as a mid-point for each year
+    )
+  ),
+  vars = list(evspsbl_cum = arr)
+)
+
+rgeco::write_nc2(
+  obj,
+  varnams = "evspsbl_cum",
+  make_tdim = TRUE,
+  path = outfile,
+  units_time = "days since 2001-01-01",
+  att_title      = "Global Cumulative Water Deficit",
+  att_history    = sprintf("Created on: %s, with R scripts from https://github.com/geco-bern/cwd_global processing data from: %s", Sys.Date(), indir)
+)
 
 
 
