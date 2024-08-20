@@ -1,7 +1,7 @@
 # Testing whether CMIP6 data is correctly read from files and handled.
 # For Patricia Gribi
 
-library(FluxDataKit)
+library(FluxDataKit) # remotes::install_github("geco-bern/fluxdatakit@v3.3")
 library(tidyverse)
 library(terra)
 library(lubridate)

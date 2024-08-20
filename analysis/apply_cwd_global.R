@@ -11,24 +11,27 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/cwd_byilon.R"))
-source(paste0(here::here(), "/R/my_cwd.R")) # load function that will be applied to time series
+source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
 
 indir  <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl/"
 outdir <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd/"
-
 dir.create(outdir, showWarnings = FALSE)
 
 # 1) Define filenames of files to process:  -------------------------------
-filnams <- list.files(
-  indir,
-  pattern = "evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_[0-9.+-]*rds",
-  full.names = TRUE
-)
+infile_pattern  <- "evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_[0-9.+-]*rds"
+outfile_pattern <- "CWD_result_[LONSTRING].rds" # must contain [LONSTRING]
 
+filnams <- list.files(indir, pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
 }
+
+# 1b) Define function to apply to each location:  -------------------------------
+# function to apply to each file:
+source(paste0(here::here(), "/R/my_cwd.R")) # load function that will be applied to time series
+# test and debug:
+#     df_of_one_coordinate <- read_rds(filnams[1])$data[[1]]
+#     my_cwd(df_of_one_coordinate)
 
 
 # 2) Setup parallelization ------------------------------------------------
@@ -45,9 +48,10 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    my_cwd    = my_cwd,    # make the function known for each core
-    cwd_byLON = cwd_byLON, # make the function known for each core
-    outdir    = outdir
+    apply_fct_to_each_file = apply_fct_to_each_file, # make the function known for each core
+    my_cwd                 = my_cwd,                 # make the function known for each core
+    outdir                 = outdir,
+    outfile_pattern        = outfile_pattern
   )
 
 
@@ -56,14 +60,19 @@ out <- tibble(in_fname = filnams) |>
   multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
     in_fname,
-    ~cwd_byLON(
+    ~apply_fct_to_each_file(
+      fct_to_apply_per_location = my_cwd,
       filnam = .,
       outdir = outdir,
-      overwrite = FALSE
+      overwrite = FALSE,
+      outfilename_template = outfile_pattern # must contain [LONSTRING]
     ))
   ) |>
   collect() # collect partitioned data.frame
 
 out |> unnest(out)
+out$out[1]
 
-# TO CHECK: readRDS("/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd//evspsbl_cum_LON_+0.000.rds") |> unnest(data)
+
+
+
