@@ -89,6 +89,19 @@ obj <- list(
   vars = list(evspsbl_cum = arr)
 )
 
+
+# Get meta information on code executed:
+# gitrepo_hash = system("git rev-parse HEAD", intern=TRUE)
+gitrepo_hash = system("git rev-parse --short HEAD", intern=TRUE)
+gitrepo_status <-
+  ifelse(system("git status --porcelain | wc -l", intern = TRUE) == "0",
+         "",  #-clean-repository
+         "-dirty-repository")
+gitrepo_id <- paste0(
+  "https://github.com/geco-bern/cwd_global@",
+  gitrepo_hash, gitrepo_status)
+
+# Write NetCDF file:
 rgeco::write_nc2(
   obj,
   varnams = "evspsbl_cum",
@@ -96,8 +109,11 @@ rgeco::write_nc2(
   path = outfile,
   units_time = "days since 2001-01-01",
   att_title      = "Global Cumulative Water Deficit",
-  att_history    = sprintf("Created on: %s, with R scripts from https://github.com/geco-bern/cwd_global processing data from: %s", Sys.Date(), indir)
+  att_history    = sprintf(
+    "Created on: %s, with R scripts from (%s) processing input data from: %s",
+    Sys.Date(), gitrepo_id, indir)
 )
+
 
 
 
