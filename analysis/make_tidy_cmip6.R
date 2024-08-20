@@ -28,7 +28,8 @@ res_evspsbl <- map2tidy(
   do_chunks = TRUE,
   outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  ncores = 12  # parallel::detectCores()
+  ncores = 12,  # parallel::detectCores()
+  overwrite = FALSE
 )
 
 # Check if any unsuccessful:
@@ -59,7 +60,8 @@ res_pr <- map2tidy(
   outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
   #outdir = "/data_2/scratch/fbernhard/cmip6-ng/tidy/pr/",
   fileprefix = str_remove(basename(filnam), ".nc"),
-  ncores = 12  # parallel::detectCores()
+  ncores = 12,  # parallel::detectCores()
+  overwrite = FALSE
 )
 # Check if any unsuccessful:
 tidyr::unnest(res_pr, data) |>

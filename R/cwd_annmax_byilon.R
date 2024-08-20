@@ -12,8 +12,12 @@ cwd_annmax_byLON <- function(
     return(paste0("File exists already: ", outpath))
 
   } else {
+    # read from file that contains tidy data for a single longitudinal band
 
-    # function to get annual maximum
+    # read evapotranspiration file tidy
+    df_evap <- readr::read_rds(filnam)
+
+    # function to apply to get annual maximum:
     get_annmax <- function(df_of_one_coordinate){
       df_of_one_coordinate |>
         mutate(year = lubridate::year(datetime)) |>
@@ -21,25 +25,17 @@ cwd_annmax_byLON <- function(
         summarise(evspsbl_cum = max(evspsbl_cum))
     }
 
-    # read evapotranspiration file tidy
-    df <- readr::read_rds(filnam)
-
     # apply annual maximum function
-    out <- df |>
-      mutate(data = purrr::map(
-        data,
-        ~get_annmax(.)
-      ))
+    out <- df_evap |>
+      # apply the custom function on the time series data frame separately for each gridcell.
+      dplyr::mutate(data = purrr::map(data, ~get_annmax(.)))
 
     message(
       paste0(
         "Writing file ", outpath, " ..."
       )
     )
-    readr::write_rds(
-      out,
-      outpath
-      )
+    readr::write_rds(out, outpath)
 
     # don't return data - it's written to file
     return(paste0("Written results to: ", outpath))

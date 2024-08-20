@@ -1,10 +1,8 @@
 cwd_byLON <- function(
-    LON_string,
-    indir,
+    filnam,
     outdir,
-    fileprefix,
     overwrite
-    ){
+){
 
   # prepare output
   # write (complemented) data to file. Give it some meaningful name and the index counter
@@ -18,12 +16,6 @@ cwd_byLON <- function(
     # read from file that contains tidy data for a single longitudinal band
 
     # read evapotranspiration file tidy
-    # filnam <- list.files(
-    #   indir,
-    #   pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_", LON_string, ".rds"), # NOTE REGEX not working since LON_string can contain a +
-    #   full.names = TRUE,
-    #   )
-    filnam <- file.path(indir, paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_", LON_string, ".rds"))
     df_evap <- readr::read_rds(filnam)
 
     # read other required files (precipitation, temperature, ...
@@ -37,22 +29,17 @@ cwd_byLON <- function(
     #     by = join_by(year, month)
     #   )
 
-    # for demo only
-    # df_evap <- df_evap |>
-    #   tidyr::unnest(data)
+    # function to apply:
+    ## my_cwd: NOTE this is defined in outer scope and accessible by closure
 
     out <- df_evap |>
       # # Uncomment code below to nest data by gridcell, if not already nested.
       # # group data by gridcells and wrap time series for each gridcell into a new
       # # column, by default called 'data'.
-      # dplyr::group_by(lon, lat) |>
-      # tidyr::nest() |>
+      # dplyr::group_by(lon, lat) |> tidyr::nest() |>
 
-      # slice(1:2) |> # for demo only
-
-      # apply the custom function on the time series data frame separately for
-      # each gridcell.
-      dplyr::mutate(data = purrr::map(data, ~my_cwd(.)))
+      # apply the custom function on the time series data frame separately for each gridcell.
+      dplyr::mutate(data = purrr::map(data, ~my_cwd(.))) # NOTE: this uses the closure
 
     # write (complemented) data to file.
     message(
@@ -60,10 +47,8 @@ cwd_byLON <- function(
         "Writing file ", outpath, " ..."
       )
     )
-    readr::write_rds(
-      out,
-      outpath
-      )
+    readr::write_rds(out, outpath)
+
     # don't return data - it's written to file
     return(paste0("Written results to: ", outpath))
   }

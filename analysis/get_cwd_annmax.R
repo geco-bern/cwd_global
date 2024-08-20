@@ -38,8 +38,6 @@ filnams <- list.files(
   pattern = "evspsbl_cum_LON_[0-9.+-]*.rds", # make sure not to include _ANNMAX.rds
   full.names = TRUE
 )
-# filnams = filnams[1:5] # for development
-
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
@@ -69,7 +67,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 
 # 3) Process files --------------------------------------------------------
-out <- tibble(in_fname = filnams[vec_index]) |> # TODO: in_fname is a much cleaner solution (also adapt in apply_cwd_global.R and cwd_byilon.R)
+out <- tibble(in_fname = filnams[vec_index]) |>
   multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
     in_fname,
