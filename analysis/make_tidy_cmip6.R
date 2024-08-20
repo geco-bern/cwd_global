@@ -3,7 +3,10 @@ library(dplyr)
 library(stringr)
 
 # list demo file path
-path_cmip6 <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
+path_cmip6     <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
+
+outdir_evspsbl <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl/"
+outdir_pr      <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/pr/"
 
 ## Evapotranspiration -----------------
 varnam <- "evspsbl"
@@ -15,7 +18,7 @@ filnam <- list.files(
   )
 
 if (length(filnam) != 1){
-  stop("Should find only a single file.")
+  stop("Should find exactly one single file.")
 }
 
 # load and convert
@@ -26,7 +29,7 @@ res_evspsbl <- map2tidy(
   latnam = "lat",
   timenam = "time",
   do_chunks = TRUE,
-  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
+  outdir = outdir_evspsbl,
   fileprefix = str_remove(basename(filnam), ".nc"),
   ncores = 12,  # parallel::detectCores()
   overwrite = FALSE
@@ -57,8 +60,7 @@ res_pr <- map2tidy(
   latnam = "lat",
   timenam = "time",
   do_chunks = TRUE,
-  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
-  #outdir = "/data_2/scratch/fbernhard/cmip6-ng/tidy/pr/",
+  outdir = outdir_pr,
   fileprefix = str_remove(basename(filnam), ".nc"),
   ncores = 12,  # parallel::detectCores()
   overwrite = FALSE

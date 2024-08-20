@@ -17,10 +17,10 @@
 # Example for 1 CPU-nodes:
 # >./get_cwd_annmax.R 1 1
 # # When using this script directly from RStudio, not from the shell, specify
-# args <- c(1, 1)
+args <- c(1, 1)
 
 # to receive arguments to script from the shell
-args = commandArgs(trailingOnly=TRUE)
+# args = commandArgs(trailingOnly=TRUE)
 
 library(dplyr)
 library(map2tidy)
@@ -28,16 +28,19 @@ library(multidplyr)
 
 source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
 
-indir  <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
-outdir <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
-
+indir  <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd"
+outdir <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd_annmax"
+dir.create(outdir, showWarnings = FALSE)
 
 # 1) Define filenames of files to process:  -------------------------------
 filnams <- list.files(
   indir,
-  pattern = "evspsbl_cum_LON_[0-9.+-]*.rds", # make sure not to include _ANNMAX.rds
+  pattern = "CWD_result_LON_[0-9.+-]*.rds", # make sure not to include _ANNMAX.rds
   full.names = TRUE
 )
+if (length(filnams) <= 1){
+  stop("Should find multiple files. Only found " ,length(filnams), ".")
+}
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes

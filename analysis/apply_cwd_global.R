@@ -14,8 +14,8 @@ library(multidplyr)
 source(paste0(here::here(), "/R/cwd_byilon.R"))
 source(paste0(here::here(), "/R/my_cwd.R")) # load function that will be applied to time series
 
-indir  <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/evspsbl/"
-outdir <- "/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd/"
+indir  <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl/"
+outdir <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd/"
 
 dir.create(outdir, showWarnings = FALSE)
 
@@ -25,6 +25,11 @@ filnams <- list.files(
   pattern = "evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_[0-9.+-]*rds",
   full.names = TRUE
 )
+
+if (length(filnams) <= 1){
+  stop("Should find multiple files. Only found " ,length(filnams), ".")
+}
+
 
 # 2) Setup parallelization ------------------------------------------------
 # parallelize job across cores on a single node
@@ -47,8 +52,8 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 
 # 3) Process files --------------------------------------------------------
-out <- tibble(in_fname = filnams[vec_index]) |>
-  # multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
+out <- tibble(in_fname = filnams) |>
+  multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
     in_fname,
     ~cwd_byLON(
@@ -61,4 +66,4 @@ out <- tibble(in_fname = filnams[vec_index]) |>
 
 out |> unnest(out)
 
-# TO CHECK: readRDS("/data_2/scratch/fbernhard/cmip6-ng/tidy/cwd//evspsbl_cum_LON_+0.000.rds") |> unnest(data)
+# TO CHECK: readRDS("/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd//evspsbl_cum_LON_+0.000.rds") |> unnest(data)
