@@ -6,6 +6,8 @@ cwd_byLON <- function(
 
   # prepare output
   # write (complemented) data to file. Give it some meaningful name and the index counter
+  fileprefix <- "CWD_result"
+  LON_string <- gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(filnam))
   outpath <- file.path(outdir, paste0(fileprefix, "_", LON_string, ".rds"))
   if (file.exists(outpath) && !overwrite){
 
