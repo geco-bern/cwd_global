@@ -8,7 +8,7 @@ my_cwd <- function(df){
     mutate(evspsbl_cum = evspsbl) |>
 
     # reduce size - important
-    select(time, evspsbl_cum)
+    select(datetime, evspsbl_cum)
 
   # return a data frame
   return(out)

@@ -1,39 +1,42 @@
 #!/usr/bin/env Rscript
 
-# script is called with three arguments:
-# 1. counter for chunks
-# 2. total number of chunks
-# 3. total number of longitude indices
+# script is called without any arguments
+# (By specifying overwrite you can choose within the script to avoid calculating
+# or recalculate previous results)
 
 # Example:
-# >./apply_cwd_global.R 1 3 360
-
-# to receive arguments to script from the shell
-args = commandArgs(trailingOnly=TRUE)
-
-# # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+# >./apply_cwd_global.R
 
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
 source(paste0(here::here(), "/R/cwd_byilon.R"))
+source(paste0(here::here(), "/R/my_cwd.R")) # load function that will be applied to time series
 
-print("getting data for longitude indices:")
-vec_index <- map2tidy::get_index_by_chunk(
-  as.integer(args[1]),  # counter for chunks
-  as.integer(args[2]),  # total number of chunks
-  as.integer(args[3])   # total number of longitude indices
-  )
+indir  <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl/"
+outdir <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd/"
 
-# number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+dir.create(outdir, showWarnings = FALSE)
 
-# parallelize job
-# set up the cluster, sending required objects to each core
+# 1) Define filenames of files to process:  -------------------------------
+filnams <- list.files(
+  indir,
+  pattern = "evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_[0-9.+-]*rds",
+  full.names = TRUE
+)
+
+if (length(filnams) <= 1){
+  stop("Should find multiple files. Only found " ,length(filnams), ".")
+}
+
+
+# 2) Setup parallelization ------------------------------------------------
+# parallelize job across cores on a single node
+ncores <- 6 # parallel::detectCores() # number of cores of parallel threads
+
 cl <- multidplyr::new_cluster(ncores) |>
+  # set up the cluster, sending required objects to each core
   multidplyr::cluster_library(c("map2tidy",
                                 "dplyr",
                                 "purrr",
@@ -42,32 +45,25 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_byilon = cwd_byilon   # make the function known for each core
-    )
+    my_cwd    = my_cwd,    # make the function known for each core
+    cwd_byLON = cwd_byLON, # make the function known for each core
+    outdir    = outdir
+  )
 
-# distribute computation across the cores, calculating for all longitudinal
-# indices of this chunk
-out <- tibble(ilon = vec_index) |>
-  multidplyr::partition(cl) |>
+
+# 3) Process files --------------------------------------------------------
+out <- tibble(in_fname = filnams) |>
+  multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_byilon(
-      .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
-      ))
-    )
+    in_fname,
+    ~cwd_byLON(
+      filnam = .,
+      outdir = outdir,
+      overwrite = FALSE
+    ))
+  ) |>
+  collect() # collect partitioned data.frame
 
+out |> unnest(out)
 
-# # un-parallel alternative
-# out <- tibble(ilon = vec_index) |>
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~cwd_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   )
+# TO CHECK: readRDS("/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd//evspsbl_cum_LON_+0.000.rds") |> unnest(data)

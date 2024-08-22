@@ -3,7 +3,10 @@ library(dplyr)
 library(stringr)
 
 # list demo file path
-path_cmip6 <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
+path_cmip6     <- "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/"
+
+outdir_evspsbl <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/evspsbl/"
+outdir_pr      <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/pr/"
 
 ## Evapotranspiration -----------------
 varnam <- "evspsbl"
@@ -15,23 +18,26 @@ filnam <- list.files(
   )
 
 if (length(filnam) != 1){
-  stop("Should find only a single file.")
+  stop("Should find exactly one single file.")
 }
 
 # load and convert
-df <- map2tidy(
+res_evspsbl <- map2tidy(
   nclist = filnam,
   varnam = "evspsbl",
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  # timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
-  fileprefix = str_remove(basename(filnam), ".nc")
-  # single_basedate = TRUE
-  # ncores = 2  # parallel::detectCores()
+  outdir = outdir_evspsbl,
+  fileprefix = str_remove(basename(filnam), ".nc"),
+  ncores = 12,  # parallel::detectCores()
+  overwrite = FALSE
 )
+
+# Check if any unsuccessful:
+tidyr::unnest(res_evspsbl, data) |>
+  filter(!grepl("Written",data))
 
 ## Precipitation ---------------
 varnam <- "pr"
@@ -47,17 +53,19 @@ if (length(filnam) != 1){
 }
 
 # load and convert
-df <- map2tidy(
+res_pr <- map2tidy(
   nclist = filnam,
   varnam = "pr",
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
-  # timedimnam = "time",
   do_chunks = TRUE,
-  outdir = "/data/scratch/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/",
+  outdir = outdir_pr,
   fileprefix = str_remove(basename(filnam), ".nc"),
-  # single_basedate = TRUE
-  ncores = 48 # parallel::detectCores()
+  ncores = 12,  # parallel::detectCores()
+  overwrite = FALSE
 )
+# Check if any unsuccessful:
+tidyr::unnest(res_pr, data) |>
+  filter(!grepl("Written",data))
 
