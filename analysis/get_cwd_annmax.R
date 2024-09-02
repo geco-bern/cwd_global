@@ -26,21 +26,33 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
+source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
 
 indir  <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd"
 outdir <- "/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd_annmax"
 dir.create(outdir, showWarnings = FALSE)
 
-# 1) Define filenames of files to process:  -------------------------------
-filnams <- list.files(
-  indir,
-  pattern = "CWD_result_LON_[0-9.+-]*.rds", # make sure not to include _ANNMAX.rds
-  full.names = TRUE
-)
+# 1a) Define filenames of files to process:  -------------------------------
+infile_pattern  <- "CWD_result_LON_[0-9.+-]*.rds"
+outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
+
+filnams <- list.files(indir, pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
 }
+
+# 1b) Define function to apply to each location:  -------------------------------
+# function to apply to get annual maximum:
+get_annmax <- function(df_of_one_coordinate){
+  df_of_one_coordinate |>
+    mutate(year = lubridate::year(datetime)) |>
+    group_by(year) |>
+    summarise(evspsbl_cum = max(evspsbl_cum))
+}
+# test and debug:
+#     df_of_one_coordinate <- read_rds(filnams[1])$data[[1]]
+#     df_of_one_coordinate
+
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
@@ -64,8 +76,10 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_annmax_byLON = cwd_annmax_byLON,   # make the function known for each core
-    outdir           = outdir
+    apply_fct_to_each_file = apply_fct_to_each_file, # make the function known for each core
+    get_annmax             = get_annmax,             # make the function known for each core
+    outdir                 = outdir,
+    outfile_pattern        = outfile_pattern
   )
 
 
@@ -74,15 +88,18 @@ out <- tibble(in_fname = filnams[vec_index]) |>
   multidplyr::partition(cl) |>      # remove this line to deactivate parallelization
   dplyr::mutate(out = purrr::map(
     in_fname,
-    ~cwd_annmax_byLON(
+    ~apply_fct_to_each_file(
+      fct_to_apply_per_location = get_annmax,
       filnam = .,
       outdir = outdir,
-      overwrite = FALSE
+      overwrite = FALSE,
+      outfilename_template = outfile_pattern # must contain [LONSTRING]
     ))
   ) |>
   collect() # collect partitioned data.frame
 
 out |> unnest(out)
+out$out[1]
 
 
 
