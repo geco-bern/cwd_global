@@ -48,21 +48,21 @@ cl <- multidplyr::new_cluster(ncores) |>
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
 ## cwd vec_index
-df_cwd <- tibble(ilon =  vec_index) |>
+df_pcwd <- tibble(ilon =  vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "/data_1/CMIP6/tidy/cwd/",
-      fileprefix = "cwd"
+      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix = "pcwd"
       ))
     ) |>
   collect() |>
   tidyr::unnest(out)
 
 readr::write_rds(
-  df_cwd,
+  df_pcwd,
   paste0(
     indir,
     fileprefix,
@@ -77,7 +77,7 @@ df_pcwd <- tibble(ilon =  vec_index) |>
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "/data_1/CMIP6/tidy/pcwd/",
+      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
       fileprefix = "pcwd"
     ))
   ) |>

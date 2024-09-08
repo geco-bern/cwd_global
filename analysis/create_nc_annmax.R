@@ -3,8 +3,8 @@
 library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 library(dplyr)
 
-indir <- "/data_1/CMIP6/tidy/cwd/"
-fileprefix <- "cwd"
+indir <- "/data_1/CMIP6/tidy/pcwd_reset/test/"
+fileprefix <- "pcwd"
 
 
 df <- readr::read_rds(
@@ -42,13 +42,14 @@ obj <- list(
       "-01-01"   # taking first of January as a mid-point for each year
     )
   ),
-  vars = list(evspsbl_cum = arr)
+  vars = list(pot_evspsbl_cum = arr)
 )
 
 rgeco::write_nc2(
   obj,
   varnams = "pot_evspsbl_cum",
   make_tdim = TRUE,
-  path = "/data_1/CMIP6/tidy/cwd/evspsbl_cum_ANNMAX.nc",
+  # adjust path to where the file should be written to
+  path = "/data_1/CMIP6/tidy/pcwd_reset/test/pot_evspsbl_cum_ANNMAX.nc",
   units_time = "days since 2001-01-01"
 )

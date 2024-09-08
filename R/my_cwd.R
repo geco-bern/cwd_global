@@ -9,9 +9,6 @@ my_cwd <- function(data){
   library(rpmodel)
   library(dplyr)
 
-  # for testing read in rds tibble
-  # test_tibble <- readRDS(paste0(here::here(), "/data/test_tibble.rds"))
-
 
   # convert tibble to dataframe
   vars_df <- as.data.frame(data)
@@ -43,17 +40,16 @@ my_cwd <- function(data){
 
   ## day_of_year as param doy_reset in cwd-algorithm
   ## corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("2015-", "0",max_month, "-01")
+  date_str <- paste0("2015-", max_month, "-01")
   date_obj <- as.Date(date_str, format = "%Y-%m-%d")
   day_of_year <- lubridate::yday(date_obj)
-  day_of_year <- as.integer(day_of_year)
 
 
   # snow simulation
   vars_df <- vars_df |>
     mutate(precipitation = ifelse(tas < 0, 0, pr),
            snow = ifelse(tas < 0, pr, 0)) |>
-    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
+    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
 
   vars_df <- vars_df |>

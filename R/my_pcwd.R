@@ -49,10 +49,9 @@ my_pcwd <- function(data){
 
   ## day_of_year as param doy_reset in cwd-algorithm
   ## corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("2015-", "0",max_month, "-01")
+  date_str <- paste0("2015-", max_month, "-01")
   date_obj <- as.Date(date_str, format = "%Y-%m-%d")
   day_of_year <- lubridate::yday(date_obj)
-  day_of_year <- as.integer(day_of_year)
 
 
   # snow simulation

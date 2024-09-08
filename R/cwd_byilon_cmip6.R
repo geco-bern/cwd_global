@@ -28,7 +28,7 @@ cwd_byilon <- function(
   # read evapotranspiration file tidy
   filnam <- list.files(
     indir_evspsbl,
-    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
     )
   df_evap <- readr::read_rds(filnam)
@@ -37,7 +37,7 @@ cwd_byilon <- function(
   # read precipitation file tidy
   filnam <- list.files(
     indir_prec,
-    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_prec <- readr::read_rds(filnam)
@@ -46,7 +46,7 @@ cwd_byilon <- function(
   # read temperature file tidy
   filnam <- list.files(
     indir_tas,
-    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", 94, ".rds"),
+    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_tas <- readr::read_rds(filnam)
@@ -55,57 +55,64 @@ cwd_byilon <- function(
   # read radiation files tidy
   filnam <- list.files(
     indir_rlus,
-    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rlus <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rlds,
-    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rlds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsds,
-    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rsds <- readr::read_rds(filnam)
 
   filnam <- list.files(
     indir_rsus,
-    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", 9, ".rds"),
+    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
     full.names = TRUE
   )
   df_rsus <- readr::read_rds(filnam)
 
-  # read elevation file and convert to dataframe
+
+  # read elevation file and convert to data frame
+  library(terra)
   filnam <- list.files(
     indir_elevation,
     pattern = paste0("elevation.nc"),
     full.names = TRUE
   )
-  #' @import ncdf4
-  library(ncdf4)
-  df_elevation <- ncdf4::nc_open(filnam)
 
-  ## extract variables
-  lon <- ncvar_get(df_elevation, "easting")
-  lat <- ncvar_get(df_elevation, "northing")
-  elevation <- ncvar_get(df_elevation, "elevation")
+  rasta_elevation <- terra::rast(filnam)
 
-  ## create a grid of longitude and latitude values
-  lon_lat_grid <- expand.grid(lon = lon, lat = lat)
+  ## read the needed longitude value and extract the latitude values
+  lon <- df_prec[["lon"]][1]
+  latitudes <- unique(df_prec$lat)
 
-  # convert the elevation matrix into a vector
-  ## matrix(latitude,longitude)
-  elev_vector <- as.vector(elevation)
+  ## create a data frame of the coordinates
+  loc <- data.frame(lon = rep(lon, length(latitudes)), lat = latitudes)
 
-  # Combine the grid and elevation data into a dataframe
-  df_elevation <- cbind(lon_lat_grid, elevation = elev_vector)
-  ## replace na-values with 0
+  ## convert to vector points
+  points <- terra::vect(loc, geom = c("lon", "lat"), crs = "EPSG:4326")
+
+  ## extract values
+  vals <- terra::extract(rasta_elevation, points, xy = FALSE, ID = FALSE, method = "simple")
+
+  # combine coordinates with extracted values
+  df_elevation <- data.frame(
+    lon = lon,
+    lat = latitudes,
+    value = vals
+  )
+
+  ## set NA-value at 90 degrees to 0
   df_elevation[is.na(df_elevation)] <- 0
 
 
@@ -154,37 +161,13 @@ cwd_byilon <- function(
     mutate(year = lubridate::year(time), month = lubridate::month(time))|>
     select(-time)
 
-  ## extract current longitude value from elevation
-  ### sort the dataframe by longitude
-  df_sorted <- df_elevation |>
-    arrange(lon)
-
-  ### create same indices for same values
-  df_sorted <- df_sorted |>
-    mutate(index = as.integer(factor(lon, levels = unique(lon))))
-
-  ### extract values that match current ilon
-  ilon <- 9 # for testing
-  matching_values <- df_sorted[df_sorted$index == ilon, ]
-
-  ### reverse the order of latitude values
-  matching_values_sorted <- matching_values |>
-    arrange(lat) |>
-    select(-index, -lon, -lat) |>
-    mutate(index = row_number())
-
-  ### create index column to join with elevation data
-  df_prec_index <- as.data.frame(df_prec) |>
-    mutate(index = as.integer(factor(lat, levels = unique(lat))))
-
-
   ## pcwd
   ### merge all such that monthly data is repeated for each day within month
-  df_pcwd <- df_prec_index |>  # one of the daily data frames
+  df_pcwd <- df_prec |>  # one of the daily data frames
     left_join(df_net_radiation, by = join_by(lon, lat, year, month))|>
     left_join(df_tas, by = join_by(lon, lat, time))|>
-    left_join(matching_values_sorted, by = join_by(index))|>
-    dplyr::select(-year, -month, -index)
+    left_join(df_elevation, by = join_by(lon, lat))|>
+    dplyr::select(-year, -month)
 
   df_pcwd <- as_tibble(df_pcwd)
 
@@ -192,44 +175,28 @@ cwd_byilon <- function(
   # out_cwd
   out_cwd <- df_cwd |>
 
-    # group data by gridcells and wrap time series for each gridcell into a new
+    # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     dplyr::group_by(lon, lat) |>
     #' @importFrom tidyr nest
     tidyr::nest() |>
 
     # apply the custom function on the time series data frame separately for
-    # each gridcell.
+    # each grid cell.
     #' @importFrom purrr map
     mutate(data = purrr::map(data, ~my_cwd(.)))
-
-
-  # for testing
-  #tibble <- out_cwd %>%
-    #pull(data) %>%
-    #.[[1]]
-  #saveRDS(tibble, paste0(here::here(), "/data/test_tibble.rds"))
-
-  # for comparison with fluxnet data
-  ## extract nearest latitude and write to rds files
-  start <- -22
-  end <- -21
-  extracted_cwd <- df_cwd[(df_cwd$lat >= start) & (df_cwd$lat <= end), ]
-  extracted_pcwd <- df_pcwd[(df_pcwd$lat >= start) & (df_pcwd$lat <= end), ]
-  saveRDS(extracted_cwd, paste0(here::here(), "/data-raw/extracted_vars_cwd.rds"))
-  saveRDS(extracted_pcwd, paste0(here::here(), "/data-raw/extracted_vars_pcwd.rds"))
 
 
   # out pcwd
   out_pcwd <- df_pcwd |>
 
-    # group data by gridcells and wrap time series for each gridcell into a new
+    # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     group_by(lon, lat) |>
     tidyr::nest() |>
 
     # apply the custom function on the time series data frame separately for
-    # each gridcell.
+    # each grid cell.
     mutate(data = purrr::map(data, ~my_pcwd(.)))
 
 

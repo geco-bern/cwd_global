@@ -53,10 +53,12 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_annmax_byilon(
       .,
-      indir_cwd = "/data_1/CMIP6/tidy/cwd/",
-      indir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
-      outdir_cwd = "/data_1/CMIP6/tidy/cwd/",
-      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
+      # adjust the paths of the indirectory and outdirectory to
+      # where your cwd and pcwd data is
+      indir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      indir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      outdir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
       fileprefix_cwd = "cwd",
       fileprefix_pcwd = "pcwd"
       ))

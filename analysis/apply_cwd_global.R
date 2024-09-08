@@ -14,7 +14,7 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-nlon <- 288 # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+nlon <- 289 # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
 args <- c(1, 1, nlon)
 
 #' @import dyplr map2tidy multidplyr
@@ -66,8 +66,8 @@ out <- tibble(ilon = vec_index) |>
       indir_rsds = "/data_1/CMIP6/tidy/rsds/",
       indir_rsus = "/data_1/CMIP6/tidy/rsus/",
       indir_elevation = "/data_1/CMIP6/tidy/elevation/",
-      outdir_cwd = "/data_1/CMIP6/tidy/cwd/",
-      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd/",
+      outdir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
       fileprefix_cwd = "cwd",
       fileprefix_pcwd = "pcwd"
       ))
@@ -76,12 +76,21 @@ out <- tibble(ilon = vec_index) |>
 
 # # un-parallel alternative
 # out <- tibble(ilon = vec_index) |>
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~cwd_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   )
+#    dplyr::mutate(out = purrr::map(
+#      ilon,
+#        ~cwd_byilon(
+#          .,
+#          indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
+#          indir_tas = "/data_1/CMIP6/tidy/tas/",
+#          indir_prec = "/data_1/CMIP6/tidy/pr/",
+#          indir_rlus = "/data_1/CMIP6/tidy/rlus/",
+#          indir_rlds = "/data_1/CMIP6/tidy/rlds/",
+#          indir_rsds = "/data_1/CMIP6/tidy/rsds/",
+#          indir_rsus = "/data_1/CMIP6/tidy/rsus/",
+#          indir_elevation = "/data_1/CMIP6/tidy/elevation/",
+#          outdir_cwd = "/data_2/scratch/CMIP6/tidy/cwd/",
+#          outdir_pcwd = "/data_2/scratch/CMIP6/tidy/pcwd/",
+#          fileprefix_cwd = "cwd",
+#          fileprefix_pcwd = "pcwd"
+#        ))
+#    )

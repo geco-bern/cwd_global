@@ -1,5 +1,4 @@
 # Testing whether CMIP6 data is correctly read from files and handled.
-# For Patricia Gribi
 
 library(FluxDataKit)
 library(tidyverse)
