@@ -16,18 +16,10 @@ cwd_byilon <- function(
     fileprefix_pcwd
     ){
 
-
   # load functions that will be applied to time series
   #' @importFrom here here
   source(paste0(here::here(), "/R/my_cwd.R"))
   source(paste0(here::here(), "/R/my_pcwd.R"))
-
-
-  # load necessary libraries
-  library(tidyr)
-  library(cwd)
-  library(rpmodel)
-  library(dplyr)
 
 
   # read from file that contains tidy data for a single longitudinal band
@@ -152,48 +144,32 @@ cwd_byilon <- function(
     left_join(df_tas, by = join_by(lon, lat, time))|>
     dplyr::select(-year, -month)
 
-  ### convert tibble to dataframe
-  df_cwd <- as.data.frame(df_cwd)
+  ## compute net_radiation
+  ### create new data frame
+  df_radiation <- df_rsds |>
+    left_join(df_rsus, by = join_by(lon, lat, time))|>
+    left_join(df_rlds, by = join_by(lon, lat, time))|>
+    left_join(df_rlus, by = join_by(lon, lat, time))
 
-  ### unit conversions
-  #### evapotranspiration
-  df_cwd$evspsbl <- df_cwd$evspsbl * 86400 # conversion to mm day-1
+  ### calculate net radiation
+  df_net_radiation <- df_radiation |>
+    mutate(net_radiation = (rsds - rsus) + (rlds - rlus))|>
+    select(-rsds, -rsus, -rlds, -rlus)
 
-  #### precipitation
-  df_cwd$pr <- df_cwd$pr * 86400 # conversion to mm day-1
+  ## extract year and month from the time column
+  df_net_radiation <- df_net_radiation |>
+    mutate(year = lubridate::year(time), month = lubridate::month(time))|>
+    select(-time)
 
-  #### temperature
-  df_cwd$tas <- df_cwd$tas - 273.15 # conversion to °C
+  ## pcwd
+  ### merge all such that monthly data is repeated for each day within month
+  df_pcwd <- df_prec |>  # one of the daily data frames
+    left_join(df_net_radiation, by = join_by(lon, lat, year, month))|>
+    left_join(df_tas, by = join_by(lon, lat, time))|>
+    left_join(df_elevation, by = join_by(lon, lat))|>
+    dplyr::select(-year, -month)
 
-  ### cwd reset
-  #### average monthly P-ET over the first 30 years of the time series
-  reset_df <- df_cwd |>
-    mutate(year = lubridate::year(time)) |>
-    mutate(month = lubridate::month(time))|>
-    mutate(pr_et = pr-evspsbl)|>
-    filter(year < 2045)|>
-    group_by(month) |>
-    summarize(mean_pr_et = mean(pr_et))
-
-  #### which month P-ET maximal
-  max_index <- which.max(reset_df$mean_pr_et)
-  max_month <- reset_df$month[max_index]
-
-  #### day_of_year as param doy_reset in cwd-algorithm
-  #### corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("2015-", max_month, "-01")
-  date_obj <- as.Date(date_str, format = "%Y-%m-%d")
-  day_of_year <- lubridate::yday(date_obj)
-
-  ### snow simulation
-  df_cwd <- df_cwd |>
-    mutate(precipitation = ifelse(tas < 0, 0, pr),
-           snow = ifelse(tas < 0, pr, 0)) |>
-    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
-
-
-  df_cwd <- df_cwd |>
-    mutate(wbal = liquid_to_soil - evspsbl)
+  df_pcwd <- as_tibble(df_pcwd)
 
 
   # out_cwd
@@ -208,96 +184,7 @@ cwd_byilon <- function(
     # apply the custom function on the time series data frame separately for
     # each grid cell.
     #' @importFrom purrr map
-    mutate(data = purrr::map(data, ~cwd::cwd(.,
-                                           varname_wbal = "wbal",
-                                           varname_date = "time",
-                                           thresh_terminate = 0.0,
-                                           thresh_drop = 0.0,
-                                           doy_reset= day_of_year)))
-
-
-  out_cwd$inst <- out_cwd$inst |>
-    filter(len >= 20)
-
-  out_cwd$df <- out_cwd$df |>
-    select(time, deficit)
-
-
-  ## compute net_radiation
-  ### create new data frame
-  df_radiation <- df_rsds |>
-    left_join(df_rsus, by = join_by(lon, lat, time))|>
-    left_join(df_rlds, by = join_by(lon, lat, time))|>
-    left_join(df_rlus, by = join_by(lon, lat, time))
-
-  ### calculate net radiation
-  df_net_radiation <- df_radiation |>
-    mutate(net_radiation = (rsds - rsus) + (rlds - rlus))|>
-    select(-rsds, -rsus, -rlds, -rlus)
-
-  ### extract year and month from the time column
-  df_net_radiation <- df_net_radiation |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time))|>
-    select(-time)
-
-  ## pcwd
-  ### merge all such that monthly data is repeated for each day within month
-  df_pcwd <- df_prec |>  # one of the daily data frames
-    left_join(df_net_radiation, by = join_by(lon, lat, year, month))|>
-    left_join(df_tas, by = join_by(lon, lat, time))|>
-    left_join(df_elevation, by = join_by(lon, lat))|>
-    dplyr::select(-year, -month)
-
-  ### convert tibble to dataframe
-  df_pcwd <- as.data.frame(df_pcwd)
-
-  ### unit conversions
-  #### precipitation
-  df_pcwd$pr <- df_pcwd$pr * 86400 # conversion to mm day-1
-
-  #### temperature
-  df_pcwd$tas <- df_pcwd$tas - 273.15 # conversion to °C
-
-  ### pet-calculation
-  #### calculate surface pressure
-  source(paste0(here::here(), "/R/calc_patm.R"))
-  df_pcwd$patm <- calc_patm(df_pcwd$elevation)
-
-  #### apply pet() function
-  df_pcwd <- df_pcwd |>
-    mutate(pet = 60 * 60 * 24 * pet(net_radiation, tas, patm))
-
-  ### pcwd reset
-  #### average monthly pr-pet over the first 30 years of the time series
-  reset_df <- df_pcwd |>
-    mutate(year = lubridate::year(time)) |>
-    mutate(month = lubridate::month(time))|>
-    mutate(pr_pet = pr-pet)|>
-    filter(year < 2045)|>
-    group_by(month) |>
-    summarize(mean_pr_pet = mean(pr_pet))
-
-
-  ## which month pr-pet maximal
-  max_index <- which.max(reset_df$mean_pr_pet)
-  max_month <- reset_df$month[max_index]
-
-
-  ## day_of_year as param doy_reset in cwd-algorithm
-  ## corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("2015-", max_month, "-01")
-  date_obj <- as.Date(date_str, format = "%Y-%m-%d")
-  day_of_year <- lubridate::yday(date_obj)
-
-  ### snow simulation
-  df_pcwd <- df_pcwd |>
-    mutate(precipitation = ifelse(tas < 0, 0, pr),
-           snow = ifelse(tas < 0, pr, 0)) |>
-    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
-
-
-  df_pcwd <- df_pcwd |>
-    mutate(wbal_pet = liquid_to_soil - pet)
+    mutate(data = purrr::map(data, ~my_cwd(.)))
 
 
   # out pcwd
@@ -310,19 +197,7 @@ cwd_byilon <- function(
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    mutate(data = purrr::map(data, ~cwd::cwd(.,
-                                           varname_wbal = "wbal_pet",
-                                           varname_date = "time",
-                                           thresh_terminate = 0.0,
-                                           thresh_drop = 0.0,
-                                           doy_reset= day_of_year)))
-
-
-  out_pcwd$inst <- out_pcwd$inst |>
-    filter(len >= 20)
-
-  out_pcwd$df <- out_pcwd$df |>
-    select(time, deficit)
+    mutate(data = purrr::map(data, ~my_pcwd(.)))
 
 
   # write (complemented) data to cwd-file with meaningful name and index counter
@@ -334,7 +209,7 @@ cwd_byilon <- function(
   )
   #' @importFrom readr write_rds
   readr::write_rds(
-    out_cwd$df,
+    out_cwd,
     path_cwd
     )
 
@@ -347,7 +222,7 @@ cwd_byilon <- function(
     )
   )
   readr::write_rds(
-    out_pcwd$df,
+    out_pcwd,
     path_pcwd
   )
 
