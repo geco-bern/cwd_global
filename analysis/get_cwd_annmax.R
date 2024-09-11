@@ -75,13 +75,16 @@ cl <- multidplyr::new_cluster(ncores) |>
     indir_pcwd      = indir_pcwd,
     outdir_cwd      = outdir_cwd,
     outdir_pcwd     = outdir_pcwd,
-    cwd_annmax_byilon = cwd_annmax_byilon   # make the function known for each core
+    cwd_annmax_byilon = cwd_annmax_byilon,   # make the function known for each core
+    pcwd_annmax_byilon= pcwd_annmax_byilon
     )
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
 # 3) Process files --------------------------------------------------------
-out <- tibble(ilon = vec_index) |>
+
+# Once for cwd
+out_cwd <- tibble(ilon = vec_index[1:10]) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
@@ -96,7 +99,24 @@ out <- tibble(ilon = vec_index) |>
       ))
     )
 
-out |> unnest(out)
+# Once for pcwd
+out_pcwd <- tibble(ilon = vec_index[1:10]) |>
+  multidplyr::partition(cl) |>
+  dplyr::mutate(out = purrr::map(
+    ilon,
+    ~pcwd_annmax_byilon(
+      .,
+      indir_cwd       = indir_cwd,
+      indir_pcwd      = indir_pcwd,
+      outdir_cwd      = outdir_cwd,
+      outdir_pcwd     = outdir_pcwd,
+      fileprefix_cwd  = "cwd",
+      fileprefix_pcwd = "pcwd"
+    ))
+  )
+
+
+out |> collect() |> unnest(out)
 out$out[1]
 
 

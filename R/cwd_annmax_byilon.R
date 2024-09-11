@@ -16,7 +16,6 @@ cwd_annmax_byilon <- function(
       summarise(max_deficit = max(deficit))
   }
 
-
   # read cwd file tidy
   filnam <- list.files(
     indir_cwd,
@@ -25,24 +24,8 @@ cwd_annmax_byilon <- function(
   )
   df_cwd <- readr::read_rds(filnam)
 
-
-  # read pcwd file tidy
-  filnam <- list.files(
-    indir_pcwd,
-    pattern = paste0(fileprefix_pcwd, "_", ilon, ".rds"),
-    full.names = TRUE
-  )
-  df_pcwd <- readr::read_rds(filnam)
-
-
   # apply annual maximum function
   out_cwd <- df_cwd |>
-    mutate(data = purrr::map(
-      data,
-      ~get_annmax(.)
-    ))
-
-  out_pcwd <- df_pcwd |>
     mutate(data = purrr::map(
       data,
       ~get_annmax(.)
@@ -61,6 +44,35 @@ cwd_annmax_byilon <- function(
     path
     )
 
+  # don't return data - it's written to file
+}
+
+pcwd_annmax_byilon <- function(
+    ilon,
+    indir_cwd,
+    indir_pcwd,
+    outdir_cwd,
+    outdir_pcwd,
+    fileprefix_cwd,
+    fileprefix_pcwd
+    ){
+
+  # read pcwd file tidy
+  filnam <- list.files(
+    indir_pcwd,
+    pattern = paste0(fileprefix_pcwd, "_", ilon, ".rds"),
+    full.names = TRUE
+  )
+  df_pcwd <- readr::read_rds(filnam)
+
+  # apply annual maximum function
+  out_pcwd <- df_pcwd |>
+    mutate(data = purrr::map(
+      data,
+      ~get_annmax(.)
+    ))
+
+  # write (complemented) data to file. Give it some meaningful name and the index counter
   ## pcwd
   path <- paste0(outdir_pcwd, "/", fileprefix_pcwd, "_", ilon, "_ANNMAX.rds")
   message(
