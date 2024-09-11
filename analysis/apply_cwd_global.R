@@ -51,7 +51,9 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
-out <- tibble(ilon = vec_index) |>
+
+# Once for cwd and pcwd
+out <- tibble(ilon = vec_index[1]) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
@@ -66,31 +68,8 @@ out <- tibble(ilon = vec_index) |>
       indir_rsds      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsds/",
       indir_rsus      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsus/",
       indir_elevation = "/data_2/scratch/fbernhard/CMIP6/tidy/elevation/",
-      outdir_cwd      = "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset/test/",
-      outdir_pcwd     = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
+      outdir_cwd      = "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset2/",
       fileprefix_cwd  = "cwd",
       fileprefix_pcwd = "pcwd"
       ))
     )
-
-
-# # un-parallel alternative
-# out <- tibble(ilon = vec_index) |>
-#    dplyr::mutate(out = purrr::map(
-#      ilon,
-#        ~cwd_byilon(
-#          .,
-#          indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
-#          indir_tas = "/data_1/CMIP6/tidy/tas/",
-#          indir_prec = "/data_1/CMIP6/tidy/pr/",
-#          indir_rlus = "/data_1/CMIP6/tidy/rlus/",
-#          indir_rlds = "/data_1/CMIP6/tidy/rlds/",
-#          indir_rsds = "/data_1/CMIP6/tidy/rsds/",
-#          indir_rsus = "/data_1/CMIP6/tidy/rsus/",
-#          indir_elevation = "/data_1/CMIP6/tidy/elevation/",
-#          outdir_cwd = "/data_2/scratch/CMIP6/tidy/cwd/",
-#          outdir_pcwd = "/data_2/scratch/CMIP6/tidy/pcwd/",
-#          fileprefix_cwd = "cwd",
-#          fileprefix_pcwd = "pcwd"
-#        ))
-#    )

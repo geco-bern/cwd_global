@@ -90,28 +90,22 @@ out_cwd <- tibble(ilon = vec_index[1:10]) |>
     ilon,
     ~cwd_annmax_byilon(
       .,
-      indir_cwd       = indir_cwd,
-      indir_pcwd      = indir_pcwd,
-      outdir_cwd      = outdir_cwd,
-      outdir_pcwd     = outdir_pcwd,
-      fileprefix_cwd  = "cwd",
-      fileprefix_pcwd = "pcwd"
+      indir       = indir_cwd,
+      outdir      = outdir_cwd,
+      fileprefix  = "cwd"
       ))
     )
 
 # Once for pcwd
-out_pcwd <- tibble(ilon = vec_index[1:10]) |>
+out_pcwd <- tibble(ilon = vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
-    ~pcwd_annmax_byilon(
+    ~cwd_annmax_byilon(
       .,
-      indir_cwd       = indir_cwd,
-      indir_pcwd      = indir_pcwd,
-      outdir_cwd      = outdir_cwd,
-      outdir_pcwd     = outdir_pcwd,
-      fileprefix_cwd  = "cwd",
-      fileprefix_pcwd = "pcwd"
+      indir       = indir_pcwd,
+      outdir      = outdir_pcwd,
+      fileprefix  = "pcwd"
     ))
   )
 

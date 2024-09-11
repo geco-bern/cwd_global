@@ -1,5 +1,3 @@
-#' @export
-
 cwd_byilon <- function(
     ilon,
     indir_evspsbl,
@@ -10,8 +8,7 @@ cwd_byilon <- function(
     indir_rsds,
     indir_rsus,
     indir_elevation,
-    outdir_cwd,
-    outdir_pcwd,
+    outdir,
     fileprefix_cwd,
     fileprefix_pcwd
     ){
@@ -19,7 +16,6 @@ cwd_byilon <- function(
   # load functions that will be applied to time series
   #' @importFrom here here
   source(paste0(here::here(), "/R/my_cwd.R"))
-  source(paste0(here::here(), "/R/my_pcwd.R"))
 
 
   # read from file that contains tidy data for a single longitudinal band
@@ -127,53 +123,68 @@ cwd_byilon <- function(
   df_tas <- df_tas |> tidyr::unnest(data)
 
 
-  # data wrangling and resolution adjustments
+  # unit conversions
+  ## precipitation
+  df_prec <-  df_prec |>
+    mutate(pr = pr * 86400 ) # conversion to mm day-1
+
+  ## actual evapotranspiration
+  df_evap <-  df_evap |>
+    mutate(evspsbl = evspsbl * 86400 ) # conversion to mm day-1
+
+  ## temperature
+  df_tas <-  df_tas |>
+    mutate(tas = tas - 273.15) # conversion to °C
+
+  # data wrangling and time resolution adjustments
 
   ## extract year and month from the time column
   df_prec <- df_prec |>
     mutate(year = lubridate::year(time), month = lubridate::month(time))
 
   df_evap <- df_evap |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time))|>
+    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
     select(-time)
-
-  ## cwd
-  ### merge all such that monthly data is repeated for each day within month
-  df_cwd <- df_prec |>
-    left_join(df_evap, by = join_by(lon, lat, year, month)) |>
-    left_join(df_tas, by = join_by(lon, lat, time))|>
-    dplyr::select(-year, -month)
 
   ## compute net_radiation
   ### create new data frame
   df_radiation <- df_rsds |>
-    left_join(df_rsus, by = join_by(lon, lat, time))|>
-    left_join(df_rlds, by = join_by(lon, lat, time))|>
+    left_join(df_rsus, by = join_by(lon, lat, time)) |>
+    left_join(df_rlds, by = join_by(lon, lat, time)) |>
     left_join(df_rlus, by = join_by(lon, lat, time))
-
   ### calculate net radiation
   df_net_radiation <- df_radiation |>
-    mutate(net_radiation = (rsds - rsus) + (rlds - rlus))|>
+    mutate(net_radiation = (rsds - rsus) + (rlds - rlus)) |>
     select(-rsds, -rsus, -rlds, -rlus)
-
   ## extract year and month from the time column
   df_net_radiation <- df_net_radiation |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time))|>
+    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
     select(-time)
 
-  ## pcwd
   ### merge all such that monthly data is repeated for each day within month
+  ## cwd
+  df_cwd <- df_prec |>
+    left_join(df_evap, by = join_by(lon, lat, year, month)) |>
+    left_join(df_tas, by = join_by(lon, lat, time)) |>
+    dplyr::select(-year, -month)
+  ## pcwd
   df_pcwd <- df_prec |>  # one of the daily data frames
-    left_join(df_net_radiation, by = join_by(lon, lat, year, month))|>
-    left_join(df_tas, by = join_by(lon, lat, time))|>
-    left_join(df_elevation, by = join_by(lon, lat))|>
+    left_join(df_net_radiation, by = join_by(lon, lat, year, month)) |>
+    left_join(df_tas, by = join_by(lon, lat, time)) |>
+    left_join(df_elevation, by = join_by(lon, lat)) |>
     dplyr::select(-year, -month)
 
-  df_pcwd <- as_tibble(df_pcwd)
-
+  # pet-calculation
+  ## calculate surface pressure
+  source(paste0(here::here(), "/R/calc_patm.R"))
+  df_pcwd$patm <- calc_patm(df_pcwd$elevation)
+  ## apply pet() function
+  df_pcwd <- df_pcwd |>
+    mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm)) # conversion from mm s-1 to mm day-1
 
   # out_cwd
   out_cwd <- df_cwd |>
+    select(lon, lat, time, pr, tas, evspsbl) |>
 
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
@@ -189,6 +200,7 @@ cwd_byilon <- function(
 
   # out pcwd
   out_pcwd <- df_pcwd |>
+    select(lon, lat, time, pr, tas, evspsbl = pet) |> # Use POTENTIAL ET as ET estimate
 
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
@@ -201,7 +213,7 @@ cwd_byilon <- function(
 
 
   # write (complemented) data to cwd-file with meaningful name and index counter
-  path_cwd <- paste0(outdir_cwd, "/", fileprefix_cwd, "_", ilon, ".rds")
+  path_cwd <- paste0(outdir, "/", fileprefix_cwd, "_", ilon, ".rds")
   message(
     paste0(
       "Writing file ", path_cwd , " ..."
@@ -215,7 +227,7 @@ cwd_byilon <- function(
 
 
   # write (complemented) data to pcwd-file.
-  path_pcwd <- paste0(outdir_pcwd, "/", fileprefix_pcwd, "_", ilon, ".rds")
+  path_pcwd <- paste0(outdir, "/", fileprefix_pcwd, "_", ilon, ".rds")
   message(
     paste0(
       "Writing file ", path_pcwd, " ..."

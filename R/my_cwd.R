@@ -1,38 +1,13 @@
 #' @export
 
 
-my_cwd <- function(data){
+my_cwd <- function(vars_df){
 
   # loading libraries
   library(tidyr)
   library(cwd)
   library(rpmodel)
   library(dplyr)
-
-
-  # convert tibble to dataframe
-  vars_df <- as.data.frame(data)
-
-
-  # unit conversions
-  ## precipitation
-  vars_df$pr <- vars_df$pr * 86400 # conversion to mm day-1
-
-  ## temperature
-  vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
-
-  ######## CWD SPECIFIC
-  ## evapotranspiration
-  vars_df$evspsbl <- vars_df$evspsbl * 86400 # conversion to mm day-1
-
-
-
-
-
-
-
-
-  ########
 
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
