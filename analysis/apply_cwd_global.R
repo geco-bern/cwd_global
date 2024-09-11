@@ -1,29 +1,37 @@
 #!/usr/bin/env Rscript
-#' @export
 
+# script is called with two arguments for parallelization:
+# 1. counter for chunks (e.g. # of each compute node)
+# 2. total number of chunks (e.g. number of total compute nodes)
 
-# script is called with three arguments:
-# 1. counter for chunks
-# 2. total number of chunks
-# 3. total number of longitude indices
+# Note that these arguments can be used to distribute over multiple nodes.
+# Distribution over CPU cores of a single node is handled by multidplyr
+# and argument ncores in the script.
 
-# Example:
-# >./apply_cwd_global.R 1 3 360
+# Example for 4 CPU-nodes:
+# >./apply_cwd_global.R 1 4
+# >./apply_cwd_global.R 2 4
+# >./apply_cwd_global.R 3 4
+# >./apply_cwd_global.R 4 4
+
+# Example for 1 CPU-nodes:
+# >./apply_cwd_global.R 1 1
+# # When using this script directly from RStudio, not from the shell, specify
+args <- c(1, 1)
 
 # to receive arguments to script from the shell
-args = commandArgs(trailingOnly=TRUE)
+# args = commandArgs(trailingOnly=TRUE)
 
-# # When using this script directly from RStudio, not from the shell, specify
-nlon <- 289 # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-args <- c(1, 1, nlon)
-
-#' @import dyplr map2tidy multidplyr
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-#' @importFrom here here
-source(paste0(here::here(), "/R/cwd_byilon_cmip6.R"))
+# source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
+source(paste0(here::here(), "/R/cwd_pcwd_byilon_tailored_for_cmip6.R"))
+
+indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
+outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset2/"
+dir.create(outdir, showWarnings = FALSE)
 
 print("getting data for longitude indices:")
 vec_index <- map2tidy::get_index_by_chunk(
@@ -32,12 +40,13 @@ vec_index <- map2tidy::get_index_by_chunk(
   as.integer(args[3])   # total number of longitude indices
   )
 
-# number of cores of parallel threads
-ncores <- 40 #2 # parallel::detectCores()
 
-# parallelize job
-# set up the cluster, sending required objects to each core
+# 2) Setup parallelization ------------------------------------------------
+# parallelize job across cores on a single node
+ncores <- 40 # parallel::detectCores() # number of cores of parallel threads
+
 cl <- multidplyr::new_cluster(ncores) |>
+  # set up the cluster, sending required objects to each core
   multidplyr::cluster_library(c("map2tidy",
                                 "dplyr",
                                 "purrr",
@@ -46,30 +55,21 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    cwd_byilon = cwd_byilon   # make the function known for each core
+    indir                              = indir,
+    outdir                             = outdir,
+    cwd_pcwd_byilon_tailored_for_cmip6 = cwd_pcwd_byilon_tailored_for_cmip6   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
 
-# Once for cwd and pcwd
+# 3) Process files --------------------------------------------------------
 out <- tibble(ilon = vec_index[1]) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
-    ~cwd_byilon(
+    ~cwd_pcwd_byilon_tailored_for_cmip6(
       .,
-      # read in variables
-      indir_evspsbl   = "/data_2/scratch/fbernhard/CMIP6/tidy/evspsbl/",
-      indir_tas       = "/data_2/scratch/fbernhard/CMIP6/tidy/tas/",
-      indir_prec      = "/data_2/scratch/fbernhard/CMIP6/tidy/pr/",
-      indir_rlus      = "/data_2/scratch/fbernhard/CMIP6/tidy/rlus/",
-      indir_rlds      = "/data_2/scratch/fbernhard/CMIP6/tidy/rlds/",
-      indir_rsds      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsds/",
-      indir_rsus      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsus/",
-      indir_elevation = "/data_2/scratch/fbernhard/CMIP6/tidy/elevation/",
-      outdir_cwd      = "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset2/",
-      fileprefix_cwd  = "cwd",
-      fileprefix_pcwd = "pcwd"
-      ))
+      indir           = indir
+      outdir          = outdir))
     )

@@ -1,25 +1,28 @@
-cwd_byilon <- function(
+cwd_pcwd_byilon_tailored_for_cmip6 <- function(
     ilon,
-    indir_evspsbl,
-    indir_prec,
-    indir_tas,
-    indir_rlus,
-    indir_rlds,
-    indir_rsds,
-    indir_rsus,
-    indir_elevation,
-    outdir,
-    fileprefix_cwd,
-    fileprefix_pcwd
-    ){
+    indir,
+    outdir){
+
+  #############################################
+  # Define hardcoded paths and hardcoded options:
+  indir_evspsbl   <- file.path(indir, "evspsbl")
+  indir_tas       <- file.path(indir, "tas")
+  indir_prec      <- file.path(indir, "pr")
+  indir_rlus      <- file.path(indir, "rlus")
+  indir_rlds      <- file.path(indir, "rlds")
+  indir_rsds      <- file.path(indir, "rsds")
+  indir_rsus      <- file.path(indir, "rsus")
+  indir_elevation <- file.path(indir, "elevation")
+
+  fileprefix_cwd  <- "cwd"
+  fileprefix_pcwd <- "pcwd"
+  #############################################
+
 
   # load functions that will be applied to time series
-  #' @importFrom here here
   source(paste0(here::here(), "/R/my_cwd.R"))
 
-
   # read from file that contains tidy data for a single longitudinal band
-  #' @importFrom readr read_rds
 
   # read evapotranspiration file tidy
   filnam <- list.files(
@@ -113,7 +116,6 @@ cwd_byilon <- function(
 
 
   # unnest all the data frames
-  #' @importFrom tidyr unnest
   df_rsds <- df_rsds |> tidyr::unnest(data)
   df_rsus <- df_rsus |> tidyr::unnest(data)
   df_rlds <- df_rlds |> tidyr::unnest(data)
@@ -189,12 +191,10 @@ cwd_byilon <- function(
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     dplyr::group_by(lon, lat) |>
-    #' @importFrom tidyr nest
     tidyr::nest() |>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    #' @importFrom purrr map
     mutate(data = purrr::map(data, ~my_cwd(.)))
 
 
@@ -219,7 +219,6 @@ cwd_byilon <- function(
       "Writing file ", path_cwd , " ..."
     )
   )
-  #' @importFrom readr write_rds
   readr::write_rds(
     out_cwd,
     path_cwd
