@@ -21,7 +21,7 @@ my_pcwd <- function(data){
   ## temperature
   vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
 
-
+  ######## PCWD SPECIFIC
   # pet-calculation
   ## calculate surface pressure
   source(paste0(here::here(), "/R/calc_patm.R"))
@@ -32,19 +32,21 @@ my_pcwd <- function(data){
   vars_df <- vars_df |>
     mutate(pet = 60 * 60 * 24 * pet(net_radiation, tas, patm))
 
+  vars_df <- select(vars_df, -pet) |> rename(evspsbl = pet) # Use POTENTIAL ET as ET estimate
+  ########
 
-  # pcwd reset
-  ## average monthly pr-pet over the first 30 years of the time series
+  # cwd reset
+  ## average monthly P-ET over the first 30 years of the time series
   reset_df <- vars_df |>
     mutate(year = lubridate::year(time)) |>
     mutate(month = lubridate::month(time))|>
-    mutate(pr_pet = pr-pet)|>
+    mutate(pr_et = pr-evspsbl)|>
     filter(year < 2045)|>
     group_by(month) |>
-    summarize(mean_pr_pet = mean(pr_pet))
+    summarize(mean_pr_et = mean(pr_et))
 
-  ## which month pr-pet maximal
-  max_index <- which.max(reset_df$mean_pr_pet)
+  ## which month P-ET maximal
+  max_index <- which.max(reset_df$mean_pr_et)
   max_month <- reset_df$month[max_index]
 
   ## day_of_year as param doy_reset in cwd-algorithm
@@ -58,29 +60,29 @@ my_pcwd <- function(data){
   vars_df <- vars_df |>
     mutate(precipitation = ifelse(tas < 0, 0, pr),
            snow = ifelse(tas < 0, pr, 0)) |>
-    simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
+    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
 
   vars_df <- vars_df |>
-    mutate(wbal_pet = liquid_to_soil - pet)
+    mutate(wbal = liquid_to_soil - evspsbl)
 
 
-  # pcwd
-  ## calculate potential cumulative water deficit
-  out_pcwd <- cwd(vars_df,
-                  varname_wbal = "wbal_pet",
-                  varname_date = "time",
-                  thresh_terminate = 0.0,
-                  thresh_drop = 0.0,
-                  doy_reset= day_of_year)
+  # cwd
+  ## calculate cumulative water deficit
+  out_cwd <- cwd(vars_df,
+                 varname_wbal = "wbal",
+                 varname_date = "time",
+                 thresh_terminate = 0.0,
+                 thresh_drop = 0.0,
+                 doy_reset= day_of_year)
 
-  out_pcwd$inst <- out_pcwd$inst |>
+  out_cwd$inst <- out_cwd$inst |>
     filter(len >= 20)
 
-  out_pcwd$df <- out_pcwd$df |>
+  out_cwd$df <- out_cwd$df |>
     select(time, deficit)
 
 
-  # return a data frame
-  return(out_pcwd$df)
+  # return data frame
+  return(out_cwd$df)
 }

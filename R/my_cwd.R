@@ -15,14 +15,24 @@ my_cwd <- function(data){
 
 
   # unit conversions
-  ## evapotranspiration
-  vars_df$evspsbl <- vars_df$evspsbl * 86400 # conversion to mm day-1
-
   ## precipitation
   vars_df$pr <- vars_df$pr * 86400 # conversion to mm day-1
 
   ## temperature
   vars_df$tas <- vars_df$tas - 273.15 # conversion to °C
+
+  ######## CWD SPECIFIC
+  ## evapotranspiration
+  vars_df$evspsbl <- vars_df$evspsbl * 86400 # conversion to mm day-1
+
+
+
+
+
+
+
+
+  ########
 
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
