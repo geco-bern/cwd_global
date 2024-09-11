@@ -58,17 +58,17 @@ out <- tibble(ilon = vec_index) |>
     ~cwd_byilon(
       .,
       # read in variables
-      indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
-      indir_tas = "/data_1/CMIP6/tidy/tas/",
-      indir_prec = "/data_1/CMIP6/tidy/pr/",
-      indir_rlus = "/data_1/CMIP6/tidy/rlus/",
-      indir_rlds = "/data_1/CMIP6/tidy/rlds/",
-      indir_rsds = "/data_1/CMIP6/tidy/rsds/",
-      indir_rsus = "/data_1/CMIP6/tidy/rsus/",
-      indir_elevation = "/data_1/CMIP6/tidy/elevation/",
-      outdir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
-      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
-      fileprefix_cwd = "cwd",
+      indir_evspsbl   = "/data_2/scratch/fbernhard/CMIP6/tidy/evspsbl/",
+      indir_tas       = "/data_2/scratch/fbernhard/CMIP6/tidy/tas/",
+      indir_prec      = "/data_2/scratch/fbernhard/CMIP6/tidy/pr/",
+      indir_rlus      = "/data_2/scratch/fbernhard/CMIP6/tidy/rlus/",
+      indir_rlds      = "/data_2/scratch/fbernhard/CMIP6/tidy/rlds/",
+      indir_rsds      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsds/",
+      indir_rsus      = "/data_2/scratch/fbernhard/CMIP6/tidy/rsus/",
+      indir_elevation = "/data_2/scratch/fbernhard/CMIP6/tidy/elevation/",
+      outdir_cwd      = "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset/test/",
+      outdir_pcwd     = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix_cwd  = "cwd",
       fileprefix_pcwd = "pcwd"
       ))
     )

@@ -54,7 +54,7 @@ df_pcwd <- tibble(ilon =  vec_index) |>
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      indir = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
       fileprefix = "pcwd"
       ))
     ) |>
@@ -77,7 +77,7 @@ df_pcwd <- tibble(ilon =  vec_index) |>
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      indir = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
       fileprefix = "pcwd"
     ))
   ) |>

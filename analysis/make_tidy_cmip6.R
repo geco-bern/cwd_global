@@ -30,7 +30,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "mon",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/evspsbl/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/evspsbl/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -61,7 +61,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "day",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/pr/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/pr/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -92,7 +92,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "day",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/tas/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/tas/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -125,7 +125,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "mon",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/rlus/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/rlus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -156,7 +156,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "mon",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/rlds/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/rlds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -187,7 +187,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "mon",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/rsds/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/rsds/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
@@ -218,7 +218,7 @@ df <- map2tidy(
   noleap = TRUE,
   res_time= "mon",
   do_chunks = TRUE,
-  outdir = "/data_1/CMIP6/tidy/rsus/",
+  outdir = "/data_2/scratch/fbernhard/CMIP6/tidy/rsus/",
   fileprefix = str_remove(basename(filnam), ".nc"),
   single_basedate = TRUE,
   overwrite = TRUE
