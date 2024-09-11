@@ -1,110 +1,105 @@
 #!/usr/bin/env Rscript
 
-# script is called with three arguments:
-# 1. counter for chunks
-# 2. total number of chunks
-# 3. total number of longitude indices
+# script is called without any arguments
 
 # Example:
-# >./get_cwd_annmax.R 1 3 360
-
-# to receive arguments to script from the shell
-args = commandArgs(trailingOnly=TRUE)
-
-# # When using this script directly from RStudio, not from the shell, specify
-nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-args <- c(1, 1, nlon)
+# >./collect_cwd_annmax.R
 
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/collect_cwd_annmax_byilon.R"))
+indir       <- "/data_1/CMIP6/tidy/pcwd_reset/test/" 
+# indir       <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/" 
+# outfile_act <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/act_evspsbl_cum_ANNMAX.nc" # adjust path to where the file should be written to
+outfile_pot <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/pot_evspsbl_cum_ANNMAX" # adjust path to where the file should be written to
+# TODO: generate subfolder of outfile_pot and outfile_act
 
-print("getting data for longitude indices:")
-vec_index <- map2tidy::get_index_by_chunk(
-  as.integer(args[1]),  # counter for chunks
-  as.integer(args[2]),  # total number of chunks
-  as.integer(args[3])   # total number of longitude indices
+# 1) Define filenames of files to collect:  -------------------------------
+# filnams_pcwd <- list.files(indir, pattern = "pcwd_[0-9]*.rds",        full.names = TRUE)
+# filnams_pcwd <- list.files(indir, pattern = "pcwd_[0-9]*_ANNMAX.rds",        full.names = TRUE)
+filnams_pcwd <- list.files(
+  indir, 
+  pattern = "pcwd_[0-9]*_ANNMAX.rds", # make sure to include only _ANNMAX.rds
+  # pattern = "CWD_result_LON_[0-9.+-]*_ANNMAX.rds", # make sure to include only _ANNMAX.rds
+  full.names = TRUE
+)
+
+if (length(filnams_pcwd) <= 1){
+  stop("Should find multiple files. Only found " ,length(filnams_pcwd), ".")
+}
+
+# 3) Process files --------------------------------------------------------
+df_pcwd <- lapply(filnams_pcwd,
+              function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
+  bind_rows()
+
+readr::write_rds(
+  df_pcwd,
+  paste0(outfile_pot, ".rds")) 
+  # file.path(indir,paste0(fileprefix, "_ANNMAX.rds"))
+
+# Instead of writing rds file, directly save as NetCDF:
+
+
+# 4) Output to single, global NetCDF file ---------------------------------
+library(rgeco)  # get it from https://github.com/geco-bern/rgeco
+
+# create object that can be used with write_nc2()
+df_pcwd <- df_pcwd |>
+  select(lon, lat, year, max_deficit) |>
+  arrange(year, lat, lon)
+
+arr <- array(
+  unlist(df_pcwd$max_deficit),
+  dim = c(
+    length(unique(df_pcwd$lon)),
+    length(unique(df_pcwd$lat)),
+    length(unique(df_pcwd$year))
   )
+)
 
-# number of cores of parallel threads
-ncores <- 40 #2 # parallel::detectCores()
+# image(arr[,,1])
 
-# parallelize job
-# set up the cluster, sending required objects to each core
-cl <- multidplyr::new_cluster(ncores) |>
-  multidplyr::cluster_library(c("map2tidy",
-                                "dplyr",
-                                "purrr",
-                                "tidyr",
-                                "readr",
-                                "here",
-                                "magrittr")) |>
-  multidplyr::cluster_assign(
-    collect_cwd_annmax_byilon = collect_cwd_annmax_byilon   # make the function known for each core
+# create object for use in rgeco::write_nc2()
+obj <- list(
+  lon = sort(unique(df_pcwd$lon)),
+  lat = sort(unique(df_pcwd$lat)),
+  time = lubridate::ymd(
+    paste0(
+      sort(unique(df_pcwd$year)),
+      "-01-01"   # taking first of January as a mid-point for each year
     )
-
-# distribute computation across the cores, calculating for all longitudinal
-# indices of this chunk
-## cwd vec_index
-df_pcwd <- tibble(ilon =  vec_index) |>
-  multidplyr::partition(cl) |>
-  dplyr::mutate(out = purrr::map(
-    ilon,
-    ~collect_cwd_annmax_byilon(
-      .,
-      indir = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
-      fileprefix = "pcwd"
-      ))
-    ) |>
-  collect() |>
-  tidyr::unnest(out)
-
-readr::write_rds(
-  df_pcwd,
-  paste0(
-    indir,
-    fileprefix,
-    "_ANNMAX.rds"
-  )
-)
-
-## pcwd
-df_pcwd <- tibble(ilon =  vec_index) |>
-  multidplyr::partition(cl) |>
-  dplyr::mutate(out = purrr::map(
-    ilon,
-    ~collect_cwd_annmax_byilon(
-      .,
-      indir = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
-      fileprefix = "pcwd"
-    ))
-  ) |>
-  collect() |>
-  tidyr::unnest(out)
-
-readr::write_rds(
-  df_pcwd,
-  paste0(
-    indir,
-    fileprefix,
-    "_ANNMAX.rds"
-  )
+  ),
+  vars = list(pot_evspsbl_cum = arr)
 )
 
 
+# Get meta information on code executed:
+# gitrepo_hash = system("git rev-parse HEAD", intern=TRUE)
+gitrepo_hash = system("git rev-parse --short HEAD", intern=TRUE)
+gitrepo_status <-
+  ifelse(system("git status --porcelain | wc -l", intern = TRUE) == "0",
+         "",  #-clean-repository
+         "-dirty-repository")
+gitrepo_id <- paste0(
+  "https://github.com/geco-bern/cwd_global@",
+  gitrepo_hash, gitrepo_status)
 
-# # un-parallel alternative
-# df <- tibble(ilon = seq(60)) |>     # vec_index
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~collect_cwd_annmax_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   ) |>
-#   tidyr::unnest(out)
-#
-# format(object.size(df), units = "MB")
+# Write NetCDF file:
+rgeco::write_nc2(
+  obj,
+  varnams = "pot_evspsbl_cum",
+  make_tdim = TRUE,
+  path = paste0(outfile_pot, ".nc"),
+  units_time = "days since 2001-01-01",
+  att_title      = "Global Potential Cumulative Water Deficit",
+  att_history    = sprintf(
+    "Created on: %s, with R scripts from (%s) processing input data from: %s",
+    Sys.Date(), gitrepo_id, indir)
+)
+
+# TODO(fabian): add another netCDF output for actual evspsbl
+
+
+
