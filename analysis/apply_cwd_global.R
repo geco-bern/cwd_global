@@ -1,4 +1,6 @@
 #!/usr/bin/env Rscript
+#' @export
+
 
 # script is called with three arguments:
 # 1. counter for chunks
@@ -12,14 +14,16 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+nlon <- 289 # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+args <- c(1, 1, nlon)
 
+#' @import dyplr map2tidy multidplyr
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-source(paste0(here::here(), "/R/cwd_byilon.R"))
+#' @importFrom here here
+source(paste0(here::here(), "/R/cwd_byilon_cmip6.R"))
 
 print("getting data for longitude indices:")
 vec_index <- map2tidy::get_index_by_chunk(
@@ -29,7 +33,7 @@ vec_index <- map2tidy::get_index_by_chunk(
   )
 
 # number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+ncores <- 40 #2 # parallel::detectCores()
 
 # parallelize job
 # set up the cluster, sending required objects to each core
@@ -53,21 +57,40 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/evspsbl/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      # read in variables
+      indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
+      indir_tas = "/data_1/CMIP6/tidy/tas/",
+      indir_prec = "/data_1/CMIP6/tidy/pr/",
+      indir_rlus = "/data_1/CMIP6/tidy/rlus/",
+      indir_rlds = "/data_1/CMIP6/tidy/rlds/",
+      indir_rsds = "/data_1/CMIP6/tidy/rsds/",
+      indir_rsus = "/data_1/CMIP6/tidy/rsus/",
+      indir_elevation = "/data_1/CMIP6/tidy/elevation/",
+      outdir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix_cwd = "cwd",
+      fileprefix_pcwd = "pcwd"
       ))
     )
 
 
 # # un-parallel alternative
 # out <- tibble(ilon = vec_index) |>
-#   dplyr::mutate(out = purrr::map(
-#     ilon,
-#     ~cwd_byilon(
-#       .,
-#       indir = "~/data/cmip6-ng/tidy/evspsbl/",
-#       outdir = "~/data/cmip6-ng/tidy/cwd/",
-#       fileprefix = "evspsbl_cum"
-#     ))
-#   )
+#    dplyr::mutate(out = purrr::map(
+#      ilon,
+#        ~cwd_byilon(
+#          .,
+#          indir_evspsbl = "/data_1/CMIP6/tidy/evspsbl/",
+#          indir_tas = "/data_1/CMIP6/tidy/tas/",
+#          indir_prec = "/data_1/CMIP6/tidy/pr/",
+#          indir_rlus = "/data_1/CMIP6/tidy/rlus/",
+#          indir_rlds = "/data_1/CMIP6/tidy/rlds/",
+#          indir_rsds = "/data_1/CMIP6/tidy/rsds/",
+#          indir_rsus = "/data_1/CMIP6/tidy/rsus/",
+#          indir_elevation = "/data_1/CMIP6/tidy/elevation/",
+#          outdir_cwd = "/data_2/scratch/CMIP6/tidy/cwd/",
+#          outdir_pcwd = "/data_2/scratch/CMIP6/tidy/pcwd/",
+#          fileprefix_cwd = "cwd",
+#          fileprefix_pcwd = "pcwd"
+#        ))
+#    )

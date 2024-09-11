@@ -12,8 +12,8 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+args <- c(1, 1, nlon)
 
 library(dplyr)
 library(map2tidy)
@@ -29,7 +29,7 @@ vec_index <- map2tidy::get_index_by_chunk(
   )
 
 # number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+ncores <- 40 #2 # parallel::detectCores()
 
 # parallelize job
 # set up the cluster, sending required objects to each core
@@ -53,9 +53,14 @@ out <- tibble(ilon = vec_index) |>
     ilon,
     ~cwd_annmax_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/cwd/",
-      outdir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      # adjust the paths of the indirectory and outdirectory to
+      # where your cwd and pcwd data is
+      indir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      indir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      outdir_cwd = "/data_1/CMIP6/tidy/cwd_reset/test/",
+      outdir_pcwd = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix_cwd = "cwd",
+      fileprefix_pcwd = "pcwd"
       ))
     )
 

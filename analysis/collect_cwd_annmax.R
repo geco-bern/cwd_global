@@ -12,8 +12,8 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # # When using this script directly from RStudio, not from the shell, specify
-# nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
-# args <- c(1, 1, nlon)
+nlon <- 288  # set this by hand. corresponds to length of the longitude dimension in original NetCDF files
+args <- c(1, 1, nlon)
 
 library(dplyr)
 library(map2tidy)
@@ -29,7 +29,7 @@ vec_index <- map2tidy::get_index_by_chunk(
   )
 
 # number of cores of parallel threads
-ncores <- 2 # parallel::detectCores()
+ncores <- 40 #2 # parallel::detectCores()
 
 # parallelize job
 # set up the cluster, sending required objects to each core
@@ -47,27 +47,52 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
-df <- tibble(ilon =  vec_index) |>
+## cwd vec_index
+df_pcwd <- tibble(ilon =  vec_index) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
     ilon,
     ~collect_cwd_annmax_byilon(
       .,
-      indir = "~/data/cmip6-ng/tidy/cwd/",
-      fileprefix = "evspsbl_cum"
+      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix = "pcwd"
       ))
     ) |>
   collect() |>
   tidyr::unnest(out)
 
 readr::write_rds(
-  df,
+  df_pcwd,
   paste0(
     indir,
     fileprefix,
     "_ANNMAX.rds"
   )
 )
+
+## pcwd
+df_pcwd <- tibble(ilon =  vec_index) |>
+  multidplyr::partition(cl) |>
+  dplyr::mutate(out = purrr::map(
+    ilon,
+    ~collect_cwd_annmax_byilon(
+      .,
+      indir = "/data_1/CMIP6/tidy/pcwd_reset/test/",
+      fileprefix = "pcwd"
+    ))
+  ) |>
+  collect() |>
+  tidyr::unnest(out)
+
+readr::write_rds(
+  df_pcwd,
+  paste0(
+    indir,
+    fileprefix,
+    "_ANNMAX.rds"
+  )
+)
+
 
 
 # # un-parallel alternative
