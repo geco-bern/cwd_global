@@ -29,20 +29,32 @@ library(multidplyr)
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
 source(paste0(here::here(), "/R/cwd_pcwd_byilon_tailored_for_cmip6.R"))
 
+# indir  <- "/data_1/CMIP6/tidy/"
 indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
-outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset2/"
+outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"
 dir.create(outdir, showWarnings = FALSE)
 
-print("getting data for longitude indices:")
-vec_index <- map2tidy::get_index_by_chunk(
-  as.integer(args[1]),  # counter for chunks
-  as.integer(args[2]),  # total number of chunks
-  as.integer(args[3])   # total number of longitude indices
-  )
+# 1a) Define filenames of files to process:  -------------------------------
+infile_pattern  <- "*.rds"
+# outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
 
+filnams <- list.files(file.path(indir, "01_pr"),  # use precip folder as example
+                      pattern = infile_pattern, full.names = TRUE)
+if (length(filnams) <= 1){
+  stop("Should find multiple files. Only found " ,length(filnams), ".")
+}
 
 # 2) Setup parallelization ------------------------------------------------
-# parallelize job across cores on a single node
+# 2a) Split job onto multiple nodes
+#     i.e. only consider a subset of the files (others might be treated by
+#     another compute node)
+vec_index <- map2tidy::get_index_by_chunk(
+  as.integer(args[1]),  # counter for compute node
+  as.integer(args[2]),  # total number of compute node
+  length(filnams)       # total number of longitude indices
+)
+
+# 2b) Parallelize job across cores on a single node
 ncores <- 40 # parallel::detectCores() # number of cores of parallel threads
 
 cl <- multidplyr::new_cluster(ncores) |>
@@ -57,19 +69,23 @@ cl <- multidplyr::new_cluster(ncores) |>
   multidplyr::cluster_assign(
     indir                              = indir,
     outdir                             = outdir,
-    cwd_pcwd_byilon_tailored_for_cmip6 = cwd_pcwd_byilon_tailored_for_cmip6   # make the function known for each core
+    cwd_pcwd_byLON_tailored_for_cmip6 = cwd_pcwd_byLON_tailored_for_cmip6   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
 
 # 3) Process files --------------------------------------------------------
-out <- tibble(ilon = vec_index[1]) |>
+out <- tibble(in_fname = filnams[vec_index]) |>
+  mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
+  select(-in_fname) |>
   multidplyr::partition(cl) |>
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_pcwd_byilon_tailored_for_cmip6(
+    LON_string,
+    ~cwd_pcwd_byLON_tailored_for_cmip6(
       .,
-      indir           = indir
+      indir           = indir,
       outdir          = outdir))
-    )
+    ) |> collect()
+
+

@@ -1,94 +1,74 @@
-cwd_pcwd_byilon_tailored_for_cmip6 <- function(
-    ilon,
+cwd_pcwd_byLON_tailored_for_cmip6 <- function(
+    LON_string,
     indir,
     outdir){
 
   #############################################
   # Define hardcoded paths and hardcoded options:
-  indir_evspsbl   <- file.path(indir, "evspsbl")
-  indir_tas       <- file.path(indir, "tas")
-  indir_prec      <- file.path(indir, "pr")
-  indir_rlus      <- file.path(indir, "rlus")
-  indir_rlds      <- file.path(indir, "rlds")
-  indir_rsds      <- file.path(indir, "rsds")
-  indir_rsus      <- file.path(indir, "rsus")
-  indir_elevation <- file.path(indir, "elevation")
+  indir_evspsbl   <- file.path(indir, "01_evspsbl")
+  indir_tas       <- file.path(indir, "01_tas")
+  indir_prec      <- file.path(indir, "01_pr")
+  indir_rlus      <- file.path(indir, "01_rlus")
+  indir_rlds      <- file.path(indir, "01_rlds")
+  indir_rsds      <- file.path(indir, "01_rsds")
+  indir_rsus      <- file.path(indir, "01_rsus")
+  # indir_elevation <- file.path(indir, "01_elevation")
+  indir_elevation <- file.path("/data_1/CMIP6/tidy/", "elevation")
 
-  fileprefix_cwd  <- "cwd"
-  fileprefix_pcwd <- "pcwd"
+  path_cwd  <- file.path(outdir, paste0("CMIP6_cwd", "_", LON_string, ".rds"))
+  path_pcwd <- file.path(outdir, paste0("CMIP6_pcwd", "_", LON_string, ".rds"))
+
+  # prepare output names
+  # stopifnot(grepl(pattern = "\\[LONSTRING\\]", outfilename_template))
+  # outpath <- file.path(outdir, gsub("\\[LONSTRING\\]", LON_string, outfilename_template))
   #############################################
 
+
+  print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
   source(paste0(here::here(), "/R/my_cwd.R"))
 
-  # read from file that contains tidy data for a single longitudinal band
-
+  # read from files that contain tidy data for a single longitudinal band
   # read evapotranspiration file tidy
-  filnam <- list.files(
-    indir_evspsbl,
-    pattern = paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-    )
+  filnam <- file.path(indir_evspsbl, paste0("evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_",
+                                            LON_string,".rds"))
   df_evap <- readr::read_rds(filnam)
 
 
   # read precipitation file tidy
-  filnam <- list.files(
-    indir_prec,
-    pattern = paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_prec, paste0("pr_day_CESM2_ssp585_r1i1p1f1_native_",
+                                         LON_string,".rds"))
   df_prec <- readr::read_rds(filnam)
 
 
   # read temperature file tidy
-  filnam <- list.files(
-    indir_tas,
-    pattern = paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_tas, paste0("tas_day_CESM2_ssp585_r1i1p1f1_native_",
+                                         LON_string,".rds"))
   df_tas <- readr::read_rds(filnam)
 
 
   # read radiation files tidy
-  filnam <- list.files(
-    indir_rlus,
-    pattern = paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_rlus, paste0("rlus_mon_CESM2_ssp585_r1i1p1f1_native_",
+                                        LON_string,".rds"))
   df_rlus <- readr::read_rds(filnam)
 
-  filnam <- list.files(
-    indir_rlds,
-    pattern = paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_rlds, paste0("rlds_mon_CESM2_ssp585_r1i1p1f1_native_",
+                                         LON_string,".rds"))
   df_rlds <- readr::read_rds(filnam)
 
-  filnam <- list.files(
-    indir_rsds,
-    pattern = paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_rsds, paste0("rsds_mon_CESM2_ssp585_r1i1p1f1_native_",
+                                         LON_string,".rds"))
   df_rsds <- readr::read_rds(filnam)
 
-  filnam <- list.files(
-    indir_rsus,
-    pattern = paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_ilon_", ilon, ".rds"),
-    full.names = TRUE
-  )
+  filnam <- file.path(indir_rsus, paste0("rsus_mon_CESM2_ssp585_r1i1p1f1_native_",
+                                         LON_string,".rds"))
   df_rsus <- readr::read_rds(filnam)
 
 
   # read elevation file and convert to data frame
   library(terra)
-  filnam <- list.files(
-    indir_elevation,
-    pattern = paste0("elevation.nc"),
-    full.names = TRUE
-  )
-
+  filnam <- file.path(indir_elevation, "elevation.nc")
   rasta_elevation <- terra::rast(filnam)
 
   ## read the needed longitude value and extract the latitude values
@@ -122,7 +102,7 @@ cwd_pcwd_byilon_tailored_for_cmip6 <- function(
   df_rlus <- df_rlus |> tidyr::unnest(data)
   df_evap <- df_evap |> tidyr::unnest(data)
   df_prec <- df_prec |> tidyr::unnest(data) # lon lat pr time
-  df_tas <- df_tas |> tidyr::unnest(data)
+  df_tas  <- df_tas  |> tidyr::unnest(data)
 
 
   # unit conversions
@@ -142,26 +122,32 @@ cwd_pcwd_byilon_tailored_for_cmip6 <- function(
 
   ## extract year and month from the time column
   df_prec <- df_prec |>
+    mutate(time = lubridate::ymd_hms(datetime)) |> select(-datetime) |>
     mutate(year = lubridate::year(time), month = lubridate::month(time))
 
+  df_tas <- df_tas |>
+    mutate(time = lubridate::ymd_hms(datetime)) |> select(-datetime)
+
   df_evap <- df_evap |>
+    mutate(time = lubridate::ymd_hms(datetime)) |>
     mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-time)
+    select(-time, -datetime)
 
   ## compute net_radiation
   ### create new data frame
   df_radiation <- df_rsds |>
-    left_join(df_rsus, by = join_by(lon, lat, time)) |>
-    left_join(df_rlds, by = join_by(lon, lat, time)) |>
-    left_join(df_rlus, by = join_by(lon, lat, time))
+    left_join(df_rsus, by = join_by(lon, lat, datetime)) |>
+    left_join(df_rlds, by = join_by(lon, lat, datetime)) |>
+    left_join(df_rlus, by = join_by(lon, lat, datetime))
   ### calculate net radiation
   df_net_radiation <- df_radiation |>
     mutate(net_radiation = (rsds - rsus) + (rlds - rlus)) |>
     select(-rsds, -rsus, -rlds, -rlus)
   ## extract year and month from the time column
   df_net_radiation <- df_net_radiation |>
+    mutate(time = lubridate::ymd_hms(datetime)) |>
     mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-time)
+    select(-time, -datetime)
 
   ### merge all such that monthly data is repeated for each day within month
   ## cwd
@@ -184,6 +170,8 @@ cwd_pcwd_byilon_tailored_for_cmip6 <- function(
   df_pcwd <- df_pcwd |>
     mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm)) # conversion from mm s-1 to mm day-1
 
+
+
   # out_cwd
   out_cwd <- df_cwd |>
     select(lon, lat, time, pr, tas, evspsbl) |>
@@ -191,12 +179,16 @@ cwd_pcwd_byilon_tailored_for_cmip6 <- function(
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     dplyr::group_by(lon, lat) |>
-    tidyr::nest() |>
+    tidyr::nest() |> dplyr::ungroup() |>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    mutate(data = purrr::map(data, ~my_cwd(.)))
+    mutate(data = purrr::map(data, ~my_cwd(.), .progress = TRUE))
 
+
+  # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
+  message(paste0("Writing file ", path_cwd , " ..."))
+  readr::write_rds(out_cwd, path_cwd)
 
   # out pcwd
   out_pcwd <- df_pcwd |>
@@ -205,37 +197,16 @@ cwd_pcwd_byilon_tailored_for_cmip6 <- function(
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     group_by(lon, lat) |>
-    tidyr::nest() |>
+    tidyr::nest() |> dplyr::ungroup() |>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    mutate(data = purrr::map(data, ~my_pcwd(.)))
+    mutate(data = purrr::map(data, ~my_cwd(.), .progress = TRUE))
 
-
-  # write (complemented) data to cwd-file with meaningful name and index counter
-  path_cwd <- paste0(outdir, "/", fileprefix_cwd, "_", ilon, ".rds")
-  message(
-    paste0(
-      "Writing file ", path_cwd , " ..."
-    )
-  )
-  readr::write_rds(
-    out_cwd,
-    path_cwd
-    )
-
-
-  # write (complemented) data to pcwd-file.
-  path_pcwd <- paste0(outdir, "/", fileprefix_pcwd, "_", ilon, ".rds")
-  message(
-    paste0(
-      "Writing file ", path_pcwd, " ..."
-    )
-  )
-  readr::write_rds(
-    out_pcwd,
-    path_pcwd
-  )
+  # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
+  message(paste0("Writing file ", path_pcwd, " ..."))
+  readr::write_rds(out_pcwd, path_pcwd)
 
   # don't return data - it's written to file
+  return(NULL)
 }
