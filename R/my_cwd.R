@@ -4,10 +4,12 @@
 my_cwd <- function(vars_df){
 
   # loading libraries
-  library(tidyr)
-  library(cwd)
-  library(rpmodel)
-  library(dplyr)
+  require(dplyr)
+  require(tidyr)
+  require(cwd)
+  library(rpmodel)    # Need to reload library on each computation core. When using require() instead of library() inside of `multiplyr` get error message:
+                      #   Error in .External(list(name = "CppMethod__invoke_notvoid", address = <pointer: (nil)>,  :
+                      #   NULL value passed as symbol address
 
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series

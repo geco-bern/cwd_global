@@ -67,7 +67,7 @@ cwd_pcwd_byLON_tailored_for_cmip6 <- function(
 
 
   # read elevation file and convert to data frame
-  library(terra)
+  # library(terra)
   filnam <- file.path(indir_elevation, "elevation.nc")
   rasta_elevation <- terra::rast(filnam)
 
@@ -184,7 +184,6 @@ cwd_pcwd_byLON_tailored_for_cmip6 <- function(
     # apply the custom function on the time series data frame separately for
     # each grid cell.
     mutate(data = purrr::map(data, ~my_cwd(.), .progress = TRUE))
-
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_cwd , " ..."))

@@ -25,6 +25,10 @@ args <- c(1, 1)
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
+library(terra)
+library(tidyr)
+library(cwd)
+library(rpmodel)
 
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
 source(paste0(here::here(), "/R/cwd_pcwd_byilon_tailored_for_cmip6.R"))
@@ -65,6 +69,8 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "tidyr",
                                 "readr",
                                 "here",
+                                "cwd",
+                                "rpmodel",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
     indir                              = indir,
