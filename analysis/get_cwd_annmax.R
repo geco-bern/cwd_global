@@ -29,17 +29,13 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir_cwd  <- "/data_1/CMIP6/tidy/cwd_reset/test/" # TODO: indir_cwd       = "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset/test/",
-indir_pcwd <- "/data_1/CMIP6/tidy/pcwd_reset/test/" # TODO: indir_pcwd      = "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/",
-outdir_cwd  <- "/data_2/scratch/fbernhard/CMIP6/tidy/cwd_reset/test/"
-outdir_pcwd <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/"
-dir.create(outdir_cwd, showWarnings = FALSE, recursive = TRUE)
-dir.create(outdir_pcwd, showWarnings = FALSE, recursive = TRUE)
+indir   <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"
+outdir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/03_cwd_ANNMAX/"
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
-print("getting data for longitude indices:")
-filnams_cwd  <- list.files(indir_cwd,  pattern = "cwd_[0-9]*.rds",  full.names = TRUE)
-filnams_pcwd <- list.files(indir_pcwd, pattern = "pcwd_[0-9]*.rds", full.names = TRUE)
+filnams_cwd  <- list.files(indir, pattern = "CMIP6_cwd_(LON_[0-9.+-]*).rds",  full.names = TRUE)
+filnams_pcwd <- list.files(indir, pattern = "CMIP6_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
 
 if (length(filnams_cwd) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
@@ -55,8 +51,11 @@ source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
 #     i.e. only consider a subset of the files (others might be treated by another compute node)
-#vec_index <- 1:288
-vec_index <- sort(as.numeric(gsub("pcwd_([0-9]*).rds","\\1",basename(filnams_pcwd))))
+vec_index <- map2tidy::get_index_by_chunk(
+  as.integer(args[1]),  # counter for compute node
+  as.integer(args[2]),  # total number of compute node
+  length(filnams_cwd)   # total number of longitude indices
+)
 
 # 2b) Parallelize job across cores on a single node
 ncores <- 40 # parallel::detectCores() # number of cores of parallel threads
@@ -71,12 +70,10 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "here",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    indir_cwd       = indir_cwd,
-    indir_pcwd      = indir_pcwd,
-    outdir_cwd      = outdir_cwd,
-    outdir_pcwd     = outdir_pcwd,
-    cwd_annmax_byilon = cwd_annmax_byilon,   # make the function known for each core
-    pcwd_annmax_byilon= pcwd_annmax_byilon
+    indir       = indir,
+    indir      = indir,
+    outdir      = outdir,
+    cwd_annmax_byLON = cwd_annmax_byLON,   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -84,35 +81,24 @@ cl <- multidplyr::new_cluster(ncores) |>
 # 3) Process files --------------------------------------------------------
 
 # Once for cwd
-out_cwd <- tibble(ilon = vec_index[1:10]) |>
-  multidplyr::partition(cl) |>
+out_cwd <- tibble(in_fname = filnams_cwd[vec_index]) |>
+  # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_annmax_byilon(
+    in_fname,
+    ~cwd_annmax_byLON(
       .,
-      indir       = indir_cwd,
-      outdir      = outdir_cwd,
-      fileprefix  = "cwd"
-      ))
-    )
+      outdir          = outdir))
+  ) |> collect()
 
 # Once for pcwd
-out_pcwd <- tibble(ilon = vec_index) |>
-  multidplyr::partition(cl) |>
+out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
+  # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
-    ilon,
-    ~cwd_annmax_byilon(
+    in_fname,
+    ~cwd_annmax_byLON(
       .,
-      indir       = indir_pcwd,
-      outdir      = outdir_pcwd,
-      fileprefix  = "pcwd"
-    ))
-  )
-
-
-out |> collect() |> unnest(out)
-out$out[1]
-
+      outdir          = outdir))
+  ) |> collect()
 
 
 

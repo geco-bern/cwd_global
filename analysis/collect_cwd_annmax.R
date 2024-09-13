@@ -9,25 +9,13 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-indir_pcwd     <- "/data_1/CMIP6/tidy/pcwd_reset/test/"
-indir_cwd      <- "/data_1/CMIP6/tidy/cwd_reset/test/"
-# indir       <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/"
-outfile_cwd  <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/act_evspsbl_cum_ANNMAX.nc" # adjust path to where the file should be written to
-outfile_pcwd <- "/data_2/scratch/fbernhard/CMIP6/tidy/pcwd_reset/test/pot_evspsbl_cum_ANNMAX" # adjust path to where the file should be written to
+indir        <- "/data_2/scratch/fbernhard/CMIP6/tidy/03_cwd_ANNMAX/"
+outfile_cwd  <- "/data_2/scratch/fbernhard/CMIP6/tidy/04_result/CWD_ANNMAX"  # adjust path to where the file should be written to
+outfile_pcwd <- "/data_2/scratch/fbernhard/CMIP6/tidy/04_result/PCWD_ANNMAX" # adjust path to where the file should be written to
 
 # 1) Define filenames of files to collect:  -------------------------------
-filnams_pcwd <- list.files(
-  indir_pcwd,
-  pattern = "^pcwd_[0-9]*_ANNMAX.rds$", # make sure to include only _ANNMAX.rds
-  # pattern = "CWD_result_LON_[0-9.+-]*_ANNMAX.rds", # make sure to include only _ANNMAX.rds # TODO: change filename with map2tidy update
-  full.names = TRUE
-)
-filnams_cwd <- list.files(
-  indir_cwd,
-  pattern = "^cwd_[0-9]*_ANNMAX.rds$", # make sure to include only _ANNMAX.rds
-  # pattern = "CWD_result_LON_[0-9.+-]*_ANNMAX.rds", # make sure to include only _ANNMAX.rds # TODO: change filename with map2tidy update
-  full.names = TRUE
-)
+filnams_cwd  <- list.files(indir, pattern = "CMIP6_cwd_(LON_[0-9.+-]*)_ANNMAX.rds",  full.names = TRUE)
+filnams_pcwd <- list.files(indir, pattern = "CMIP6_pcwd_(LON_[0-9.+-]*)_ANNMAX.rds", full.names = TRUE)
 
 if (length(filnams_pcwd) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams_pcwd), ".")
@@ -41,10 +29,10 @@ df_pcwd <- lapply(filnams_pcwd,
               function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
   bind_rows()
 df_cwd <- lapply(filnams_cwd,
-                  function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
+              function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
   bind_rows()
 
-# TODO: generate subfolder of outfile_pcwd and outfile_cwd
+dir.create(dirname(outfile_cwd),  showWarnings = FALSE, recursive = TRUE)
 dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
 readr::write_rds(
   df_pcwd,
@@ -55,63 +43,89 @@ readr::write_rds(
 
 
 
-# 4) Output to single, global NetCDF file ---------------------------------
-# TODO(fabian): add another netCDF output for actual evspsbl
+# 4) Output to global NetCDF file ---------------------------------
 library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 
-# create object that can be used with write_nc2()
-df_pcwd <- df_pcwd |>
-  select(lon, lat, year, max_deficit) |>
-  arrange(year, lat, lon)
+prepare_write_nc2 <- function(df_cwd, varname){
+  # create object that can be used with write_nc2()
+  df_cwd <- df_cwd |>
+    select(lon, lat, year, max_deficit) |>
+    arrange(year, lat, lon)
 
-arr <- array(
-  unlist(df_pcwd$max_deficit),
-  dim = c(
-    length(unique(df_pcwd$lon)),
-    length(unique(df_pcwd$lat)),
-    length(unique(df_pcwd$year))
-  )
-)
-
-# image(arr[,,1])
-
-# create object for use in rgeco::write_nc2()
-obj <- list(
-  lon = sort(unique(df_pcwd$lon)),
-  lat = sort(unique(df_pcwd$lat)),
-  time = lubridate::ymd(
-    paste0(
-      sort(unique(df_pcwd$year)),
-      "-01-01"   # taking first of January as a mid-point for each year
+  arr <- array(
+    unlist(df_cwd$max_deficit),
+    dim = c(
+      length(unique(df_cwd$lon)),
+      length(unique(df_cwd$lat)),
+      length(unique(df_cwd$year))
     )
-  ),
-  vars = list(pot_evspsbl_cum = arr)
-)
+  )
 
+  # image(arr[,,1])
+
+  # create object for use in rgeco::write_nc2()
+  vars_list = list(arr)
+  names(vars_list) <- varname
+
+  obj <- list(
+    lon = sort(unique(df_cwd$lon)),
+    lat = sort(unique(df_cwd$lat)),
+    time = lubridate::ymd(
+      paste0(
+        sort(unique(df_cwd$year)),
+        "-01-01"   # taking first of January as a mid-point for each year
+      )
+    ),
+    vars = vars_list
+  )
+
+  return(obj)
+}
+
+obj_cwd  <- prepare_write_nc2(df_cwd,  varname="cwd_annmax")
+obj_pcwd <- prepare_write_nc2(df_pcwd, varname="pcwd_annmax")
 
 # Get meta information on code executed:
-# gitrepo_hash = system("git rev-parse HEAD", intern=TRUE)
-gitrepo_hash = system("git rev-parse --short HEAD", intern=TRUE)
-gitrepo_status <-
-  ifelse(system("git status --porcelain | wc -l", intern = TRUE) == "0",
-         "",  #-clean-repository
-         "-dirty-repository")
-gitrepo_id <- paste0(
-  "https://github.com/geco-bern/cwd_global@",
-  gitrepo_hash, gitrepo_status)
+get_repo_info <- function(){
+  gitrepo_url  <- system("git remote get-url origin", intern=TRUE)
+  gitrepo_hash <- system("git rev-parse --short HEAD", intern=TRUE)
+  gitrepo_status <-
+    ifelse(system("git status --porcelain | wc -l", intern = TRUE) == "0",
+           "",  #-clean-repository
+           "-dirty-repository")
+  gitrepo_id <- paste0(
+    gsub(".git$", "", gsub(".*github.com:","github.com/", gitrepo_url)),
+    "@", gitrepo_hash, gitrepo_status)
+
+  return(gitrepo_id)
+}
+get_repo_info()
 
 # Write NetCDF file:
 rgeco::write_nc2(
-  obj,
-  varnams = "pot_evspsbl_cum",
+  obj_cwd,
+  varnams = "cwd_annmax",
+  make_tdim = TRUE,
+  path = paste0(outfile_cwd, ".nc"),
+  units_time = "days since 2001-01-01",
+  att_title      = "Global Cumulative Water Deficit",
+  att_history    = sprintf(
+    "Created on: %s, with R scripts from (%s) processing input data from: %s",
+    Sys.Date(), get_repo_info(), indir)
+)
+
+rgeco::write_nc2(
+  obj_pcwd,
+  varnams = "pcwd_annmax",
   make_tdim = TRUE,
   path = paste0(outfile_pcwd, ".nc"),
   units_time = "days since 2001-01-01",
   att_title      = "Global Potential Cumulative Water Deficit",
   att_history    = sprintf(
     "Created on: %s, with R scripts from (%s) processing input data from: %s",
-    Sys.Date(), gitrepo_id, indir_pcwd)
+    Sys.Date(), get_repo_info(), indir)
 )
+
 
 
 

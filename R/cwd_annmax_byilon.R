@@ -5,21 +5,13 @@ get_annmax <- function(df){
     group_by(year) |>
     summarise(max_deficit = max(deficit))
 }
-
-cwd_annmax_byilon <- function(
-    ilon,
-    indir,
-    outdir,
-    fileprefix
+cwd_annmax_byLON <- function(
+    in_fname,
+    outdir
     ){
 
   # read cwd file tidy
-  filnam <- list.files(
-    indir,
-    pattern = paste0(fileprefix, "_", ilon, ".rds"),
-    full.names = TRUE
-  )
-  df <- readr::read_rds(filnam)
+  df <- readr::read_rds(in_fname)
 
   # apply annual maximum function
   out <- df |>
@@ -27,19 +19,13 @@ cwd_annmax_byilon <- function(
       data,
       ~get_annmax(.)
     ))
+  # test: out |> slice(1) |> unnest(data) |> print(n=100)
 
-  # write (complemented) data to file. Give it some meaningful name and the index counter
-  ##cwd
-  path <- paste0(outdir, "/", fileprefix, "_", ilon, "_ANNMAX.rds")
-  message(
-    paste0(
-      "Writing file ", path, " ..."
-    )
-  )
-  readr::write_rds(
-    out,
-    path
-    )
+  # write (reduced) data to cwdfile with meaningful name and index counter
+  path <- file.path(outdir, gsub('.rds', '_ANNMAX.rds', basename(in_fname)))
+  message(paste0("Writing file ", path, " ..."))
+  readr::write_rds(out, path)
 
   # don't return data - it's written to file
+  return(NULL)
 }

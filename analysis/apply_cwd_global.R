@@ -33,7 +33,6 @@ library(rpmodel)
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
 source(paste0(here::here(), "/R/cwd_pcwd_byilon_tailored_for_cmip6.R"))
 
-# indir  <- "/data_1/CMIP6/tidy/"
 indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
 outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"
 dir.create(outdir, showWarnings = FALSE)
@@ -85,7 +84,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
   select(-in_fname) |>
-  multidplyr::partition(cl) |>
+  multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
     ~cwd_pcwd_byLON_tailored_for_cmip6(
