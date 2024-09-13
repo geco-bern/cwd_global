@@ -31,7 +31,7 @@ library(cwd)
 library(rpmodel)
 
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source(paste0(here::here(), "/R/cwd_pcwd_byilon_tailored_for_cmip6.R"))
+source(paste0(here::here(), "/R/cmip6_compute_cwd_pcwd_byLON.R"))
 
 indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
 outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"
@@ -74,7 +74,7 @@ cl <- multidplyr::new_cluster(ncores) |>
   multidplyr::cluster_assign(
     indir                              = indir,
     outdir                             = outdir,
-    cwd_pcwd_byLON_tailored_for_cmip6 = cwd_pcwd_byLON_tailored_for_cmip6   # make the function known for each core
+    cmip6_compute_cwd_pcwd_byLON = cmip6_compute_cwd_pcwd_byLON   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -87,7 +87,7 @@ out <- tibble(in_fname = filnams[vec_index]) |>
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
-    ~cwd_pcwd_byLON_tailored_for_cmip6(
+    ~cmip6_compute_cwd_pcwd_byLON(
       .,
       indir           = indir,
       outdir          = outdir))

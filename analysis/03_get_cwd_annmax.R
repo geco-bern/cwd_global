@@ -45,7 +45,7 @@ if (length(filnams_pcwd) <= 1){
 }
 
 # 1b) Define function to apply to each location:  -------------------------------
-source(paste0(here::here(), "/R/cwd_annmax_byilon.R"))
+source(paste0(here::here(), "/R/get_cwd_annmax_byLON.R"))
 
 
 # 2) Setup parallelization ------------------------------------------------
@@ -73,7 +73,7 @@ cl <- multidplyr::new_cluster(ncores) |>
     indir       = indir,
     indir      = indir,
     outdir      = outdir,
-    cwd_annmax_byLON = cwd_annmax_byLON,   # make the function known for each core
+    get_cwd_annmax_byLON = get_cwd_annmax_byLON,   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -85,7 +85,7 @@ out_cwd <- tibble(in_fname = filnams_cwd[vec_index]) |>
   # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     in_fname,
-    ~cwd_annmax_byLON(
+    ~get_cwd_annmax_byLON(
       .,
       outdir          = outdir))
   ) |> collect()
@@ -95,7 +95,7 @@ out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
   # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     in_fname,
-    ~cwd_annmax_byLON(
+    ~get_cwd_annmax_byLON(
       .,
       outdir          = outdir))
   ) |> collect()

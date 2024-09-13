@@ -20,7 +20,7 @@
 
     `~/data/cmip6-ng/tidy/cwd/<fileprefix>_<ilon>_ANNMAX.rds`
 
-4.  `04_collect_cwd_annmax.R`: Script for collecting annual time series of each gridcell - is much smaller data and can now be handled by reading all into memory. Writes file containing global data with annual resolution as RDS and NetCDF file. This uses the function `write_nc2()` from the package {rgeco}. Install it from [here](https://github.com/geco-bern/rgeco):
+4.  `04_collect_cwd_results.R`: Script for collecting annual time series of each gridcell - is much smaller data and can now be handled by reading all into memory. Writes file containing global data with annual resolution as RDS and NetCDF file. This uses the function `write_nc2()` from the package {rgeco}. Install it from [here](https://github.com/geco-bern/rgeco):
 
     `~/data/cmip6-ng/tidy/cwd/<fileprefix>_cum_ANNMAX.rds` and `~/data/cmip6-ng/tidy/cwd/evspsbl_cum_ANNMAX.nc`
 

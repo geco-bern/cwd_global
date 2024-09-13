@@ -5,7 +5,7 @@ get_annmax <- function(df){
     group_by(year) |>
     summarise(max_deficit = max(deficit))
 }
-cwd_annmax_byLON <- function(
+get_cwd_annmax_byLON <- function(
     in_fname,
     outdir
     ){

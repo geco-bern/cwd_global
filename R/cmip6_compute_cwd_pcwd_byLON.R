@@ -1,4 +1,4 @@
-cwd_pcwd_byLON_tailored_for_cmip6 <- function(
+cmip6_compute_cwd_pcwd_byLON <- function(
     LON_string,
     indir,
     outdir){
@@ -27,7 +27,7 @@ cwd_pcwd_byLON_tailored_for_cmip6 <- function(
   print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
-  source(paste0(here::here(), "/R/my_cwd.R"))
+  source(paste0(here::here(), "/R/get_cwd_withSnow_and_reset.R"))
 
   # read from files that contain tidy data for a single longitudinal band
   # read evapotranspiration file tidy
@@ -183,7 +183,8 @@ cwd_pcwd_byLON_tailored_for_cmip6 <- function(
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    mutate(data = purrr::map(data, ~my_cwd(.), .progress = TRUE))
+    ###slice(1:2)|> # uncomment for development/debugging
+    mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset(.), .progress = TRUE))
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_cwd , " ..."))
@@ -200,7 +201,8 @@ cwd_pcwd_byLON_tailored_for_cmip6 <- function(
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    mutate(data = purrr::map(data, ~my_cwd(.), .progress = TRUE))
+    ###slice(1:2)|> # uncomment for development/debugging
+    mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset(.), .progress = TRUE))
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_pcwd, " ..."))

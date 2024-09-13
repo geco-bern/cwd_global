@@ -1,7 +1,5 @@
-#' @export
-
-
-my_cwd <- function(vars_df){
+get_cwd_withSnow_and_reset <- function(vars_df){
+  # vars_df must contain columns: time, pr, evspsbl, tas
 
   # loading libraries
   require(dplyr)
@@ -45,7 +43,7 @@ my_cwd <- function(vars_df){
 
   # cwd
   ## calculate cumulative water deficit
-  out_cwd <- cwd(vars_df,
+  out_cwd <- cwd::cwd(vars_df,
                  varname_wbal = "wbal",
                  varname_date = "time",
                  thresh_terminate = 0.0,
