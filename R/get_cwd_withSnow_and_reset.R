@@ -1,4 +1,6 @@
-get_cwd_withSnow_and_reset <- function(vars_df){
+#get_cwd_withSnow_and_reset <- function(vars_df){
+#TODO: have as function again
+vars_df <- df_pcwd
   # vars_df must contain columns: time, pr, evspsbl, tas
 
   # loading libraries
@@ -12,7 +14,8 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
   reset_df <- vars_df |>
-    mutate(month = lubridate::month(time))|>
+    mutate(date = lubridate::ymd(date)) |>
+    mutate(month = lubridate::month(date))|>
     mutate(pr_et = precip - pet)|> #replace with et for CWD
     group_by(month) |>
     summarize(mean_pr_et = mean(pr_et))
@@ -32,7 +35,7 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   vars_df <- vars_df |>
     mutate(precipitation = ifelse(tsurf < 0, 0, precip),
            snow = ifelse(tsurf < 0, precip, 0)) |>
-    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
+    cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tsurf")
 
 
   vars_df <- vars_df |>
@@ -43,7 +46,7 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   ## calculate cumulative water deficit
   out_cwd <- cwd::cwd(vars_df,
                  varname_wbal = "wbal", #water balance
-                 varname_date = "time",
+                 varname_date = "date",
                  thresh_terminate = 0.0,
                  thresh_drop = 0.0,
                  doy_reset= day_of_year)
@@ -57,4 +60,4 @@ get_cwd_withSnow_and_reset <- function(vars_df){
 
   # return data frame
   return(out_cwd$df)
-}
+#}

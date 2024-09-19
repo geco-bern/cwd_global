@@ -1,7 +1,9 @@
-ModESim_compute_pcwd_byLON <- function(
-    LON_string,
-    indir,
-    outdir){
+LON_string <- "LON_-120.000"
+#TODO: have as function again
+# ModESim_compute_pcwd_byLON <- function(
+#     LON_string,
+#     indir,
+#     outdir){
 
   #############################################
   # Define hardcoded paths and hardcoded options:
@@ -99,50 +101,54 @@ ModESim_compute_pcwd_byLON <- function(
   # data wrangling and time resolution adjustments
 
   ## extract year and month from the time column---------------????????????
-  df_pcwd <- df_prec |>
-    mutate(date = lubridate::ymd(date)) %>%
-    left_join(
-      df_tas %>%
-        mutate(date = lubridate::ymd(date)),
-      join_by(date)
-    ) %>%
-    mutate(year = year(date), month = month(date)) %>%
-    left_join(
-      df_net_radiation %>%
-        mutate(year = year(date), month = month(date)),
-      join_by(c("year", "month"))
-    ) %>%
-    left_join(
-      df_patm %>%
-        mutate(year = year(date), month = month(date)),
-      join_by(c("year", "month"))
-    ) |>
-   select(-datetime)
+  # df_pcwd <- df_prec |>
+  #   mutate(date = lubridate::ymd(date)) %>%
+  #   left_join(
+  #     df_tas %>%
+  #       mutate(date = lubridate::ymd(date)),
+  #     join_by(date)
+  #   ) %>%
+  #   mutate(year = year(date), month = month(date)) %>%
+  #   left_join(
+  #     df_net_radiation %>%
+  #       mutate(year = year(date), month = month(date)),
+  #     join_by(c("year", "month"))
+  #   ) %>%
+  #   left_join(
+  #     df_patm %>%
+  #       mutate(year = year(date), month = month(date)),
+  #     join_by(c("year", "month"))
+  #   ) |>
+  #  select(-datetime)
 
-  # df_tas <- df_tas |>
-  #   mutate(time = lubridate::ymd_hms(datetime)) |>
-  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-  #   select(-datetime)
-  #
-  # df_patm <- df_patm |>
-  #   mutate(time = lubridate::ymd_hms(datetime)) |>
-  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-  #   select(-time, -datetime)
-  #
-  # df_net_radiation <- df_net_radiation |>
-  #   mutate(time = lubridate::ymd_hms(datetime)) |>
-  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-  #   select(-time, -datetime)
+  df_tas <- df_tas |>
+    mutate(date = lubridate::ymd(date)) |>
+    mutate(year = lubridate::year(date), month = lubridate::month(date))
+
+  df_prec <- df_prec |>
+    mutate(date = lubridate::ymd(date)) |>
+    mutate(year = lubridate::year(date), month = lubridate::month(date))
+
+  df_patm <- df_patm |>
+    mutate(date = lubridate::ym(datetime)) |>
+    mutate(year = lubridate::year(date), month = lubridate::month(date)) |>
+    dplyr::select(-datetime)
+
+  df_net_radiation <- df_net_radiation |>
+    mutate(date = lubridate::ym(datetime)) |>
+    mutate(year = lubridate::year(date), month = lubridate::month(date)) |>
+    dplyr::select(-datetime)
 
 ################################################????????????????????????????
 
-  ### merge all such that monthly data is repeated for each day within month
-  ## pcwd
-  # df_pcwd <- df_prec |>  # one of the daily data frames
-  #   left_join(df_net_radiation, by = join_by(lon, lat, year, month)) |>
-  #   left_join(df_patm, by = join_by(lon, lat, year, month)) |>
-  #   left_join(df_tas, by = join_by(lon, lat, time)) |>
-  #   dplyr::select(-year, -month)
+  ## merge all such that monthly data is repeated for each day within month
+  # pcwd
+  df_pcwd <- df_prec |>  # one of the daily data frames
+    left_join(df_net_radiation, by = c("year", "month", "lon", "lat")) |>
+    left_join(df_patm, by = c("lon", "lat", "year", "month")) |>
+    left_join(df_tas, by = c("lon", "lat", "date")) |>
+    dplyr::select(-date, -year.y, -month.y, -date.y,
+                  year = year.x, month = month.x, date = date.x)
 
   # pet-calculation
   # ## calculate surface pressure
@@ -155,12 +161,14 @@ ModESim_compute_pcwd_byLON <- function(
 
   # out pcwd
   out_pcwd <- df_pcwd |>
-    select(lon, lat, time, precip, tsurf, pet) |> # Use POTENTIAL ET as ET estimate
+    dplyr::select(lon, lat, date, precip, tsurf, pet) |> # Use POTENTIAL ET as ET estimate
 
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     group_by(lon, lat) |>
-    tidyr::nest() |> dplyr::ungroup() |>
+    tidyr::nest() |> dplyr::ungroup()
+#TODO: add back in to connect mutate
+  #|#>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
@@ -173,4 +181,4 @@ ModESim_compute_pcwd_byLON <- function(
 
   # don't return data - it's written to file
   return(NULL)
-}
+#}

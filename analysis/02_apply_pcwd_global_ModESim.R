@@ -83,10 +83,16 @@ cl <- multidplyr::new_cluster(ncores) |>
 # indices of this chunk
 
 # 3) Process files --------------------------------------------------------
+# ModESim_compute_pcwd_byLON(
+#   "LON_-120.000",
+#   indir           = indir,
+#   outdir          = outdir)
+
+
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
   dplyr::select(-in_fname) |>
-  multidplyr::partition(cl) |>    # comment this partitioning for development
+  # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
     ~ModESim_compute_pcwd_byLON(
@@ -95,5 +101,3 @@ out <- tibble(in_fname = filnams[vec_index]) |>
       outdir          = outdir))
     ) |> collect()
 
-print(str(filnams[vec_index]))
-print(str(out))
