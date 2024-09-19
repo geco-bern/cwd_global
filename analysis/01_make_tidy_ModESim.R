@@ -248,5 +248,5 @@ res_patm <- map2tidy(
   filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
 )
 
-# test1 <- readRDS("~/scratch2/tidy/1420_01_m001_patm/set1420_1_m001_patm_LON_-120.000.rds")
-# test1$data
+ test1 <- readRDS("~/scratch2/tidy/1420_01_m001_precip/set1420_1_m001_precip_LON_-120.000.rds")
+ test1$data

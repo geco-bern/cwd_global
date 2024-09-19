@@ -24,7 +24,7 @@ ModESim_compute_pcwd_byLON <- function(
   print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
-  source(paste0(here::here(), "/R/get_cwd_withSnow_and_reset.R"))
+  source("~/cwd_global/R/get_cwd_withSnow_and_reset.R")
 
   # read from files that contain tidy data for a single longitudinal band
   # read surface Pressure file tidy
@@ -57,14 +57,14 @@ ModESim_compute_pcwd_byLON <- function(
   # rasta_elevation <- terra::rast(filnam)
 
   ## read the needed longitude value and extract the latitude values
-  lon <- df_prec[["lon"]][1]
-  latitudes <- unique(df_prec$lat)
+  # lon <- df_prec[["lon"]][1]
+  # latitudes <- unique(df_prec$lat)
 
   ## create a data frame of the coordinates
-  loc <- data.frame(lon = rep(lon, length(latitudes)), lat = latitudes)
+  # loc <- data.frame(lon = rep(lon, length(latitudes)), lat = latitudes)
 
   ## convert to vector points
-  points <- terra::vect(loc, geom = c("lon", "lat"), crs = "EPSG:4326")
+  # points <- terra::vect(loc, geom = c("lon", "lat"), crs = "EPSG:4326")
 
   # ## extract values
   # vals <- terra::extract(rasta_elevation, points, xy = FALSE, ID = FALSE, method = "simple")
@@ -81,7 +81,7 @@ ModESim_compute_pcwd_byLON <- function(
 
 
   # unnest all the data frames
-  df_net_radiation  <- net_radiation |> tidyr::unnest(data)
+  df_net_radiation  <- df_net_radiation |> tidyr::unnest(data)
   df_patm           <- df_patm   |> tidyr::unnest(data)
   df_prec           <- df_prec |> tidyr::unnest(data) # lon lat pr time
   df_tas            <- df_tas  |> tidyr::unnest(data)
@@ -90,43 +90,59 @@ ModESim_compute_pcwd_byLON <- function(
   # unit conversions
   ## precipitation; total precip has units of kg m-2 s-1
   df_prec <-  df_prec |>
-    mutate(pr = pr * 86400 ) # conversion to mm day-1
+    mutate(precip = precip * 86400 ) # conversion to mm day-1
 
   ## temperature
   df_tas <-  df_tas |>
-    mutate(tas = tas - 273.15) # conversion to °C
+    mutate(tsurf = tsurf - 273.15) # conversion to °C
 
   # data wrangling and time resolution adjustments
 
   ## extract year and month from the time column---------------????????????
-  df_prec <- df_prec |>
-    mutate(time = lubridate::ymd_hms(datetime)) |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-datetime)
+  df_pcwd <- df_prec |>
+    mutate(date = lubridate::ymd(date)) %>%
+    left_join(
+      df_tas %>%
+        mutate(date = lubridate::ymd(date)),
+      join_by(date)
+    ) %>%
+    mutate(year = year(date), month = month(date)) %>%
+    left_join(
+      df_net_radiation %>%
+        mutate(year = year(date), month = month(date)),
+      join_by(c("year", "month"))
+    ) %>%
+    left_join(
+      df_patm %>%
+        mutate(year = year(date), month = month(date)),
+      join_by(c("year", "month"))
+    ) |>
+   select(-datetime)
 
-  df_tas <- df_tas |>
-    mutate(time = lubridate::ymd_hms(datetime)) |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-datetime)
+  # df_tas <- df_tas |>
+  #   mutate(time = lubridate::ymd_hms(datetime)) |>
+  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
+  #   select(-datetime)
+  #
+  # df_patm <- df_patm |>
+  #   mutate(time = lubridate::ymd_hms(datetime)) |>
+  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
+  #   select(-time, -datetime)
+  #
+  # df_net_radiation <- df_net_radiation |>
+  #   mutate(time = lubridate::ymd_hms(datetime)) |>
+  #   mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
+  #   select(-time, -datetime)
 
-  df_patm <- df_patm |>
-    mutate(time = lubridate::ymd_hms(datetime)) |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-time, -datetime)
-
-  df_net_radiation <- df_net_radiation |>
-    mutate(time = lubridate::ymd_hms(datetime)) |>
-    mutate(year = lubridate::year(time), month = lubridate::month(time)) |>
-    select(-time, -datetime)
 ################################################????????????????????????????
 
   ### merge all such that monthly data is repeated for each day within month
   ## pcwd
-  df_pcwd <- df_prec |>  # one of the daily data frames
-    left_join(df_net_radiation, by = join_by(lon, lat, year, month)) |>
-    left_join(df_patm, by = join_by(lon, lat, year, month)) |>
-    left_join(df_tas, by = join_by(lon, lat, time)) |>
-    dplyr::select(-year, -month)
+  # df_pcwd <- df_prec |>  # one of the daily data frames
+  #   left_join(df_net_radiation, by = join_by(lon, lat, year, month)) |>
+  #   left_join(df_patm, by = join_by(lon, lat, year, month)) |>
+  #   left_join(df_tas, by = join_by(lon, lat, time)) |>
+  #   dplyr::select(-year, -month)
 
   # pet-calculation
   # ## calculate surface pressure
@@ -134,12 +150,12 @@ ModESim_compute_pcwd_byLON <- function(
   # df_pcwd$patm <- calc_patm(df_pcwd$elevation)
   ## apply pet() function
   df_pcwd <- df_pcwd |>
-    mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm)) # conversion from mm s-1 to mm day-1
+    mutate(pet = 60 * 60 * 24 * cwd::pet(netrad, tsurf, patm)) # conversion from mm s-1 to mm day-1
 
 
   # out pcwd
   out_pcwd <- df_pcwd |>
-    select(lon, lat, time, pr, tas, evspsbl = pet) |> # Use POTENTIAL ET as ET estimate
+    select(lon, lat, time, precip, tsurf, pet) |> # Use POTENTIAL ET as ET estimate
 
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.

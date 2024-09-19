@@ -12,10 +12,8 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
   reset_df <- vars_df |>
-    mutate(year = lubridate::year(time)) |>
     mutate(month = lubridate::month(time))|>
-    mutate(pr_et = pr-evspsbl)|>
-    filter(year < 2045)|>
+    mutate(pr_et = precip - pet)|> #replace with et for CWD
     group_by(month) |>
     summarize(mean_pr_et = mean(pr_et))
 
@@ -25,35 +23,35 @@ get_cwd_withSnow_and_reset <- function(vars_df){
 
   ## day_of_year as param doy_reset in cwd-algorithm
   ## corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("2015-", max_month, "-01")
+  date_str <- paste0("1420-", max_month, "-01") #can be any random year
   date_obj <- as.Date(date_str, format = "%Y-%m-%d")
   day_of_year <- lubridate::yday(date_obj)
 
 
   # snow simulation
   vars_df <- vars_df |>
-    mutate(precipitation = ifelse(tas < 0, 0, pr),
-           snow = ifelse(tas < 0, pr, 0)) |>
+    mutate(precipitation = ifelse(tsurf < 0, 0, precip),
+           snow = ifelse(tsurf < 0, precip, 0)) |>
     cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
 
   vars_df <- vars_df |>
-    mutate(wbal = liquid_to_soil - evspsbl)
+    mutate(wbal = liquid_to_soil - pet)
 
 
   # cwd
   ## calculate cumulative water deficit
   out_cwd <- cwd::cwd(vars_df,
-                 varname_wbal = "wbal",
+                 varname_wbal = "wbal", #water balance
                  varname_date = "time",
                  thresh_terminate = 0.0,
                  thresh_drop = 0.0,
                  doy_reset= day_of_year)
 
-  out_cwd$inst <- out_cwd$inst |>
+  out_cwd$inst <- out_cwd$inst |> #instance; gives a deficit event
     filter(len >= 20)
 
-  out_cwd$df <- out_cwd$df |>
+  out_cwd$df <- out_cwd$df |> #
     select(time, deficit)
 
 

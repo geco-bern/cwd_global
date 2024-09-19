@@ -25,13 +25,15 @@ args <- c(1, 1)
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
-library(terra)
+#library(terra)
 library(tidyr)
 library(cwd)
 library(rpmodel)
 
+setwd("~/cwd_global")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source(paste0(here::here(), "/R/ModESim_compute_pcwd_byLON.R"))
+source("~/cwd_global/R/ModESim_compute_pcwd_byLON.R")
+#paste0(here::here(),
 
 indir  <- "~/scratch2/tidy/"
 outdir <- "~/scratch2/tidy/02_pcwd"
@@ -83,7 +85,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 # 3) Process files --------------------------------------------------------
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
-  select(-in_fname) |>
+  dplyr::select(-in_fname) |>
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
@@ -93,4 +95,5 @@ out <- tibble(in_fname = filnams[vec_index]) |>
       outdir          = outdir))
     ) |> collect()
 
-
+print(str(filnams[vec_index]))
+print(str(out))
