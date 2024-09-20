@@ -1,6 +1,6 @@
-#get_cwd_withSnow_and_reset <- function(vars_df){
+get_cwd_withSnow_and_reset <- function(vars_df){
 #TODO: have as function again
-vars_df <- df_pcwd
+#vars_df <- df_pcwd
   # vars_df must contain columns: time, pr, evspsbl, tas
 
   # loading libraries
@@ -55,9 +55,9 @@ vars_df <- df_pcwd
     filter(len >= 20)
 
   out_cwd$df <- out_cwd$df |> #
-    select(time, deficit)
+    select(date, deficit)
 
 
   # return data frame
   return(out_cwd$df)
-#}
+}

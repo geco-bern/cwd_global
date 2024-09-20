@@ -1,9 +1,9 @@
-LON_string <- "LON_-120.000"
+#LON_string <- "LON_-120.000"
 #TODO: have as function again
-# ModESim_compute_pcwd_byLON <- function(
-#     LON_string,
-#     indir,
-#     outdir){
+ModESim_compute_pcwd_byLON <- function(
+    LON_string,
+    indir,
+    outdir){
 
   #############################################
   # Define hardcoded paths and hardcoded options:
@@ -166,9 +166,7 @@ LON_string <- "LON_-120.000"
     # group data by grid cells and wrap time series for each grid cell into a new
     # column, by default called 'data'.
     group_by(lon, lat) |>
-    tidyr::nest() |> dplyr::ungroup()
-#TODO: add back in to connect mutate
-  #|#>
+    tidyr::nest() |> dplyr::ungroup() |>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
@@ -181,4 +179,4 @@ LON_string <- "LON_-120.000"
 
   # don't return data - it's written to file
   return(NULL)
-#}
+}
