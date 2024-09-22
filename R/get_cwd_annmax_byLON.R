@@ -1,7 +1,7 @@
 # function to get annual maximum
 get_annmax <- function(df){
   df |>
-    mutate(year = lubridate::year(time)) |>
+    mutate(year = lubridate::year(date)) |>
     group_by(year) |>
     summarise(max_deficit = max(deficit))
 }
