@@ -7,30 +7,31 @@ library(tidyr)
 # adjust path to where your ModE-Sim data is located
 outdir <- "~/scratch2/tidy"
 
-## Precipitation - daily resolution--------------------------------------------------
+# Precipitation - daily resolution--------------------------------------------------
 path_ModESim <- "~/scratch2"
 varnam <- "precip";
+set_name <- "1850_1"
 filnam <- list.files(
-  paste0(path_ModESim, "/", varnam),
+  paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m001_precip")
+output_dir = file.path(outdir, "1850_01_m001_precip")
 
 
-  prefix <- "set1420_1_m001_precip"
-# # convert to tidy   -----commented out for running in the shell
-# res_pr <- map2tidy(
-#   nclist = filnam[1:431],
-#   varnam = "precip",
-#   lonnam = "lon",
-#   latnam = "lat",
-#   timenam = "time",
-#   do_chunks = TRUE,
-#   outdir = output_dir,
-#   fileprefix = "set1420_1_m001_precip",
-#   ncores = 1,
-#   overwrite = FALSE
-#   #filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
-#   )
+  prefix <- "set1850_1_m001_precip"
+# convert to tidy   -----commented out for running in the shell
+res_pr <- map2tidy(
+  nclist = filnam[1:160],  #[1:431] for 1420 onwards; [1:160] for 1850
+  varnam = "precip",
+  lonnam = "lon",
+  latnam = "lat",
+  timenam = "time",
+  do_chunks = TRUE,
+  outdir = output_dir,
+  fileprefix = "set1850_1_m001_precip",
+  ncores = 1,
+  overwrite = FALSE
+  #filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
+  )
 
 # test <- readRDS("~/scratch2/tidy/1420_01_m001_precip/set1420_1_m001_precip_LON_-120.000.rds")
 #
@@ -56,21 +57,19 @@ output_dir = file.path(outdir, "1420_01_m001_precip")
 #######loop through remaining files for date conversion:
 
 # Define directories
-tmpdir <- "~/scratch2/tidy/1420_01_m001_precip"  # directory where your RDS files are located
-outdir <- tmpdir  # Assuming output directory is same as input directory
+tmpdir <- "~/scratch2/tidy/1850_01_m001_precip"  # directory where your RDS files are located
+outdir_ref <- tmpdir  # Assuming output directory is same as input directory
 
 # List all RDS files in the directory
 rds_files <- list.files(tmpdir, pattern = "\\.rds$", full.names = TRUE)
 
 # List of already processed files (replace with the actual filenames)
 processed_files <- c(
-  "set1420_1_m001_precip_LON_-001.875.rds",
-  "set1420_1_m001_precip_LON_-121.875.rds",  # Add more file paths here as needed
-  "set1420_1_m001_precip_LON_-120.000.rds"
+  ""
 )
 
 # Exclude already processed files
-remaining_files <- rds_files[!basename(rds_files) %in% basename(processed_files)]
+ remaining_files <- rds_files[!basename(rds_files) %in% basename(processed_files)]
 
 # Function to process and save each RDS file
 process_file <- function(file_path) {
@@ -99,23 +98,24 @@ purrr::walk(remaining_files, process_file)
 ## Temperature - daily resolution-------------------------------------------------
 path_ModESim <- "~/scratch2"
 varnam <- "tsurf";
+set_name <- "1850_1"
 filnam <- list.files(
-  paste0(path_ModESim, "/", varnam),
+  paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m001_tsurf")
+output_dir = file.path(outdir, "1850_01_m001_tsurf")
 
 
-prefix <- "set1420_1_m001_tsurf"
+prefix <- "set1850_1_m001_tsurf"
 # convert to tidy
 res_ts <- map2tidy(
-  nclist = filnam[1:431],
+  nclist = filnam[1:160],
   varnam = "tsurf",
   lonnam = "lon",
   latnam = "lat",
   timenam = "time",
   do_chunks = TRUE,
   outdir = output_dir,
-  fileprefix = "set1420_1_m001_tsurf",
+  fileprefix = "set1850_1_m001_tsurf",
   ncores = 1,
   overwrite = FALSE
  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
@@ -124,17 +124,14 @@ res_ts <- map2tidy(
 #######loop through remaining files for date conversion:
 
 # Define directories
-tmpdir <- "~/scratch2/tidy/1420_01_m001_tsurf"  # directory where your RDS files are located
-outdir <- tmpdir  # Assuming output directory is same as input directory
+tmpdir <- "~/scratch2/tidy/1850_01_m001_tsurf"  # directory where your RDS files are located
+outdir_ref <- tmpdir  # Assuming output directory is same as input directory
 
 # List all RDS files in the directory
 rds_files <- list.files(tmpdir, pattern = "\\.rds$", full.names = TRUE)
 
 # List of already processed files (replace with the actual filenames)
-processed_files <- c(
-  "set1420_1_m001_tsurf_LON_-121.875.rds",  # Add more file paths here as needed
-  "set1420_1_m001_tsurf_LON_-120.000.rds"
-)
+processed_files <- c("")
 
 # Exclude already processed files
 remaining_files <- rds_files[!basename(rds_files) %in% basename(processed_files)]
@@ -163,14 +160,15 @@ purrr::walk(remaining_files, process_file)
 
 
 
-## Net Radiation - monthly resolution -------------------------------------------
+# ## Net Radiation - monthly resolution -------------------------------------------
 path_ModESim <- "~/scratch2"
 varnam <- "netradiation";
+set_name <- "1850_1"
 filnam <- list.files(
-  paste0(path_ModESim, "/", varnam),
+  paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m001_netrad")
-prefix <- "set1420_1_m001_netrad"
+output_dir = file.path(outdir, "1850_01_m001_netrad")
+prefix <- "set1850_1_m001_netrad"
 
 # for files that do not contain a date variable:
 # define a function that derives the necessary dates from the filename and pass that function to fgetdate
@@ -187,24 +185,25 @@ filename_to_monthly_datelist <- function(filename){
 
 #convert to tidy
 res_nr <- map2tidy(
-  nclist = filnam[1:431],
+  nclist = filnam[1:160],
   varnam = "netrad",
   lonnam = "longitude",
   latnam = "latitude",
   timenam = "Time",
   do_chunks = TRUE, ncores = 1, fgetdate = filename_to_monthly_datelist,
-  outdir = output_dir, fileprefix = "set1420_1_m001_netrad",
+  outdir = output_dir, fileprefix = "set1850_1_m001_netrad",
   overwrite = FALSE
  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
 )
-
-## Surface Pressure - monthly resolution ----------------------------------------
+#
+# ## Surface Pressure - monthly resolution ----------------------------------------
 path_ModESim <- "~/scratch2"
 varnam <- "surfaceP";
+set_name <- "1850_1"
 filnam <- list.files(
-  paste0(path_ModESim, "/", varnam),
+  paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m001_patm")
+output_dir = file.path(outdir, "1850_01_m001_patm")
 
 
 # for files that do not contain a date variable:
@@ -220,10 +219,10 @@ filename_to_monthly_datelist <- function(filename){
   return(sprintf("%s-%02d", year_str, c(1:12)))
 }
 
-prefix <- "set1420_1_m001_patm"
+prefix <- "set1850_1_m001_patm"
 # convert to tidy
 res_patm <- map2tidy(
-  nclist = filnam[1:431],
+  nclist = filnam[1:160],
   varnam = "patm",
   lonnam = "longitude",
   latnam = "latitude",
@@ -231,11 +230,11 @@ res_patm <- map2tidy(
   fgetdate = filename_to_monthly_datelist,
   do_chunks = TRUE,
   outdir = output_dir,
-  fileprefix = "set1420_1_m001_patm",
+  fileprefix = "set1850_1_m001_patm",
   ncores = 1,
   overwrite = FALSE
  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
 )
-
- # test1 <- readRDS("~/scratch2/tidy/1420_01_m001_precip/set1420_1_m001_precip_LON_-120.000.rds")
- # test1$data
+#
+#   test1 <- readRDS("~/scratch2/tidy/1420_01_m001_patm/set1420_1_m001_patm_LON_-120.000.rds")
+#   test1$data
