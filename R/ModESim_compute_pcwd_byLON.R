@@ -6,14 +6,11 @@ ModESim_compute_pcwd_byLON <- function(
     outdir){
 
   #############################################
-  # Define hardcoded paths and hardcoded options:
+  # Define hardcoded paths and hardcoded options: change year and set number to adapt for other sets
   indir_patm      <- file.path(indir, "1420_01_m001_patm")
   indir_tas       <- file.path(indir, "1420_01_m001_tsurf")
   indir_prec      <- file.path(indir, "1420_01_m001_precip")
   indir_netrad    <- file.path(indir, "1420_01_m001_netrad")
-
-  # # indir_elevation <- file.path(indir, "01_elevation") --------not needed as have Psurf
-  # indir_elevation <- file.path("/data_1/CMIP6/tidy/", "elevation")
 
   path_pcwd <- file.path(outdir, paste0("ModESim_pcwd", "_", LON_string, ".rds"))
 
@@ -52,36 +49,6 @@ ModESim_compute_pcwd_byLON <- function(
                                         LON_string,".rds"))
   df_net_radiation <- readr::read_rds(filnam)
 
-
-  # # read elevation file and convert to data frame
-  # # library(terra)
-  # filnam <- file.path(indir_elevation, "elevation.nc")
-  # rasta_elevation <- terra::rast(filnam)
-
-  ## read the needed longitude value and extract the latitude values
-  # lon <- df_prec[["lon"]][1]
-  # latitudes <- unique(df_prec$lat)
-
-  ## create a data frame of the coordinates
-  # loc <- data.frame(lon = rep(lon, length(latitudes)), lat = latitudes)
-
-  ## convert to vector points
-  # points <- terra::vect(loc, geom = c("lon", "lat"), crs = "EPSG:4326")
-
-  # ## extract values
-  # vals <- terra::extract(rasta_elevation, points, xy = FALSE, ID = FALSE, method = "simple")
-  #
-  # # combine coordinates with extracted values
-  # df_elevation <- data.frame(
-  #   lon = lon,
-  #   lat = latitudes,
-  #   value = vals
-  # )
-  #
-  # ## set NA-value at 90 degrees to 0
-  # df_elevation[is.na(df_elevation)] <- 0
-
-
   # unnest all the data frames
   df_net_radiation  <- df_net_radiation |> tidyr::unnest(data)
   df_patm           <- df_patm   |> tidyr::unnest(data)
@@ -99,27 +66,6 @@ ModESim_compute_pcwd_byLON <- function(
     mutate(tsurf = tsurf - 273.15) # conversion to °C
 
   # data wrangling and time resolution adjustments
-
-  ## extract year and month from the time column---------------????????????
-  # df_pcwd <- df_prec |>
-  #   mutate(date = lubridate::ymd(date)) %>%
-  #   left_join(
-  #     df_tas %>%
-  #       mutate(date = lubridate::ymd(date)),
-  #     join_by(date)
-  #   ) %>%
-  #   mutate(year = year(date), month = month(date)) %>%
-  #   left_join(
-  #     df_net_radiation %>%
-  #       mutate(year = year(date), month = month(date)),
-  #     join_by(c("year", "month"))
-  #   ) %>%
-  #   left_join(
-  #     df_patm %>%
-  #       mutate(year = year(date), month = month(date)),
-  #     join_by(c("year", "month"))
-  #   ) |>
-  #  select(-datetime)
 
   df_tas <- df_tas |>
     mutate(date = lubridate::ymd(date)) |>
@@ -139,7 +85,6 @@ ModESim_compute_pcwd_byLON <- function(
     mutate(year = lubridate::year(date), month = lubridate::month(date)) |>
     dplyr::select(-datetime)
 
-################################################????????????????????????????
 
   ## merge all such that monthly data is repeated for each day within month
   # pcwd
@@ -151,9 +96,6 @@ ModESim_compute_pcwd_byLON <- function(
                   year = year.x, month = month.x, date = date.x)
 
   # pet-calculation
-  # ## calculate surface pressure
-  # source(paste0(here::here(), "/R/calc_patm.R"))
-  # df_pcwd$patm <- calc_patm(df_pcwd$elevation)
   ## apply pet() function
   df_pcwd <- df_pcwd |>
     mutate(pet = 60 * 60 * 24 * cwd::pet(netrad, tsurf, patm)) # conversion from mm s-1 to mm day-1
