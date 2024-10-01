@@ -30,6 +30,7 @@ library(tidyr)
 library(cwd)
 library(rgeco)
 library(rpmodel)
+library(parallelly)
 
 setwd("~/cwd_global")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
@@ -61,7 +62,7 @@ vec_index <- map2tidy::get_index_by_chunk(
 )
 
 # 2b) Parallelize job across cores on a single node
-ncores <- 8 # parallel::detectCores() # number of cores of parallel threads
+ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
 
 cl <- multidplyr::new_cluster(ncores) |>
   # set up the cluster, sending required objects to each core
