@@ -1,12 +1,20 @@
-#!/bin/bash
-# this is for sumitting the job on a single machine (node) with multiple cores
-Rscript analysis/apply_cwd_global.R 1 1
+#! /usr/bin/bash -l
+#SBATCH --job-name="PCWD calculation 1420 set"
+#SBATCH --time=00:30:00
+#SBATCH --partition=icpu-stocker # if you have access, this gives you priority
+#SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
+#SBATCH --cpus-per-task=124      # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
+# ###SBATCH --mail-user=patricia.helpap@students.unibe.ch
+# ###SBATCH --mail-type=fail               # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
+#SBATCH --chdir=~/cwd_global/analysis  # define here the working directory which contains your R-script, and where the output will be written to.
 
-# # this is for submitting jobs on HPC with a queueing system
-# TODO: Note by Fabian: only get_cwd_annmax.R is setup for multi-node parallelization but not apply_cwd_global.R
-# TODO: Note by Fabian: only  Furthermore, no HPC available with bsub.
-# njobs=4   # number of top-level jobs, sent to separate nodes. On each node, number fo cores is automatically determined and used.
-# for ((n=1;n<=${njobs};n++)); do
-#     echo "Submitting chunk number $n ..."
-#     bsub -W 72:00 -u bestocke -J "job_name $n" -R "rusage[mem=10000]" "Rscript vanilla analysis/apply_cwd_global.R $n $njobs"
-# done
+echo "Started on: $(date --rfc-3339=seconds)"
+echo "Hostname: $(hostname)"
+echo "Working directory: $PWD"   # Is most likely the HOME directory. Allows to check in the log.
+module load R
+
+## Run a small test R script using parallel workers
+##Rscript GitHub/fabern/parallelization-tests/01_example_future.R # If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
+Rscript 02_apply_pcwd_global_ModESim_ubelix.R    # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+
+echo "Finished on: $(date --rfc-3339=seconds)"
