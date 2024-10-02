@@ -1,6 +1,6 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="PCWD calculation 1420 set"
-#SBATCH --time=16-00:00:00
+#SBATCH --time=4-00:00:00
 # ###SBATCH --partition=icpu-stocker # if you have access, this gives you priority
 # ###SBATCH --partition=job_cpu_long
 #SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
