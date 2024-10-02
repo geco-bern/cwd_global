@@ -20,7 +20,8 @@
 #args <- c(1, 1)
 
 # to receive arguments to script from the shell
-# args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly=TRUE)
+stopifnot(length(args)==2)
 
 library(dplyr)
 library(map2tidy)

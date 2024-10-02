@@ -1,0 +1,33 @@
+Started on: 2024-10-02 13:49:29+02:00
+Hostname: bnode008
+Working directory: /storage/homefs/ph23v078/cwd_global/analysis
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+terra 1.7.78
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:terra’:
+
+    extract
+
+
+Attaching package: ‘rpmodel’
+
+The following object is masked from ‘package:rgeco’:
+
+    calc_patm
+
+Error in args[2] : object of type 'closure' is not subsettable
+Calls: <Anonymous>
+Execution halted
+Finished on: 2024-10-02 13:49:40+02:00
