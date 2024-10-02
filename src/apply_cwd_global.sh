@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=124      # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
 # ###SBATCH --mail-user=patricia.helpap@students.unibe.ch
 # ###SBATCH --mail-type=fail               # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
-#SBATCH --chdir=~/cwd_global/analysis  # define here the working directory which contains your R-script, and where the output will be written to.
+#SBATCH --chdir=cwd_global/analysis  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 
 echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
