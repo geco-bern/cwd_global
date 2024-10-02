@@ -38,7 +38,7 @@ setwd("~/cwd_global")
 source("~/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
-indir  <- "~/ModESim/tidy/"
+indir  <- "~/ModESim/tidy"
 outdir <- "~/ModESim/tidy/02_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
