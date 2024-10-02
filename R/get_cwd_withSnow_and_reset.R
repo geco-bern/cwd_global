@@ -36,7 +36,6 @@ get_cwd_withSnow_and_reset <- function(vars_df){
            snow = ifelse(tas < 0, pr, 0)) |>
     cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tas")
 
-
   vars_df <- vars_df |>
     mutate(wbal = liquid_to_soil - evspsbl)
 
@@ -50,13 +49,8 @@ get_cwd_withSnow_and_reset <- function(vars_df){
                  thresh_drop = 0.0,
                  doy_reset= day_of_year)
 
-  out_cwd$inst <- out_cwd$inst |>
-    filter(len >= 20)
-
-  out_cwd$df <- out_cwd$df |>
-    select(time, deficit)
-
-
-  # return data frame
-  return(out_cwd$df)
+  # return list with two components: 
+  # - data frame for time series and all variables
+  # - data frame with instances
+  return(out_cwd)
 }

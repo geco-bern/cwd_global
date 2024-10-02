@@ -170,8 +170,6 @@ cmip6_compute_cwd_pcwd_byLON <- function(
   df_pcwd <- df_pcwd |>
     mutate(pet = 60 * 60 * 24 * cwd::pet(net_radiation, tas, patm)) # conversion from mm s-1 to mm day-1
 
-
-
   # out_cwd
   out_cwd <- df_cwd |>
     select(lon, lat, time, pr, tas, evspsbl) |>
