@@ -16,6 +16,6 @@ module load R
 
 ## Run a small test R script using parallel workers
 ##Rscript GitHub/fabern/parallelization-tests/01_example_future.R # If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
-Rscript 02_apply_pcwd_global_ModESim_ubelix.R    # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+Rscript 02_apply_pcwd_global_ModESim_ubelix.R 1 1   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
 
 echo "Finished on: $(date --rfc-3339=seconds)"
