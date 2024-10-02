@@ -45,19 +45,14 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   # cwd
   ## calculate cumulative water deficit
   out_cwd <- cwd::cwd(vars_df,
-                 varname_wbal = "wbal", #water balance
-                 varname_date = "date",
-                 thresh_terminate = 0.0,
-                 thresh_drop = 0.0,
-                 doy_reset= day_of_year)
+                      varname_wbal = "wbal",
+                      varname_date = "time",
+                      thresh_terminate = 0.0,
+                      thresh_drop = 0.0,
+                      doy_reset= day_of_year)
 
-  out_cwd$inst <- out_cwd$inst |> #instance; gives a deficit event
-    filter(len >= 20)
-
-  out_cwd$df <- out_cwd$df |> #
-    select(date, deficit)
-
-
-  # return data frame
-  return(out_cwd$df)
+  # return list with two components:
+  # - data frame for time series and all variables
+  # - data frame with instances
+  return(out_cwd)
 }
