@@ -102,7 +102,7 @@ ModESim_compute_pcwd_byLON <- function(
 
 
   # out pcwd
-  out_pcwd <- df_pcwd |>
+out_pcwd <- df_pcwd |>
     dplyr::select(lon, lat, date, precip, tsurf, pet) |> # Use POTENTIAL ET as ET estimate
 
     # group data by grid cells and wrap time series for each grid cell into a new
@@ -114,7 +114,6 @@ ModESim_compute_pcwd_byLON <- function(
     # each grid cell.
     ###slice(1:2)|> # uncomment for development/debugging
     mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset(.), .progress = TRUE))
-
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_pcwd, " ..."))
   readr::write_rds(out_pcwd, path_pcwd)
