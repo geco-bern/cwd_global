@@ -95,7 +95,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
   dplyr::select(-in_fname) |>
-  # multidplyr::partition(cl) |>    # comment this partitioning for development
+  multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
     ~ModESim_compute_pcwd_byLON(
