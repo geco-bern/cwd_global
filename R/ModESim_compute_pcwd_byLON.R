@@ -113,7 +113,7 @@ out_pcwd <- df_pcwd |>
     # apply the custom function on the time series data frame separately for
     # each grid cell.
     ###slice(1:2)|> # uncomment for development/debugging
-    mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset(.), .progress = TRUE))
+    mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset_ModESim(.), .progress = TRUE))
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_pcwd, " ..."))
   readr::write_rds(out_pcwd, path_pcwd)
