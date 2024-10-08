@@ -1,4 +1,4 @@
-get_cwd_withSnow_and_reset <- function(vars_df){
+get_cwd_withSnow_and_reset_ModESim <- function(vars_df){
 #TODO: have as function again
 #vars_df <- df_pcwd
   # vars_df must contain columns: time, pr, evspsbl, tas
