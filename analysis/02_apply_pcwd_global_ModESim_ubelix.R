@@ -33,13 +33,13 @@ library(rgeco)
 library(rpmodel)
 library(parallelly)
 
-setwd("~/cwd_global")
+setwd("/storage")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source("~/cwd_global/R/ModESim_compute_pcwd_byLON.R")
+source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
-indir  <- "~/ModESim/tidy"
-outdir <- "~/ModESim/tidy/02_pcwd"
+indir  <- "/storage/homefs/ph23v078/ModESim/tidy"
+outdir <- "/storage/capacity/occr_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
