@@ -40,6 +40,7 @@ source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 
 indir  <- "/storage/homefs/ph23v078/ModESim/tidy"
 outdir <- "/storage/capacity/occr_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
+#outdir <- "/storage/homefs/ph23v078/ModESim/tidy/02_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -94,7 +95,17 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
+
+  # Define the corresponding output filename based on how your output files are named
+  # Assuming output files follow the same LON_string format with .rds extension
+  mutate(out_fname = file.path(outdir, paste0("ModESim_pcwd_",LON_string, ".rds"))) |>
+
+  # Filter out files that already have corresponding output files
+  filter(!file.exists(out_fname)) |>
+
+  # Remove unnecessary columns if needed
   dplyr::select(-in_fname) |>
+
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
