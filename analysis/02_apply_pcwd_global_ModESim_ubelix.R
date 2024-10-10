@@ -39,8 +39,7 @@ source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
 indir  <- "/storage/homefs/ph23v078/ModESim/tidy"
-outdir <- "/storage/capacity/occr_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
-outdir_old <- "/storage/homefs/ph23v078/ModESim/tidy/02_pcwd"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -98,7 +97,7 @@ out <- tibble(in_fname = filnams[vec_index]) |>
 
   # Define the corresponding output filename based on how your output files are named
   # Assuming output files follow the same LON_string format with .rds extension
-  mutate(out_fname = file.path(outdir_old, paste0("ModESim_pcwd_",LON_string, ".rds"))) |>
+  mutate(out_fname = file.path(outdir, paste0("ModESim_pcwd_",LON_string, ".rds"))) |>
 
   # Filter out files that already have corresponding output files
   filter(!file.exists(out_fname)) |>
@@ -113,3 +112,5 @@ out <- tibble(in_fname = filnams[vec_index]) |>
       indir           = indir,
       outdir          = outdir))
   ) |> collect()
+
+
