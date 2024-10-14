@@ -26,7 +26,7 @@ get_cwd_withSnow_and_reset_ModESim <- function(vars_df){
 
   ## day_of_year as param doy_reset in cwd-algorithm
   ## corresponds to day-of-year (integer) when deficit is to be reset to zero
-  date_str <- paste0("1420-", max_month, "-01") #can be any random year
+  date_str <- paste0("1850-", max_month, "-01") #can be any random year
   date_obj <- as.Date(date_str, format = "%Y-%m-%d")
   day_of_year <- lubridate::yday(date_obj)
 

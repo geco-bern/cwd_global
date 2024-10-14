@@ -46,7 +46,7 @@ dir.create(outdir, showWarnings = FALSE)
 infile_pattern  <- "*.rds"
 # outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
 
-filnams <- list.files(file.path(indir, "1420_01_m001_precip"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "1850_01_m001_precip"),  # use precip folder as example; change year
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")

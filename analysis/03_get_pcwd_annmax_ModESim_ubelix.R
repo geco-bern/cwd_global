@@ -30,8 +30,8 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "~/ModESim/tidy/02_pcwd"
-outdir  <- "~/ModESim/tidy/03_pcwd"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/03_pcwd"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -42,7 +42,7 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", 
 # }
 
 # 1b) Define function to apply to each location:  -------------------------------
-source("~/cwd_global/R/get_cwd_annmax_byLON.R")
+source("/storage/homefs/ph23v078/cwd_global/R/get_cwd_annmax_byLON.R")
 
 
 # 2) Setup parallelization ------------------------------------------------
@@ -55,7 +55,7 @@ vec_index <- map2tidy::get_index_by_chunk(
 )
 
 # 2b) Parallelize job across cores on a single node
-ncores <- 40 # parallel::detectCores() # number of cores of parallel threads
+ncores <- 50 # parallel::detectCores() # number of cores of parallel threads
 
 cl <- multidplyr::new_cluster(ncores) |>
   # set up the cluster by sending required objects to each core
