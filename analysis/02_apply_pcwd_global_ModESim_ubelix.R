@@ -39,7 +39,7 @@ source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
 indir  <- "/storage/homefs/ph23v078/ModESim/tidy"
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd_1850"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------

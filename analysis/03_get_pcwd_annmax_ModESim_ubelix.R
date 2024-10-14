@@ -30,8 +30,8 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/03_pcwd"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/02_pcwd_1850"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/03_pcwd_ANNMAX_1850"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -70,6 +70,7 @@ cl <- multidplyr::new_cluster(ncores) |>
     indir       = indir,
     indir      = indir,
     outdir      = outdir,
+    get_annmax = get_annmax,
     get_cwd_annmax_byLON = get_cwd_annmax_byLON,   # make the function known for each core
     )
 
@@ -86,6 +87,5 @@ out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
       .,
       outdir          = outdir))
   ) |> collect()
-
 
 

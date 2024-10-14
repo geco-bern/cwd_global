@@ -1,10 +1,12 @@
 # function to get annual maximum
 get_annmax <- function(df){
+  # Proceed with your existing operation on 'df'
   df |>
     mutate(year = lubridate::year(date)) |>
     group_by(year) |>
-    summarise(max_deficit = max(deficit))
+    summarise(max_deficit = max(deficit, na.rm = TRUE))
 }
+
 get_cwd_annmax_byLON <- function(
     in_fname,
     outdir
@@ -17,7 +19,7 @@ get_cwd_annmax_byLON <- function(
   out <- df |>
     mutate(data = purrr::map(
       data,
-      ~get_annmax(.)
+      ~get_annmax(.x$df)
     ))
   # test: out |> slice(1) |> unnest(data) |> print(n=100)
 

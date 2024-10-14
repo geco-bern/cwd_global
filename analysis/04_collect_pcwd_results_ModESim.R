@@ -9,8 +9,8 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/03_pcwd_ANNMAX"
-outfile_pcwd <- "~/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/04_result/PCWD_ANNMAX" # adjust path to where the file should be written to
+indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/03_pcwd_ANNMAX_1850"
+outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy/04_result_1850/PCWD_ANNMAX" # adjust path to where the file should be written to
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_ANNMAX.rds", full.names = TRUE)

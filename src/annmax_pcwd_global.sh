@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="PCWD annmax 1420 set"
-#SBATCH --time=2-00:00:00
-# ###SBATCH --partition=icpu-stocker # if you have access, this gives you priority
-# ###SBATCH --partition=job_cpu_long
+#SBATCH --job-name="PCWD annmax 1850 set"
+#SBATCH --time=1-00:00:00
+#SBATCH --partition=icpu-stocker # if you have access, this gives you priority
 #SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
 #SBATCH --cpus-per-task=50      # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
+#SBATCH --mem-per-cpu=16G
 #SBATCH --mail-user=patricia.helpap@students.unibe.ch
 #SBATCH --mail-type=fail               # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
 #SBATCH --chdir=cwd_global/analysis  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
