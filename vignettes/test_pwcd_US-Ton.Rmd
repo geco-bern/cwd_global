@@ -20,6 +20,7 @@ library(ggplot2)
 library(cwd)
 library(ncdf4)
 library(readr)
+library(reshape2)
 ```
 
 #The next section opens an annual max netcdf file which only contains the longitude of the US-Ton site: 
@@ -27,13 +28,13 @@ library(readr)
 
 ```{r read data from netcdf}
 ##read in data
-input_file <- "~/scratch2/tidy/04_result/PCWD_ANNMAX.nc"
-nc_pwcd <- nc_open(input_file)
-pcwd_annmax = ncvar_get(nc_pwcd, varid="pcwd_annmax")
-lon = ncvar_get(nc_pwcd, varid="lon")
-lat = ncvar_get(nc_pwcd, varid="lat")
-lon = ncvar_get(nc_pwcd, varid="lon")
-time = ncvar_get(nc_pwcd, varid="time")
+input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420/PCWD_ANNMAX.nc"
+nc_pwcd_1420 <- nc_open(input_file)
+pcwd_annmax_1420 = ncvar_get(nc_pwcd_1420, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1420, varid="lon")
+lat = ncvar_get(nc_pwcd_1420, varid="lat")
+lon = ncvar_get(nc_pwcd_1420, varid="lon")
+time = ncvar_get(nc_pwcd_1420, varid="time")
 # Convert to actual dates (days since 2001-01-01)
 reference_date <- as.Date("2001-01-01")
 time_dates <- reference_date + time
@@ -41,12 +42,12 @@ time_dates <- reference_date + time
 # # Print the resulting dates
 # print(time_dates)
 
-nc_close(nc_pwcd)
+nc_close(nc_pwcd_1420)
 
 ```
 
 ```{r plot annmax}
-plot(time_dates, pcwd_annmax[38.4,1:431],type="l")
+plot(time_dates, pcwd_annmax_1420[111.25,71.2,1:431],type="l")
 
 ```
 
@@ -145,4 +146,166 @@ ggplot() +
     x = "Date", 
     y = "Potential cumulative water deficit (mm)"
     )
+```
+##comparing the 1850 and 1420 model sets 
+- Note from Ralf: should treat the year 1850 as part of the 1850 set, not 1420
+```{r read in data both sets}
+#read in dataframes
+##read in data from m001 1420 set
+input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420/PCWD_ANNMAX.nc"
+nc_pwcd_1420 <- nc_open(input_file)
+pcwd_annmax_1420 = ncvar_get(nc_pwcd_1420, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1420, varid="lon")
+lat = ncvar_get(nc_pwcd_1420, varid="lat")time = ncvar_get(nc_pwcd_1420, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates <- reference_date + time
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1420)
+# Assuming 'pcwd_annmax_1420' is a 3D array with dimensions (lat, lon, time)
+# Convert to a dataframe using melt
+melt_pcwd_annmax_1420 <- melt(pcwd_annmax_1420, varnames = c("lat", "lon", "time"), value.name = "pcwd_annmax")
+
+
+##read in data from m001 1850 set
+input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc"
+nc_pwcd_1850 <- nc_open(input_file)
+pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
+#lon = ncvar_get(nc_pwcd_1850, varid="lon")
+#lat = ncvar_get(nc_pwcd_1850, varid="lat")
+time_1850 = ncvar_get(nc_pwcd_1850, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates_1850 <- reference_date + time_1850
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1850)
+melt_pcwd_annmax_1850 <- melt(pcwd_annmax_1850, varnames = c("lat", "lon", "time"), value.name = "pcwd_annmax")
+
+```
+
+
+```{r plotting several annmax data}
+#used stations used in Patricia Gribis Bachelor thesis 
+####################Russian site
+
+
+time <- c(1420:2009)
+# Find the index of the closest latitude to 71.2
+lat_index <- which.min(abs(as.numeric(lat) - 71.2))
+lon_index <- which.min(abs(as.numeric(lon) - 111.25))
+Russia_1420 <- pcwd_annmax_1420[lon_index,lat_index,1:431]
+Russia_1850 <- pcwd_annmax_1850[lon_index,lat_index,1:160]
+# Determine the maximum length between the two lists
+max_length <- max(length(time), length(Russia_1420))
+length(Russia_1420) <- max_length
+prepend_list2 <- max_length - length(Russia_1850)
+# Prepend NAs to the shorter list
+Russia_1850 <- c(rep(NA, prepend_list2), Russia_1850)
+Russia_df <- data.frame(time, Russia_1420, Russia_1850)
+
+####################Algeria site
+lat_index <- which.min(abs(as.numeric(lat) - 28.7))
+lon_index <- which.min(abs(as.numeric(lon) - 3.75))
+Algeria_1420<- pcwd_annmax_1420[lon_index,lat_index,1:431]
+Algeria_1850<- pcwd_annmax_1850[lon_index,lat_index,1:160]
+# Determine the maximum length between the two lists
+length(Algeria_1420) <- max_length
+# Prepend NAs to the shorter list
+Algeria_1850 <- c(rep(NA, prepend_list2), Algeria_1850)
+Algeria_df <- data.frame(time, Algeria_1420, Algeria_1850)
+
+####################Antarctica site
+lat_index <- which.min(abs(as.numeric(lat) - -81.5))
+lon_index <- which.min(abs(as.numeric(lon) - 55))
+Antarctica_1420<- pcwd_annmax_1420[lon_index,lat_index,1:431]
+Antarctica_1850<- pcwd_annmax_1850[lon_index,lat_index,1:160]
+# Determine the maximum length between the two lists
+length(Antarctica_1420) <- max_length
+# Prepend NAs to the shorter list
+Antarctica_1850 <- c(rep(NA, prepend_list2), Antarctica_1850)
+Antarctica_df <- data.frame(time, Antarctica_1420, Antarctica_1850)
+
+####################Czechia site
+lat_index <- which.min(abs(as.numeric(lat) - 50.4))
+lon_index <- which.min(abs(as.numeric(lon) - 13.75))
+Czechia_1420<- pcwd_annmax_1420[lon_index,lat_index,1:431]
+Czechia_1850<- pcwd_annmax_1850[lon_index,lat_index,1:160]
+# Determine the maximum length between the two lists
+length(Czechia_1420) <- max_length
+# Prepend NAs to the shorter list
+Czechia_1850 <- c(rep(NA, prepend_list2), Czechia_1850)
+Czechia_df <- data.frame(time, Czechia_1420, Czechia_1850)
+
+####################Brazil site
+lat_index <- which.min(abs(as.numeric(lat) - -7))
+lon_index <- which.min(abs(as.numeric(lon) - -52.5))
+Brazil_1420<- pcwd_annmax_1420[lon_index,lat_index,1:431]
+Brazil_1850<- pcwd_annmax_1850[lon_index,lat_index,1:160]
+# Determine the maximum length between the two lists
+length(Brazil_1420) <- max_length
+# Prepend NAs to the shorter list
+Brazil_1850 <- c(rep(NA, prepend_list2), Brazil_1850)
+Brazil_df <- data.frame(time, Brazil_1420, Brazil_1850)
+
+
+```
+
+```{r plot multiple stations for both sets}
+
+ggplot() +
+  geom_line(data = Russia_df, aes(x = time, y = Russia_1420, color = "Russia 1420")) +
+  geom_line(data = Russia_df, aes(x = time, y = Russia_1850, color = "Russia 1850")) +
+  geom_line(data = Algeria_df, aes(x = time, y = Algeria_1420, color = "Algeria 1420")) +
+  geom_line(data = Algeria_df, aes(x = time, y = Algeria_1850, color = "Algeria 1850")) +
+    geom_line(data = Antarctica_df, aes(x = time, y = Antarctica_1420, color = "Antarctica 1420")) +
+  geom_line(data = Antarctica_df, aes(x = time, y = Antarctica_1850, color = "Antarctica 1850")) +
+    geom_line(data = Brazil_df, aes(x = time, y = Brazil_1420, color = "Brazil 1420")) +
+  geom_line(data = Brazil_df, aes(x = time, y = Brazil_1850, color = "Brazil 1850")) +
+    geom_line(data = Czechia_df, aes(x = time, y = Czechia_1420, color = "Czechia 1420")) +
+  geom_line(data = Czechia_df, aes(x = time, y = Czechia_1850, color = "Czechia 1850")) +
+  theme_classic() +
+  ylim(0, max(Brazil_df$Brazil_1850)) +
+  xlim(min(Russia_df$time), max(Russia_df$time)) +
+  labs(
+    x = "Year", 
+    y = "Potential cumulative water deficit (mm)",
+    color = "Legend"
+  ) +
+  scale_color_manual(values = c("Russia 1420" = "red", "Russia 1850" = "darkred","Algeria 1420" = "blue", "Algeria 1850" = "darkblue", "Antarctica 1420" = "darkslategray4", "Antarctica 1850" = "darkslategray", "Brazil 1420" = "green", "Brazil 1850" = "darkgreen", "Czechia 1420" = "yellow", "Czechia 1850" = "gold"))
+
+ggsave("stations_allyears.tiff", width = 20, height = 14, units = "cm", dpi=320)
+
+
+```
+
+```{r plot multiple stations for both sets but around 1850}
+
+ggplot() +
+  geom_line(data = Russia_df, aes(x = time, y = Russia_1420, color = "Russia 1420")) +
+  geom_line(data = Russia_df, aes(x = time, y = Russia_1850, color = "Russia 1850")) +
+  geom_line(data = Algeria_df, aes(x = time, y = Algeria_1420, color = "Algeria 1420")) +
+  geom_line(data = Algeria_df, aes(x = time, y = Algeria_1850, color = "Algeria 1850")) +
+    geom_line(data = Antarctica_df, aes(x = time, y = Antarctica_1420, color = "Antarctica 1420")) +
+  geom_line(data = Antarctica_df, aes(x = time, y = Antarctica_1850, color = "Antarctica 1850")) +
+    geom_line(data = Brazil_df, aes(x = time, y = Brazil_1420, color = "Brazil 1420")) +
+  geom_line(data = Brazil_df, aes(x = time, y = Brazil_1850, color = "Brazil 1850")) +
+    geom_line(data = Czechia_df, aes(x = time, y = Czechia_1420, color = "Czechia 1420")) +
+  geom_line(data = Czechia_df, aes(x = time, y = Czechia_1850, color = "Czechia 1850")) +
+  theme_classic() +
+  ylim(0, max(Brazil_df$Brazil_1850)) +
+  xlim(1800, 1900) +
+  labs(
+    x = "Year", 
+    y = "Potential cumulative water deficit (mm)",
+    color = "Legend"
+  ) +
+  scale_color_manual(values = c("Russia 1420" = "red", "Russia 1850" = "darkred","Algeria 1420" = "blue", "Algeria 1850" = "darkblue", "Antarctica 1420" = "darkslategray4", "Antarctica 1850" = "darkslategray", "Brazil 1420" = "green", "Brazil 1850" = "darkgreen", "Czechia 1420" = "yellow", "Czechia 1850" = "gold"))
+
+ggsave("stations_overlap.tiff", width = 20, height = 14, units = "cm", dpi=320)
 ```
