@@ -8,9 +8,16 @@
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
+library(tidyr)
+library(lubridate)
+library(purrr)
 
-indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_pcwd_1850"
-outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_5_pcwdresult_1850" # adjust path to where the file should be written to
+#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_pcwd_1850"
+#outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_5_pcwdresult_1850" # adjust path to where the file should be written to
+indir        <- "~/scratch2/m001_tidy"
+outfile_pcwd <- "~/scratch2/m001_tidy/02_5_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
+
+
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
@@ -20,7 +27,7 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", 
 # }
 
 # 3) Process files --------------------------------------------------------
-df_pcwd <- lapply(filnams_pcwd,
+df_pcwd_2 <- lapply(filnams_pcwd,
                   function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
   bind_rows()
 
@@ -34,43 +41,61 @@ readr::write_rds(
 # 4) Output to global NetCDF file ---------------------------------
 library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 
-prepare_write_nc2 <- function(df_cwd, varname){
-  # create object that can be used with write_nc2()
-  df_cwd <- df_cwd |>
-    dplyr::select(lon, lat, year, max_deficit) |>
-    arrange(year, lat, lon)
+#prepare_write_nc2_no_aggregation <- function(df_pcwd_2, varname) {
 
-  arr <- array(
-    unlist(df_cwd$max_deficit),
-    dim = c(
-      length(unique(df_cwd$lon)),
-      length(unique(df_cwd$lat)),
-      length(unique(df_cwd$year))
-    )
-  )
+  # Step 1: Extract unique lat and lon coordinates
+  lons <- sort(unique(df_pcwd_2$lon))
+  lats <- sort(unique(df_pcwd_2$lat))
 
-  # image(arr[,,1])
+  # Step 1.5: Extract unique dates across all `record` tibbles in `data`
+  unique_dates <- df_pcwd_2$data %>%
+    map(~ .x$date) %>%
+    unlist() %>%
+    unique() %>%
+    sort()
 
-  # create object for use in rgeco::write_nc2()
-  vars_list = list(arr)
-  names(vars_list) <- varname
+  # Initialize a list to store each variable's array data
+  vars_list <- list()
 
+  # Step 2: Process each record in `df_pcwd_2`
+  for (i in 1:nrow(df_pcwd_2)) {
+    record <- df_pcwd_2$data[[i]]
+    coord_lon <- df_pcwd_2$lon[i]
+    coord_lat <- df_pcwd_2$lat[i]
+
+    # Step 3: Populate arrays for each variable in `record` without aggregation
+    for (var_name in names(record)[-1]) {  # Exclude 'date' column
+      if (!exists(var_name, envir = vars_list)) {
+        # Initialize the array to hold data for this variable
+        vars_list[[var_name]] <- array(NA,
+                                       dim = c(length(lons), length(lats), length(unique_dates)))
+      }
+
+      # Find the indices for lon, lat, and time dimensions
+      lon_index <- which(lons == coord_lon)
+      lat_index <- which(lats == coord_lat)
+      date_indices <- match(record$date, unique_dates)
+
+      # Fill in data for this variable
+      vars_list[[var_name]][lon_index, lat_index, date_indices] <- record[[var_name]]
+    }
+  }
+
+  # Step 4: Prepare the final object for writing
   obj <- list(
-    lon = sort(unique(df_cwd$lon)),
-    lat = sort(unique(df_cwd$lat)),
-    time = lubridate::ymd(
-      paste0(
-        sort(unique(df_cwd$year)),
-        "-01-01"   # taking first of January as a mid-point for each year
-      )
-    ),
+    lon = lons,
+    lat = lats,
+    time = unique_dates,  # Exact dates are retained as time dimension
     vars = vars_list
   )
 
   return(obj)
 }
 
-obj_pcwd <- prepare_write_nc2(df_pcwd, varname="pcwd_annmax")
+# Usage example
+obj_pcwd <- prepare_write_nc2_no_aggregation(df_pcwd_2, varname="pcwd")
+
+
 
 # Get meta information on code executed:
 get_repo_info <- function(){
@@ -92,7 +117,7 @@ get_repo_info()
 
 rgeco::write_nc2(
   obj_pcwd,
-  varnams = "pcwd_annmax",
+  varnams = "pcwd",
   make_tdim = TRUE,
   path = paste0(outfile_pcwd, ".nc"),
   units_time = "days since 2001-01-01",
