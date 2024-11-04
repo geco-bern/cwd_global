@@ -12,17 +12,12 @@ library(tidyr)
 library(lubridate)
 library(purrr)
 
-#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_pcwd_1850"
-#outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_5_pcwdresult_1850" # adjust path to where the file should be written to
 indir        <- "~/scratch2/m001_tidy"
 outfile_pcwd <- "~/scratch2/m001_tidy/02_5_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
 
+#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850"
+#outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_5_pcwdresult_1850" # adjust path to where the file should be written to
 
-<<<<<<< HEAD
-=======
-indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850"
-outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_5_pcwdresult_1850" # adjust path to where the file should be written to
->>>>>>> fa1e7ae991bbac5eb15a0d06c9a16b671a101da4
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
