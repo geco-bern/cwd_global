@@ -44,10 +44,12 @@ get_cwd_withSnow_and_reset_ModESim <- function(vars_df){
 
   # cwd
   ## calculate cumulative water deficit
+  ##choose between absolute or relative cwd threshold
   out_cwd <- cwd::cwd(vars_df,
                       varname_wbal = "wbal",
                       varname_date = "date",
-                      thresh_terminate = 0.0,
+                      #thresh_terminate = 0.0,
+                      thresh_terminate_absolute = 10,
                       thresh_drop = 0.0,
                       doy_reset= day_of_year)
 

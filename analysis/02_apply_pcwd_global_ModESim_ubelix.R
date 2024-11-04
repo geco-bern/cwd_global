@@ -38,8 +38,8 @@ setwd("/storage")
 source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
-indir  <- "/storage/homefs/ph23v078/ModESim/tidy_m001"
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/tidy_m001/02_pcwd_1850"
+indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850_AbsTrsh"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
