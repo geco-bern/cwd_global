@@ -33,7 +33,8 @@ library(multidplyr)
 indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850"
 outdir_def  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_def_1850"
 outdir_inst  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_inst_1850"
-dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+dir.create(outdir_def, showWarnings = FALSE, recursive = TRUE)
+dir.create(outdir_inst, showWarnings = FALSE, recursive = TRUE)
 
 #for development:
 #indir   <- "~/scratch2/m001_tidy"
@@ -65,7 +66,7 @@ vec_index <- map2tidy::get_index_by_chunk(
 # 2b) Parallelize job across cores on a single node
 ncores <- 50 # parallel::detectCores() # number of cores of parallel threads
 
-cl <- multidplyr::new_cluster(ncores) |>
+cl_def <- multidplyr::new_cluster(ncores) |>
   # set up the cluster by sending required objects to each core
   multidplyr::cluster_library(c("map2tidy",
                                 "dplyr",
@@ -76,12 +77,25 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "magrittr")) |>
   multidplyr::cluster_assign(
     indir       = indir,
-    indir      = indir,
-    outdir      = outdir,
+    outdir_def      = outdir_def,
     get_deficit = get_deficit,
-    get_inst = get_inst,
-    get_cwd_instance_byLON = get_cwd_instance_byLON,
     get_cwd_deficit_byLON = get_cwd_deficit_byLON   # make the function known for each core
+  )
+
+cl_inst <- multidplyr::new_cluster(ncores) |>
+  # set up the cluster by sending required objects to each core
+  multidplyr::cluster_library(c("map2tidy",
+                                "dplyr",
+                                "purrr",
+                                "tidyr",
+                                "readr",
+                                "here",
+                                "magrittr")) |>
+  multidplyr::cluster_assign(
+    indir       = indir,
+    outdir_inst      = outdir_inst,
+    get_inst = get_inst,
+    get_cwd_instance_byLON = get_cwd_instance_byLON   # make the function known for each core
   )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -90,7 +104,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 # Once for pcwd_deficit
 out_pcwd_def <- tibble(in_fname = filnams_pcwd[vec_index]) |>
- # multidplyr::partition(cl) |>    # comment this partitioning for development
+ multidplyr::partition(cl_def) |>    # comment this partitioning for development
   dplyr::mutate(out_def = purrr::map(
     in_fname,
     ~get_cwd_deficit_byLON(
@@ -100,7 +114,7 @@ out_pcwd_def <- tibble(in_fname = filnams_pcwd[vec_index]) |>
 
 # Once for pcwd_instance
 out_pcwd_inst <- tibble(in_fname = filnams_pcwd[vec_index]) |>
-   multidplyr::partition(cl) |>    # comment this partitioning for development
+   multidplyr::partition(cl_inst) |>    # comment this partitioning for development
   dplyr::mutate(out_inst = purrr::map(
     in_fname,
     ~get_cwd_instance_byLON(

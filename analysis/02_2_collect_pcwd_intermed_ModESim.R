@@ -12,17 +12,17 @@ library(tidyr)
 library(lubridate)
 library(purrr)
 
-indir        <- "~/scratch2/m001_tidy"
-outfile_pcwd_def <- "~/scratch2/m001_tidy/02_2_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
-outfile_pcwd_inst <- "~/scratch2/m001_tidy/02_2_pcwd_result/PCWD_instance"
-#indir_inst        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_inst_1850"
-#indir_def        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_def_1850"
+#indir        <- "~/scratch2/m001_tidy"
+outfile_pcwd_def <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_2_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
+outfile_pcwd_inst <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_2_pcwd_result/PCWD_instance"
+indir_inst        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_inst_1850"
+indir_def        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_1_pcwd_def_1850"
 #outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_2_pcwdresult_1850" # adjust path to where the file should be written to
 
 
 # 1) Define filenames of files to collect:  -------------------------------
-filnams_pcwd_def <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_DEFICIT.rds", full.names = TRUE)
-filnams_pcwd_inst <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_INST.rds", full.names = TRUE)
+filnams_pcwd_def <- list.files(indir_def, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_DEFICIT.rds", full.names = TRUE)
+filnams_pcwd_inst <- list.files(indir_inst, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_INST.rds", full.names = TRUE)
 
 # if (length(filnams_cwd) <= 1){
 #   stop("Should find multiple files. Only found " ,length(filnams_cwd), ".")
@@ -127,7 +127,7 @@ rgeco::write_nc2(
   att_title = "Global Potential Cumulative Water Deficit and Additional Variables", # Title attribute
   att_history = sprintf(
     "Created on: %s, with R scripts from (%s) processing input data from: %s",
-    Sys.Date(), get_repo_info(), indir
+    Sys.Date(), get_repo_info(), indir_def
   )
 )
 
@@ -192,7 +192,7 @@ rgeco::write_nc2(
   att_title = "Global Potential Cumulative Water Deficit Instances and Length",  # Title attribute
   att_history = sprintf(
     "Created on: %s, with R scripts from (%s) processing input data from: %s",
-    Sys.Date(), git_repo_info, indir
+    Sys.Date(), git_repo_info, indir_inst
   )
 )
 
