@@ -30,8 +30,8 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/03_pcwd_ANNMAX_1850"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850_AbsTrsh"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/03_pcwd_ANNMAX_1850_AbsTrsh"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
