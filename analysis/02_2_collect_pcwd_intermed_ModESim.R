@@ -138,76 +138,62 @@ rgeco::write_nc2(
 prepare_write_nc2_inst <- function(df_cwd, varname_list) {
   # Ensure the provided variable names match columns in df_cwd
   df_cwd <- df_cwd |>
-    dplyr::select(lon, lat, date_start, date_end, all_of(varname_list)) |>
-    arrange(date_start, lat, lon)
-
-  # Unique values for lon and lat
-  unique_lon <- sort(unique(df_cwd$lon))
-  unique_lat <- sort(unique(df_cwd$lat))
-  num_events <- nrow(df_cwd)  # Total number of events
+    dplyr::select(lon, lat, all_of(varname_list)) |>
+    arrange(lat, lon)
 
   # Initialize an empty list to store arrays for each variable
   vars_list <- list()
 
-  # Create a 3D array for each variable
+  # Loop through each variable in varname_list to create an array and add to vars_list
   for (varname in varname_list) {
-    arr <- array(NA, dim = c(length(unique_lon), length(unique_lat), num_events))  # Initialize with NA
+    arr <- array(
+      unlist(df_cwd[[varname]]),
+      dim = c(
+        length(unique(df_cwd$lon)),
+        length(unique(df_cwd$lat))
+      )
+    )
 
-    # Populate the array using the correct indexing
-    for (i in seq_len(num_events)) {
-      lon_idx <- match(df_cwd$lon[i], unique_lon)
-      lat_idx <- match(df_cwd$lat[i], unique_lat)
+    vars_list[[varname]] <- arr  # Add each array to the list with its variable name
 
-      # Check if indices are found
-      if (!is.na(lon_idx) && !is.na(lat_idx)) {
-        arr[lon_idx, lat_idx, i] <- df_cwd[[varname]][i]  # Correctly assign value to the array
-      }
-    }
-
-    vars_list[[varname]] <- arr  # Store the filled array in the vars_list
   }
-
   # Define the object structure for netCDF writing
   obj <- list(
-    lon = unique_lon,
-    lat = unique_lat,
-    date_start = df_cwd$date_start,  # Store date_start values directly
-    date_end = df_cwd$date_end,      # Store date_end values directly
+    lon = sort(unique(df_cwd$lon)),
+    lat = sort(unique(df_cwd$lat)),
+   # time = sort(unique(df_cwd$date)),  # Use daily dates as the time dimension
     vars = vars_list
   )
 
   return(obj)
 }
 
-# Assuming df_pcwd_inst is your input dataframe
-varnames <- c("deficit", "len")  # Exclude date_end from varnames since we will handle it separately
-obj_pcwd_inst <- prepare_write_nc2_inst(df_pcwd_inst, varname_list = varnames)
 
-# Debugging: Check the dimensions of vars_list
-sapply(obj_pcwd_inst$vars, dim)
+# Assuming df_pcwd_inst is your input dataframe
+varnames <- c("deficit", "len", "date_start", "date_end")  # Exclude date_end from varnames since we will handle it separately
+obj_pcwd_inst <- prepare_write_nc2_inst(df_pcwd_inst, varname_list = varnames)
 
 # Get meta information on code executed (as previously defined)
 git_repo_info <- get_repo_info()
 
 # Define variable names and units
-units <- c("mm", "days")  # Corresponding units for deficit and length
-long_names <- c("Cumulative Water Deficit", "Event Length")  # Long names for each variable
+units <- c("mm", "days", "days since 2001-01-01", "days since 2001-01-01")  # Corresponding units for deficit and length
+long_names <- c("Cumulative Water Deficit", "Event Length", "Event start date", "Event end date")  # Long names for each variable
 
 # Write the NetCDF file
 rgeco::write_nc2(
   obj = obj_pcwd_inst,                             # Pass the prepared object
-  varnams = c(varnames, "date_start", "date_end"),  # Include both date variables in variable names
-  make_tdim = TRUE,                                 # Create a time dimension
+  varnams = c(varnames),  # Include both date variables in variable names
+  make_tdim = FALSE,                                 # Create a time dimension
   path = paste0(outfile_pcwd_inst, ".nc"),         # Output file path
-  units_time = "days since 2001-01-01",             # Time units
-  units = c(units, "days", "days"),                 # Units for date_start and date_end
-  long_names = c(long_names, "Start Date", "End Date"),  # Long names for date_start and date_end
+  #units_time = "days since 2001-01-01",             # Time units
+  units = c(units),                 # Units for date_start and date_end
+  long_names = c(long_names),  # Long names for date_start and date_end
   att_title = "Global Potential Cumulative Water Deficit Instances and Length",  # Title attribute
   att_history = sprintf(
     "Created on: %s, with R scripts from (%s) processing input data from: %s",
     Sys.Date(), git_repo_info, indir
   )
 )
-
 
 
