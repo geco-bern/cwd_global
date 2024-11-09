@@ -9,15 +9,12 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-
-#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/03_pcwd_ANNMAX_1850_AbsTrsh"
-#outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX" # adjust path to where the file should be written to
-
+#GIUB server paths:
 #indir        <- "~/scratch2/m001_tidy/03_pcwd_ANNMAX"
 #outfile_pcwd <- "~/scratch2/m001_tidy/02_5_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
 
-indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/03_pcwd_ANNMAX_1850"
-outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX" # adjust path to where the file should be written to
+indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/03_pcwd_ANNMAX_1850_AbsTrsh"
+outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX" # adjust path to where the file should be written to
 
 
 

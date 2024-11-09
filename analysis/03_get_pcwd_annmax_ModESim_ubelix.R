@@ -68,7 +68,6 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "magrittr")) |>
   multidplyr::cluster_assign(
     indir       = indir,
-    indir      = indir,
     outdir      = outdir,
     get_annmax = get_annmax,
     get_cwd_annmax_byLON = get_cwd_annmax_byLON,   # make the function known for each core
