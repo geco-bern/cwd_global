@@ -24,7 +24,7 @@ library(reshape2)
 library(ggpubr)
 ```
 
-#The next section opens an annual max netcdf file which only contains the longitude of the US-Ton site: 
+## The next section opens an annual max netcdf file which only contains the longitude of the US-Ton site: 
 
 
 ```{r read data from netcdf}
@@ -52,103 +52,104 @@ plot(time_dates, pcwd_annmax_1420[111.25,71.2,1:431],type="l")
 
 ```
 
-#Now read in the intermediate rds file to get information on cwd events
+## Now read in the intermediate rds file to get information on cwd events
 ```{r read in RDS}
-filename <- "~/scratch2/tidy/02_pcwd/ModESim_pcwd_LON_-120.000.rds"
-pcwd <- read_rds(filename)
-pcwd_deficit <- pcwd |> tidyr::unnest(data)
-
-# Filter for the specific latitude and longitude (US-Ton site)
-pcwd_deficit_fil <- pcwd_deficit |> 
-  filter(dplyr::near(lat, 38.237736) & dplyr::near(lon, -120.000))  # Adjust lon if needed
-
-# Select only the 'deficit' and 'date' columns
-pcwd_deficit_fil <- pcwd_deficit_fil |> select(date, deficit)
-
-# View the filtered data
-print(pcwd_deficit_fil)
+# filename <- "~/scratch2/tidy/02_pcwd/ModESim_pcwd_LON_-120.000.rds"
+# pcwd <- read_rds(filename)
+# pcwd_deficit <- pcwd |> tidyr::unnest(data)
+# 
+# # Filter for the specific latitude and longitude (US-Ton site)
+# pcwd_deficit_fil <- pcwd_deficit |> 
+#   filter(dplyr::near(lat, 38.237736) & dplyr::near(lon, -120.000))  # Adjust lon if needed
+# 
+# # Select only the 'deficit' and 'date' columns
+# pcwd_deficit_fil <- pcwd_deficit_fil |> select(date, deficit)
+# 
+# # View the filtered data
+# print(pcwd_deficit_fil)
 ```
 
 
 ```{r plot seasonal cycle PCWD}
-#select 10 years to plot
-pcwd_deficit_fil_10 <- pcwd_deficit_fil |> filter(date >= as.Date("1420-01-01") & date <= as.Date("1430-01-01"))
-
-#plots seasonal cycle of PCWD 
-ggplot() +
-  geom_rect(
-    data = pcwd_deficit_fil_10,
-    aes(xmin = min(pcwd_deficit_fil_10$date), xmax = max(pcwd_deficit_fil_10$date) , ymin = 0, ymax = max(pcwd_deficit_fil_10$deficit)),
-    fill = rgb(0,0,0,0.3),
-    color = NA) +
-  geom_line(data  =  pcwd_deficit_fil, aes(date, deficit), color = "tomato") +
-  theme_classic() +
-  ylim(0, max(pcwd_deficit_fil_10$deficit)) +
-  xlim(min(pcwd_deficit_fil_10$date), max(pcwd_deficit_fil_10$date))+
-  labs(
-    x = "Date", 
-    y = "Potential cumulative water deficit (mm)"
-    )
+# #select 10 years to plot
+# pcwd_deficit_fil_10 <- pcwd_deficit_fil |> filter(date >= as.Date("1420-01-01") & date <= as.Date("1430-01-01"))
+# 
+# #plots seasonal cycle of PCWD 
+# ggplot() +
+#   geom_rect(
+#     data = pcwd_deficit_fil_10,
+#     aes(xmin = min(pcwd_deficit_fil_10$date), xmax = max(pcwd_deficit_fil_10$date) , ymin = 0, ymax = max(pcwd_deficit_fil_10$deficit)),
+#     fill = rgb(0,0,0,0.3),
+#     color = NA) +
+#   geom_line(data  =  pcwd_deficit_fil, aes(date, deficit), color = "tomato") +
+#   theme_classic() +
+#   ylim(0, max(pcwd_deficit_fil_10$deficit)) +
+#   xlim(min(pcwd_deficit_fil_10$date), max(pcwd_deficit_fil_10$date))+
+#   labs(
+#     x = "Date", 
+#     y = "Potential cumulative water deficit (mm)"
+#     )
 ```
 
 
-##-----------------------------------------------------------------------------
-#Read in a test cwd file to explore analysis options
+## Read in a test cwd file to explore analysis options
 
 ```{r read in test RDS}
-filename <- "~/ModESim/tidy/02_pcwd/ModESim_pcwd_LON_-120.000.rds"
-pcwd <- read_rds(filename)
-pcwd_deficit <- pcwd |> tidyr::unnest(data)
-
-# Filter for the specific latitude and longitude (US-Ton site)
-pcwd_deficit_fil <- pcwd_deficit |> 
-  filter(dplyr::near(lat, 38.237736) & dplyr::near(lon, -120.000))  # Adjust lon if needed
-
-# Select only the 'deficit' and 'date' columns
-#pcwd_deficit_fil <- pcwd_deficit_fil |> select(date, deficit)
-
-# View the filtered data
-print(pcwd_deficit_fil)
+# filename <- "~/ModESim/tidy/02_pcwd/ModESim_pcwd_LON_-120.000.rds"
+# pcwd <- read_rds(filename)
+# pcwd_deficit <- pcwd |> tidyr::unnest(data)
+# 
+# # Filter for the specific latitude and longitude (US-Ton site)
+# pcwd_deficit_fil <- pcwd_deficit |> 
+#   filter(dplyr::near(lat, 38.237736) & dplyr::near(lon, -120.000))  # Adjust lon if needed
+# 
+# # Select only the 'deficit' and 'date' columns
+# #pcwd_deficit_fil <- pcwd_deficit_fil |> select(date, deficit)
+# 
+# # View the filtered data
+# print(pcwd_deficit_fil)
 ```
 
 Plot the potential cumulative water deficit time series and events.
 ```{r}
-
-# Filtering the dates
-# Set the date range for filtering
-start_date <- as.Date("1420-01-01")
-end_date <- as.Date("1430-01-01")
-
-# Filter the df tibble for dates in the specified range
-filtered_df <- pcwd_deficit_fil$data[[1]]$df |> 
-  filter(date >= start_date & date <= end_date)
-
-# Filter the inst tibble based on date_start and date_end
-filtered_inst <- pcwd_deficit_fil$data[[1]]$inst |> 
-  filter(date_start <= end_date & date_end >= start_date)
-
-# Combine the filtered df and inst back into the original tibble, keeping structure
-pcwd_deficit_fil_filtered <- pcwd_deficit_fil |> 
-  mutate(data = list(list(inst = filtered_inst, df = filtered_df)))
-
-# Print the filtered structure
-print(pcwd_deficit_fil_filtered)
-
-ggplot() +
-  geom_rect(
-    data = pcwd_deficit_fil$data$inst,
-    aes(xmin = date_start, xmax = date_end, ymin = 0, ymax = max(pcwd_deficit_fil$data$df$deficit)),
-    fill = rgb(0,0,0,0.3),
-    color = NA) +
-  geom_line(data  =  pcwd_deficit_fil$data$df, aes(date, deficit), color = "tomato") +
-  theme_classic() +
-  ylim(0, max(pcwd_deficit_fil$data$df$deficit)) +
-  labs(
-    x = "Date", 
-    y = "Potential cumulative water deficit (mm)"
-    )
+# 
+# # Filtering the dates
+# # Set the date range for filtering
+# start_date <- as.Date("1420-01-01")
+# end_date <- as.Date("1430-01-01")
+# 
+# # Filter the df tibble for dates in the specified range
+# filtered_df <- pcwd_deficit_fil$data[[1]]$df |> 
+#   filter(date >= start_date & date <= end_date)
+# 
+# # Filter the inst tibble based on date_start and date_end
+# filtered_inst <- pcwd_deficit_fil$data[[1]]$inst |> 
+#   filter(date_start <= end_date & date_end >= start_date)
+# 
+# # Combine the filtered df and inst back into the original tibble, keeping structure
+# pcwd_deficit_fil_filtered <- pcwd_deficit_fil |> 
+#   mutate(data = list(list(inst = filtered_inst, df = filtered_df)))
+# 
+# # Print the filtered structure
+# print(pcwd_deficit_fil_filtered)
+# 
+# ggplot() +
+#   geom_rect(
+#     data = pcwd_deficit_fil$data$inst,
+#     aes(xmin = date_start, xmax = date_end, ymin = 0, ymax = max(pcwd_deficit_fil$data$df$deficit)),
+#     fill = rgb(0,0,0,0.3),
+#     color = NA) +
+#   geom_line(data  =  pcwd_deficit_fil$data$df, aes(date, deficit), color = "tomato") +
+#   theme_classic() +
+#   ylim(0, max(pcwd_deficit_fil$data$df$deficit)) +
+#   labs(
+#     x = "Date", 
+#     y = "Potential cumulative water deficit (mm)"
+#     )
 ```
-##comparing the 1850 and 1420 model sets 
+
+
+## comparing the 1850 and 1420 model sets 
 - Note from Ralf: should treat the year 1850 as part of the 1850 set, not 1420
 ```{r read in data both sets}
 #read in dataframes
