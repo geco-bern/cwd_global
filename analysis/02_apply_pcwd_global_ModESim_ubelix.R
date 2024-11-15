@@ -38,19 +38,41 @@ setwd("/storage")
 source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
-indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy"
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1850_AbsTrsh"
+indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m002_tidy"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m002_tidy/02_pcwd_1420"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 # outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
 
-filnams <- list.files(file.path(indir, "1850_01_m001_precip"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "1420_01_m002_precip"),  # use precip folder as example; change year
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
 }
+
+##if multiple files already exist in the outdir:
+# tmpdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1420_AbsTrsh_30"
+# # List all RDS files in the directory
+# rds_files <- list.files(tmpdir, pattern = "\\.rds$", full.names = TRUE)
+#
+# # Function to extract the longitude identifier
+# extract_longitude <- function(filename) {
+#   match <- regmatches(filename, regexpr("LON_\\+?[-]?\\d+\\.\\d+", filename))
+#   if (length(match) > 0) return(match) else return(NA)
+# }
+#
+# # Extract LON identifiers from input and processed files
+# input_lons <- sapply(filnams, extract_longitude)
+# processed_lons <- sapply(rds_files, extract_longitude)
+#
+# # Identify files in input_files that need processing
+# filnams <- filnams[!input_lons %in% processed_lons]
+
+
+# Display files that need processing
+#print(filnams)
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes

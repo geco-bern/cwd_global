@@ -50,8 +50,9 @@ get_cwd_withSnow_and_reset_ModESim <- function(vars_df){
                       varname_date = "date",
                       #thresh_terminate = 0.0,
                       thresh_terminate_absolute = 10,
-                      thresh_drop = 0.0,
-                      doy_reset= day_of_year)
+                      thresh_drop = 0.0
+                     #doy_reset= day_of_year
+                     )
 
   # return list with two components:
   # - data frame for time series and all variables
