@@ -1,0 +1,163 @@
+---
+title: "Extreme Value Analysis PCWD"
+author: "Patricia Helpap"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(readr)
+library(dplyr)
+library(here)
+library(lubridate)
+library(patchwork)
+library(extRemes)
+library(ggplot2)
+library(cwd)
+library(ncdf4)
+```
+
+This demonstrates the workflow for fitting an extreme value distribution to annual maxima of the CWD time series.
+
+## Prepare data
+
+```{r read data from netcdf, echo=FALSE}
+##read in data
+input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc"
+nc_pwcd_1850 <- nc_open(input_file)
+pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1850, varid="lon")
+lat = ncvar_get(nc_pwcd_1850, varid="lat")
+time = ncvar_get(nc_pwcd_1850, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates <- reference_date + time
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1850)
+
+```
+
+## Extreme value statistics
+
+Get annual maxima and fit a general extreme value distribution using the {extRemes} package.
+```{r}
+
+evd_gev <- extRemes::fevd(x = pcwd_annmax_1850, type = "GEV", method = "MLE", units = "years")
+summary(evd_gev)
+```
+
+Get CWD magnitudes for given return periods.
+```{r}
+return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
+
+return_level <- extRemes::return.level(
+  evd_gev,
+  return.period = return_period
+)
+df_return <- tibble(
+  return_period = return_period,
+  return_level = unname(c(return_level)),
+  trans_period = -log( -log(1 - 1/return_period)) )
+
+df_return |> 
+  ggplot(aes(return_period, return_level)) +
+  geom_point() +
+  labs(x = "Return period (yr)", 
+       y = "Magnitude of annual CWD maximum (mm)",
+       title = "GEV")
+```
+
+With a Gumbel extreme value distribution, the return period as a function of the CWD extreme magnitude is calculated as follows:
+```{r}
+# Fit Gumbel distribution
+evd_gumbi <- extRemes::fevd(x = pcwd_annmax_1850, type = "Gumbel", method = "MLE", units = "years")
+summary(evd_gumbi)
+
+# calculate return period as a function of the CWD extreme. Using the two 
+# coefficients of the fitted distribution as arguments
+calc_return_period <- function(x, loc, scale){
+  1 / (1 - exp(-exp(-(x-loc)/scale)))
+}
+
+extract_loc <- function(mod){
+  loc <- mod$results$par[ "location" ]
+  if (!is.null(loc)){
+    return(loc)
+  } else {
+    return(NA)
+  }
+}
+
+extract_scale <- function(mod){
+  scale <- mod$results$par[ "scale" ]
+  if (!is.null(scale)){
+    return(scale)
+  } else {
+    return(NA)
+  }
+}
+
+# demo return periods
+return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
+
+# use built-in function to get expected CWD extreme for given return periods 
+# (inverse of probability)
+return_level <- extRemes::return.level(
+  evd_gumbi,
+  return.period = return_period
+)
+
+# create data frame for visualisation
+df_return <- tibble(
+  return_period = return_period,
+  return_level = unname(c(return_level)),
+  trans_level = -log( -log(1 - 1/return_period))) |> 
+  mutate(myreturn_period = calc_return_period(
+    return_level,
+    extract_loc(evd_gumbi),
+    extract_scale(evd_gumbi)
+  ))
+
+# CWD extreme for a given return period
+df_return |> 
+  ggplot(aes(return_period, return_level)) +
+  geom_point() +
+  labs(x = "Return period (yr)", 
+       y = "Magnitude of annual CWD maximum (mm)",
+       title = "Gumbel")
+
+# Return period for a given CWD extreme (calculated based on function above)
+df_return |> 
+  ggplot(aes(return_level, myreturn_period)) + 
+  geom_point() +
+  labs(y = "Return period (yr)", 
+       x = "Magnitude of annual CWD maximum (mm)",
+       title = "Gumbel")
+```
+
+Visualise the estimated event size with a return period of $T = 80$ y as the red line on top of the distribution of cumulative water deficit events.
+```{r}
+# Flatten the array into a vector
+deficit_vector <- c(pcwd_annmax_1850)
+
+ggplot() +
+  geom_histogram(
+    aes(x = deficit_vector, y = after_stat(density)),
+    color = "black",
+    position="identity",
+    bins = 20
+    ) +
+  labs(x = "Cumulative water deficit (mm)") +
+  geom_vline(xintercept = df_return %>%
+               dplyr::filter(return_period == 80) %>%
+               pull(return_level),
+             col = "tomato")
+```
+
