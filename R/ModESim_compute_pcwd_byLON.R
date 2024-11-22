@@ -1,5 +1,5 @@
-#LON_string <- "LON_-120.000"
-#TODO: have as function again
+#LON_string <- "LON_+105.000"
+
 ModESim_compute_pcwd_byLON <- function(
     LON_string,
     indir,
@@ -7,10 +7,10 @@ ModESim_compute_pcwd_byLON <- function(
 
   #############################################
   # Define hardcoded paths and hardcoded options: change year and set number to adapt for other sets
-  indir_patm      <- file.path(indir, "1420_01_m002_patm")
-  indir_tas       <- file.path(indir, "1420_01_m002_tsurf")
-  indir_prec      <- file.path(indir, "1420_01_m002_precip")
-  indir_netrad    <- file.path(indir, "1420_01_m002_netrad")
+  indir_patm      <- file.path(indir, "1420_01_m006_patm")
+  indir_tas       <- file.path(indir, "1420_01_m006_tsurf")
+  indir_prec      <- file.path(indir, "1420_01_m006_precip")
+  indir_netrad    <- file.path(indir, "1420_01_m006_netrad")
 
   path_pcwd <- file.path(outdir, paste0("ModESim_pcwd", "_", LON_string, ".rds"))
 
@@ -27,26 +27,25 @@ ModESim_compute_pcwd_byLON <- function(
 
   # read from files that contain tidy data for a single longitudinal band
   # read surface Pressure file tidy
-  filnam <- file.path(indir_patm, paste0("set1420_1_m002_patm_",
+  filnam <- file.path(indir_patm, paste0("set1420_1_m006_patm_",
                                             LON_string,".rds"))
   df_patm <- readr::read_rds(filnam)
 
 
   # read precipitation file tidy
-  filnam <- file.path(indir_prec, paste0("set1420_1_m002_precip_",
+  filnam <- file.path(indir_prec, paste0("set1420_1_m006_precip_",
                                          LON_string,".rds"))
   df_prec <- readr::read_rds(filnam)
 
-
   # read temperature file tidy
-  filnam <- file.path(indir_tas, paste0("set1420_1_m002_tsurf_",
+  filnam <- file.path(indir_tas, paste0("set1420_1_m006_tsurf_",
                                          LON_string,".rds"))
   df_tas <- readr::read_rds(filnam)
 
-
   # read net radiation file tidy
-  filnam <- file.path(indir_netrad, paste0("set1420_1_m002_netrad_",
+  filnam <- file.path(indir_netrad, paste0("set1420_1_m006_netrad_",
                                         LON_string,".rds"))
+
   df_net_radiation <- readr::read_rds(filnam)
 
   # unnest all the data frames

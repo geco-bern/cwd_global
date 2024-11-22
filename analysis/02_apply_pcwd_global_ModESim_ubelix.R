@@ -38,15 +38,15 @@ setwd("/storage")
 source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
-indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m002_tidy"
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m002_tidy/02_pcwd_1420"
+indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m006_tidy"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m006_tidy/02_pcwd_1420"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 # outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
 
-filnams <- list.files(file.path(indir, "1420_01_m002_precip"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "1420_01_m006_precip"),  # use precip folder as example; change year
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
