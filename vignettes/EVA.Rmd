@@ -19,6 +19,12 @@ library(extRemes)
 library(ggplot2)
 library(cwd)
 library(ncdf4)
+library(reshape2)
+library(ggpubr)
+library(maps)
+library(raster)
+library(rnaturalearth)
+library(sf)
 ```
 
 This demonstrates the workflow for fitting an extreme value distribution to annual maxima of the CWD time series.
@@ -44,14 +50,61 @@ nc_close(nc_pwcd_1850)
 
 ```
 
+Select one gridcell: 
+```{r}
+# Specify the desired latitude and longitude (close to Munich here)
+target_lon <- 11.5  # Replace with your desired longitude
+target_lat <- 48.0    # Replace with your desired latitude
+
+# Find the indices of the closest longitude and latitude
+lon_index <- which.min(abs(lon - target_lon))
+lat_index <- which.min(abs(lat - target_lat))
+
+# Extract the time series for the specific grid cell
+pcwd_gridcell <- pcwd_annmax_1850[lon_index, lat_index, ]
+
+# # Now you have the time series for the specific grid cell
+# print(pcwd_gridcell)
+
+plot(time_dates, pcwd_gridcell, type = "l", xlab = "Time", ylab = "PCWD Annual Max",
+     main = paste("Time Series for Grid Cell at", target_lon, target_lat))
+
+
+```
+
+
 ## Extreme value statistics
 
+Get an overview plot of the data: 
+```{r}
+# Create a histogram
+hist(pcwd_gridcell, freq = FALSE, main = "Histogram and density")
+
+# Calculate density
+dx <- density(pcwd_gridcell)
+
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+# Plot the density without histogram
+plot(dx, lwd = 2, col = "red",
+     main = "Density")
+
+# Add the data-poins with noise in the X-axis
+rug(jitter(pcwd_gridcell))
+```
+
 Get annual maxima and fit a general extreme value distribution using the {extRemes} package.
+- GEV is used for block maxima (e.g. annual maximum PCWD)
+- if the shape parameter ξ = 0, distribution follows a Gumbel distribution (see example below)
+- if the shape parameter ξ > 0, distribution follows a Fréchet distribution, meaning that the extremes with higher magnitudes have a higher probability of occurrence than would be seen in a distribution where ξ = 0
+- if the shape parameter ξ < 0, distribution follows a Weibull distribution
 ```{r}
 
-evd_gev <- extRemes::fevd(x = pcwd_annmax_1850, type = "GEV", method = "MLE", units = "years")
+evd_gev <- extRemes::fevd(x = pcwd_gridcell, type = "GEV", method = "MLE", units = "years")
 summary(evd_gev)
 ```
+
 
 Get CWD magnitudes for given return periods.
 ```{r}
@@ -77,7 +130,7 @@ df_return |>
 With a Gumbel extreme value distribution, the return period as a function of the CWD extreme magnitude is calculated as follows:
 ```{r}
 # Fit Gumbel distribution
-evd_gumbi <- extRemes::fevd(x = pcwd_annmax_1850, type = "Gumbel", method = "MLE", units = "years")
+evd_gumbi <- extRemes::fevd(x = pcwd_gridcell, type = "Gumbel", method = "MLE", units = "years")
 summary(evd_gumbi)
 
 # calculate return period as a function of the CWD extreme. Using the two 
@@ -145,7 +198,7 @@ df_return |>
 Visualise the estimated event size with a return period of $T = 80$ y as the red line on top of the distribution of cumulative water deficit events.
 ```{r}
 # Flatten the array into a vector
-deficit_vector <- c(pcwd_annmax_1850)
+deficit_vector <- c(pcwd_gridcell)
 
 ggplot() +
   geom_histogram(
@@ -160,4 +213,114 @@ ggplot() +
                pull(return_level),
              col = "tomato")
 ```
+
+
+Plot Distribution functions for 1420 set and 1850 set to assess stationarity
+- tails indicate if distributions change with time
+```{r}
+#read in data from both sets
+
+#plot above each other 
+```
+
+
+Apply to all gridcells and plot: 
+```{r}
+#calculate return periods for each gridcell and plot 
+
+#function that calculates EVA: 
+calculate_return_level <- function(data, return_period) {
+  # Fit Gumbel distribution
+  evd_fit <- extRemes::fevd(x = data, type = "GEV", method = "MLE", units = "years")
+  
+  # Extract the return level for the specified return period
+  return_level <- extRemes::return.level(evd_fit, return.period = return_period)
+  
+  # Return the calculated return level
+  return(unname(return_level))
+}
+
+```
+
+loop over the dataset and extract return period value: 
+```{r, echo=FALSE, warnings=FALSE}
+# Create an empty matrix to store 80-year return levels
+return_level_80yr <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+# Loop through each grid cell
+for (i in seq_along(lon)) {
+  for (j in seq_along(lat)) {
+    # Extract time series for the grid cell
+    data <- pcwd_annmax_1850[i, j, ]
+    
+    # Check for NA or insufficient data
+   # if (all(is.na(data)) || length(na.omit(data)) < 10) next
+    
+    # Calculate 80-year return level
+    return_level_80yr[i, j] <- calculate_return_level(data, return_period = 80)
+  }
+}
+
+print(return_level_80yr)
+```
+now plot 80 yr return values of PCWD on map: 
+
+```{r}
+# Convert first year's data into a raster object
+r <- raster(t(return_level_80yr), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r<- flip(r, direction='y')
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+```
+
+```{r}
+# Define custom color bins
+custom_bins <- c(0, 20, 40, 60, 80, 100, 150, 200, 300, 500, 700, 900, 1200, 2000, Inf)  # Define breaks based on data range
+# Define a custom 13-color palette from deep turquoise to bright pink with earthy tones in between
+# Updated custom color palette with two additional colors
+custom_colors <- c("#004f5a",  # New color: a darker turquoise at the beginning
+                   "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", "#e8b249", 
+                   "#e3842a", "#d45321", "#ba2e1f", "#9e2d2a", "#803c3d", "#63363f", 
+                   "#9c276e",  # New color: a deeper shade in the pink tones
+                   "#d238a5")
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+```
+
+```{r}
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "80 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX 80 year return level m001 1850 set", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "80 yr return level", reverse = TRUE))  # Adjust legend for better presentation
+
+ggsave("80yr_return_m001_1850_10mm.tiff", width = 20, height = 14, units = "cm", dpi=320)
+```
+
+
+
+
+
+
+
+
+
+
 

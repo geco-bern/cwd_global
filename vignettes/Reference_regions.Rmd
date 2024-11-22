@@ -1,0 +1,181 @@
+---
+title: "Reference_regions"
+author: "Patricia Helpap"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rgdal)
+library(sp)
+library(RColorBrewer)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+```
+All code taken from: https://github.com/SantanderMetGroup/ATLAS/tree/devel 
+
+Function readOGR from package rgdal loads shapefiles into the R environment.
+```{r}
+tmpdir <- tempdir()
+unzip("/storage/homefs/ph23v078/Reference_regions/IPCC-WGI-reference-regions-v4_shapefile.zip", exdir = tmpdir)
+refregions <- readOGR(dsn = tmpdir, layer = "IPCC-WGI-reference-regions-v4")
+     
+```
+The R object that is obtained is a SpatialPolygonsDataFrame, this is a Spatial* class object from package sp.
+```{r}
+class(refregions)
+```
+The refregions R object is also available in the same repo directory, thus, the Spatial object of the regions can be directly loaded into R as follows:
+```{r}
+load("/storage/homefs/ph23v078/Reference_regions/IPCC-WGI-reference-regions-v4_R.rda", verbose = TRUE)
+
+#simplify this object by converting it to a SpatialPolygons class object (i.e., only the polygons are retained and their attributes discarded):
+refregions <- as(IPCC_WGI_reference_regions_v4, "SpatialPolygons")
+```
+## Plotting regions:
+We can use function plot to visualize the regions:
+
+```{r}
+plot(refregions)
+```
+The R basic plotting functions allow adding layers to the plot. Here the region names and coastline are added. Shapefiles such as global coastlines and other physical features or administrative boundaries can be either read from local or obtained from the Internet. In this example, a world coastline layer is used from the Natural Earth public repository of digital cartography.
+
+*begin example*
+
+An example follows on how to download and load the vector layer. However, note that this step can be skipped and read the layer directly from the auxiliary-material subdir.
+
+The target vector layer (shapefile format) is next downloaded from Natural Earth download site to a temporary file and extracted:
+```{r}
+temp.dir <- tempdir()
+unzip("/storage/homefs/ph23v078/Reference_regions/ne_110m_coastline.zip", exdir = temp.dir)
+coastLines <- readOGR(dsn = temp.dir, layer = "ne_110m_coastline")
+plot(coastLines)
+```
+```{r}
+plot(coastLines, col = "grey")
+plot(refregions, add = TRUE)
+text(x = coordinates(refregions)[ ,1],
+     y = coordinates(refregions)[ ,2],
+     labels = names(refregions), cex = 0.6)
+```
+## Selecting specific regions
+The IDs of all regions can be inspected for easy subsetting:
+```{r}
+names(names(refregions))
+```
+For instance, in order to extract one single region (e.g., New Zealand, NZ):
+```{r}
+newzealand <- refregions["NZ"]
+plot(newzealand)
+plot(coastLines, col = "grey", add = TRUE)
+text(x = coordinates(newzealand)[,1],
+     y = coordinates(newzealand)[,2],
+     labels = names(newzealand), cex = 1)
+```
+or several regions:
+```{r}
+australasia <- refregions[c("NZ", "SEA", "NAU", "CAU", "EAU", "SAU")]
+
+plot(australasia)
+plot(coastLines, col = rgb(0.85,0.85,0.85,0.7), add = TRUE)
+text(x = coordinates(australasia)[,1],
+    y = coordinates(australasia)[,2],
+    labels = names(australasia), cex = 1)
+```
+## Example:
+In this example we will consider a NetCDF file with historical temperature simulations and show several analysis and visualizations at a global scale or filtering by regions. 
+
+First, dataInventory provides basic information about the variables available in the file/dataset:
+```{r}
+di <- dataInventory("/storage/homefs/ph23v078/Reference_regions/CMIP6Amon_tas_CanESM5_r1i1p1f1_historical_gn_185001-201412.nc")
+str(di)
+```
+As we can see from the inventory output, it contains a single variable ('tas', 2 meters air temperature). To load this data, the function loadGridData from package loadeR is used:
+```{r}
+grid1 <- loadGridData(dataset = "/storage/homefs/ph23v078/Reference_regions/CMIP6Amon_tas_CanESM5_r1i1p1f1_historical_gn_185001-201412.nc",
+                      var = "tas")
+```
+The example data is the temperature field for the period 1850-2014. In order to plot the first time step, we extract the data for January 1850 with the function subsetGrid (package transformeR):
+```{r}
+grid185001 <- subsetGrid(grid1, years = 1850, season = 1, drop = TRUE)
+```
+
+spatialPlot from package visualizeR is the main map plotting function in climate4R. It is a wrapper of the powerful spplot method from package sp, thus accepting all possible optional parameters from lattice graphics. In addition, it also incorporates some additional arguments for straightforward fulfillment of commonplace requirements in climate data visualization (e.g. backdrop.theme, set.min, set.max, lonCenter, color.theme, rev.colors etc.).
+
+```{r}
+regnameslayer <- list("sp.text", coordinates(refregions), names(refregions))
+spatialPlot(grid185001, backdrop.theme = "coastline", 
+            color.theme = "RdBu",
+            rev.colors = TRUE,
+            sp.layout = list(list(refregions, first = FALSE, col = "blue"), regnameslayer))
+```
+
+We could also get the annual values using function aggregateGrid and plot the annual climatology:
+```{r}
+grid1.ann <- aggregateGrid(grid1, aggr.y = list(FUN = "mean", na.rm = TRUE))
+spatialPlot(climatology(grid1.ann), backdrop.theme = "coastline", 
+            color.theme = "RdBu",
+            rev.colors = TRUE,
+            main = "Annual mean surface temperature (K)",
+            sp.layout = list(list(refregions, first = FALSE, col = "blue"), regnameslayer))
+```
+## Extracting data for the region/s of interest
+Function overGrid perfoms the operation of intersecting a climate4R grid and a Spatial object. The only requirement is equal projections. Use function projectGrid to define and/or change the projection of a grid. Use proj4string and spTransform for Spatial objects. In this example the map projection is WGS84 (EPSG:4326). Note that several warning messages may appear during the following operations. These arise from recent changes in the versions of PROJ and GDAL, and can be safely ignored throughout these examples.
+```{r}
+proj4string(refregions)
+#An appropriate definition of the current coordinates projection will be later needed to ensure spatial consistency of geospatial operations:
+grid1.ann <- setGridProj(grid = grid1.ann, proj = proj4string(refregions))
+#Once the spatial reference is defined, the spatial overlay is done:
+grid1.au <- overGrid(grid1.ann, australasia)
+```
+```{r}
+spatialPlot(climatology(grid1.au), 
+            color.theme = "RdBu",
+            rev.colors = TRUE,
+            sp.layout = list(coastLines, first = FALSE, col = "black"))
+```
+Setting the argument subset = TRUE the spatial object is cropped to the region extent:
+```{r}
+grid1.au <- overGrid(grid1.ann, australasia, subset = TRUE)
+```
+
+```{r}
+spatialPlot(climatology(grid1.au), 
+            color.theme = "RdBu",
+            rev.colors = TRUE,
+            sp.layout = list(coastLines, first = FALSE, col = "black"))
+```
+Let’s calculate the regional average and visualize the yearly time series with temporalPlot:
+```{r}
+temporalPlot(grid1.au, aggr.spatial = list(FUN = "mean", na.rm = TRUE), xyplot.custom = list(ylab = "Annual mean surface temperature (K)"))
+     
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
