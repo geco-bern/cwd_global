@@ -337,6 +337,8 @@ coastLines <- readOGR(dsn = temp.dir, layer = "ne_110m_coastline")
 
 For instance, in order to extract one single region (e.g., Western Central Europe, WCE):
 ```{r}
+MED <- refregions["MED"]
+NEU <- refregions["NEU"]
 WCE <- refregions["WCE"]
 plot(WCE)
 plot(coastLines, col = "grey", add = TRUE)
@@ -521,6 +523,37 @@ for (i in seq_len(num_x)) {
 
 ```
 
+```{r}
+#IPCC region inserts
+# Convert WCE to an sf object
+WCE_sf <- st_as_sf(WCE)
+# Ensure the CRS matches with the raster and other layers
+WCE_sf <- st_transform(WCE_sf, crs = st_crs(r.wce))
+# Convert MED and NEU to sf objects
+MED_sf <- st_as_sf(MED)
+NEU_sf <- st_as_sf(NEU)
+# Ensure the CRS matches with the raster and other layers
+MED_sf <- st_transform(MED_sf, crs = st_crs(r.wce))
+NEU_sf <- st_transform(NEU_sf, crs = st_crs(r.wce))
+
+# Calculate centroids for text placement
+WCE_centroids <- st_centroid(WCE_sf)
+# Add a column for region names (if not already available)
+WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
+# Calculate centroids for text placement
+NEU_centroids <- st_centroid(NEU_sf)
+# Add a column for region names (if not already available)
+NEU_centroids$region_name <- "NEU"  # Replace "WCE" with the actual region name if available
+# Calculate centroids for text placement
+MED_centroids <- st_centroid(MED_sf)
+# Add a column for region names (if not already available)
+MED_centroids$region_name <- "MED"  # Replace "WCE" with the actual region name if available
+
+# Coordinates (longitude and latitude)
+lon.eu <- grid1.eu$xyCoords$x
+lat.eu <- grid1.eu$xyCoords$y
+
+```
 
 
 ```{r}
@@ -528,22 +561,13 @@ for (i in seq_len(num_x)) {
 lon.wce <- grid1.wce$xyCoords$x
 lat.wce <- grid1.wce$xyCoords$y
 
-# Convert first year's data into a raster object
+# Convert into a raster object
 r.wce <- raster(t(return_level_80yr.wce), xmn=min(lon.wce), xmx=max(lon.wce), ymn=min(lat.wce), ymx=max(lat.wce))
 crs(r.wce) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r.wce<- flip(r.wce, direction='y')
 # Retrieve land polygons and set the same CRS as the raster
 land <- ne_countries(scale = "medium", returnclass = "sf")
 land <- st_transform(land, crs = st_crs(r.wce))  # Ensure CRS alignment
-# Convert WCE to an sf object
-WCE_sf <- st_as_sf(WCE)
-# Ensure the CRS matches with the raster and other layers
-WCE_sf <- st_transform(WCE_sf, crs = st_crs(r.wce))
-# Calculate centroids for text placement
-WCE_centroids <- st_centroid(WCE_sf)
-# Add a column for region names (if not already available)
-WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
-
 
 # Mask the raster with land polygons to remove ocean values
 r_masked.wce <- mask(r.wce, as(land, "Spatial"))
@@ -553,7 +577,7 @@ r_df.wce <- as.data.frame(r_masked.wce, xy = TRUE)
 colnames(r_df.wce) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
 
 # Define custom bins based on the actual data range
-custom_bins <- c(0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200)  # Adjust bins for your data range
+custom_bins <- c(200, 300, 400, 500, 600, 700, 800, 900)  # Adjust bins for your data range
 
 # Update custom color palette to match the number of bins
 custom_colors <- c("#004f5a", "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", 
@@ -571,7 +595,8 @@ ggplot() +
     name = "80 yr return level", 
     values = custom_colors, 
     na.value = "lightgrey", 
-    labels = break_labels
+    labels = break_labels,
+    drop = FALSE
   ) +
   # Add title and axis labels
   labs(
@@ -585,6 +610,8 @@ ggplot() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   # Overlay WCE outline
   geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = NEU_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = MED_sf, fill = NA, color = "blue", lwd = 0.8) +
   # Add region name labels
   geom_text(
     data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
@@ -593,15 +620,29 @@ ggplot() +
     color = "blue", 
     size = 4
   ) +
+  geom_text(
+    data = NEU_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = NEU_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  geom_text(
+    data = MED_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = MED_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
   # Ensure proper coordinate scaling
-  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  coord_sf(xlim = range(lon.eu), ylim = range(lat.eu), expand = FALSE) +
   # Adjust legend styling
   theme(
     legend.title = element_text(size = 12),  # Adjust legend title size
     legend.text = element_text(size = 10)    # Adjust legend text size
   ) +
   # Adjust legend presentation
-  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE))
+  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE, override.aes = list(color = NA)))
 
 ```
 
@@ -744,15 +785,6 @@ r2.wce<- flip(r2.wce, direction='y')
 # Retrieve land polygons and set the same CRS as the raster
 land <- ne_countries(scale = "medium", returnclass = "sf")
 land <- st_transform(land, crs = st_crs(r2.wce))  # Ensure CRS alignment
-# Convert WCE to an sf object
-WCE_sf <- st_as_sf(WCE)
-# Ensure the CRS matches with the raster and other layers
-WCE_sf <- st_transform(WCE_sf, crs = st_crs(r2.wce))
-# Calculate centroids for text placement
-WCE_centroids <- st_centroid(WCE_sf)
-# Add a column for region names (if not already available)
-WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
-
 
 # Mask the raster with land polygons to remove ocean values
 r_masked2.wce <- mask(r2.wce, as(land, "Spatial"))
@@ -762,12 +794,11 @@ r_df2.wce <- as.data.frame(r_masked2.wce, xy = TRUE)
 colnames(r_df2.wce) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
 
 # Define custom bins based on the actual data range
-custom_bins <- c(0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200)  # Adjust bins for your data range
+custom_bins <- c(200, 300, 400, 500, 600, 700, 800, 900)  # Adjust bins for your data range
 
 # Update custom color palette to match the number of bins
 custom_colors <- c("#004f5a", "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", 
                    "#e8b249", "#e3842a", "#d45321", "#ba2e1f", "#9e2d2a")
-
 # Create labels for the legend
 break_labels <- paste0(custom_bins[-length(custom_bins)], " - ", custom_bins[-1])
 
@@ -780,7 +811,8 @@ ggplot() +
     name = "80 yr return level", 
     values = custom_colors, 
     na.value = "lightgrey", 
-    labels = break_labels
+    labels = break_labels, 
+    drop = FALSE  # Ensures only defined bins are shown
   ) +
   # Add title and axis labels
   labs(
@@ -794,6 +826,8 @@ ggplot() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   # Overlay WCE outline
   geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = NEU_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = MED_sf, fill = NA, color = "blue", lwd = 0.8) +
   # Add region name labels
   geom_text(
     data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
@@ -802,15 +836,29 @@ ggplot() +
     color = "blue", 
     size = 4
   ) +
+  geom_text(
+    data = NEU_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = NEU_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  geom_text(
+    data = MED_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = MED_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
   # Ensure proper coordinate scaling
-  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  coord_sf(xlim = range(lon.eu), ylim = range(lat.eu), expand = FALSE) +
   # Adjust legend styling
   theme(
     legend.title = element_text(size = 12),  # Adjust legend title size
     legend.text = element_text(size = 10)    # Adjust legend text size
   ) +
   # Adjust legend presentation
-  guides(fill = guide_legend(title = "PWCD [mm]", reverse = TRUE))
+  guides(fill = guide_legend(title = "PWCD [mm]", reverse = TRUE, override.aes = list(color = NA)))
 
 ```
 
@@ -864,7 +912,8 @@ ggplot() +
     name = "80 yr return level", 
     values = custom_colors, 
     na.value = "lightgrey", 
-    labels = break_labels
+    labels = break_labels,
+    drop = FALSE
   ) +
   # Add title and axis labels
   labs(
@@ -878,6 +927,8 @@ ggplot() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   # Overlay WCE outline
   geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = NEU_sf, fill = NA, color = "blue", lwd = 0.8) +
+  geom_sf(data = MED_sf, fill = NA, color = "blue", lwd = 0.8) +
   # Add region name labels
   geom_text(
     data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
@@ -886,15 +937,29 @@ ggplot() +
     color = "blue", 
     size = 4
   ) +
+  geom_text(
+    data = NEU_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = NEU_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  geom_text(
+    data = MED_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = MED_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
   # Ensure proper coordinate scaling
-  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  coord_sf(xlim = range(lon.eu), ylim = range(lat.eu), expand = FALSE) +
   # Adjust legend styling
   theme(
     legend.title = element_text(size = 12),  # Adjust legend title size
     legend.text = element_text(size = 10)    # Adjust legend text size
   ) +
   # Adjust legend presentation
-  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE))
+  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE, override.aes = list(color = NA)))
 
 ```
 
