@@ -215,15 +215,6 @@ ggplot() +
 ```
 
 
-Plot Distribution functions for 1420 set and 1850 set to assess stationarity
-- tails indicate if distributions change with time
-```{r}
-#read in data from both sets
-
-#plot above each other 
-```
-
-
 Apply to all gridcells and plot: 
 ```{r}
 #calculate return periods for each gridcell and plot 
@@ -261,7 +252,7 @@ for (i in seq_along(lon)) {
   }
 }
 
-print(return_level_80yr)
+#print(return_level_80yr)
 ```
 now plot 80 yr return values of PCWD on map: 
 
@@ -314,13 +305,596 @@ ggplot() +
 ggsave("80yr_return_m001_1850_10mm.tiff", width = 20, height = 14, units = "cm", dpi=320)
 ```
 
+## Now apply the extreme value statistics to IPCC regions
+
+Load libraries from Climate4R
+```{r}
+library(rgdal)
+library(sp)
+library(RColorBrewer)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+```
+
+Load reference regions and coastlines:
+```{r}
+load("/storage/homefs/ph23v078/Reference_regions/IPCC-WGI-reference-regions-v4_R.rda", verbose = TRUE)
+
+#simplify this object by converting it to a SpatialPolygons class object (i.e., only the polygons are retained and their attributes discarded):
+refregions <- as(IPCC_WGI_reference_regions_v4, "SpatialPolygons")
+
+temp.dir <- tempdir()
+unzip("/storage/homefs/ph23v078/Reference_regions/ne_110m_coastline.zip", exdir = temp.dir)
+coastLines <- readOGR(dsn = temp.dir, layer = "ne_110m_coastline")
+
+```
+
+## Selecting specific regions
+
+For instance, in order to extract one single region (e.g., Western Central Europe, WCE):
+```{r}
+WCE <- refregions["WCE"]
+plot(WCE)
+plot(coastLines, col = "grey", add = TRUE)
+text(x = coordinates(WCE)[,1],
+     y = coordinates(WCE)[,2],
+     labels = names(WCE), cex = 1)
+```
+Or all of Europe
+```{r}
+europe <- refregions[c("NEU", "WCE", "MED")]
+
+plot(europe)
+plot(coastLines, col = rgb(0.85,0.85,0.85,0.7), add = TRUE)
+text(x = coordinates(europe)[,1],
+    y = coordinates(europe)[,2],
+    labels = names(europe), cex = 1)
+```
+
+## Example with ModE-Sim data:
+First, dataInventory provides basic information about the variables available in the file/dataset:
+```{r, message=FALSE, echo=FALSE}
+di <- dataInventory("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc")
+str(di)
+```
+ To load pcwd_annmax data, the function loadGridData from package loadeR is used:
+```{r}
+grid1 <- loadGridData(dataset = "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc",
+                      var = "pcwd_annmax")
+```
+## Extracting data for the region/s of interest
+Function overGrid perfoms the operation of intersecting a climate4R grid and a Spatial object. The only requirement is equal projections. Use function projectGrid to define and/or change the projection of a grid. Use proj4string and spTransform for Spatial objects. In this example the map projection is WGS84 (EPSG:4326). Note that several warning messages may appear during the following operations. These arise from recent changes in the versions of PROJ and GDAL, and can be safely ignored throughout these examples.
+```{r}
+proj4string(refregions)
+#An appropriate definition of the current coordinates projection will be later needed to ensure spatial consistency of geospatial operations:
+grid1 <- setGridProj(grid = grid1, proj = proj4string(refregions))
+#Once the spatial reference is defined, the spatial overlay is done:
+grid1.eu <- overGrid(grid1, europe)
+```
+
+
+Setting the argument subset = TRUE the spatial object is cropped to the region extent:
+```{r}
+grid1.eu <- overGrid(grid1, europe, subset = TRUE)
+```
+
+```{r}
+regnameslayer <- list("sp.text", coordinates(refregions), names(refregions))
+spatialPlot(climatology(grid1.eu), backdrop.theme = "coastline",
+            color.theme = "BuGn",
+            rev.colors = FALSE,
+            sp.layout = list(list(refregions, first = FALSE, col = "blue"), regnameslayer))
+
+
+```
+Now apply extreme value statistics on the region of Europe:
+
+Get an overview plot of the data: 
+```{r}
+# Create a histogram
+hist(grid1.eu$Data, freq = FALSE, main = "Histogram and density")
+
+# Calculate density
+dx <- density(grid1.eu$Data)
+
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+# Plot the density without histogram
+plot(dx, lwd = 2, col = "red",
+     main = "Density")
+
+# Add the data-poins with noise in the X-axis
+rug(jitter(grid1.eu$Data))
+```
+comments: still have northern Africa contained in the MED area so exclude that from the Europe cell? Or compute for the smaller areas? 
+e.g. just for CWE: 
+```{r}
+proj4string(refregions)
+grid1.wce <- overGrid(grid1, WCE)
+grid1.wce <- overGrid(grid1, WCE, subset = TRUE)
+
+#show data: 
+# Create a histogram
+hist(grid1.wce$Data, freq = FALSE, main = "Histogram and density")
+
+# Calculate density
+dx <- density(grid1.wce$Data, na.rm=TRUE)
+
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+# Plot the density without histogram
+plot(dx, lwd = 2, col = "red",
+     main = "Density")
+
+# Add the data-poins with noise in the X-axis
+rug(jitter(grid1.wce$Data))
+```
+
+```{r}
+grid185001 <- subsetGrid(grid1.wce, years = 1850, drop = TRUE)
+
+regnameslayer <- list("sp.text", coordinates(refregions), names(refregions))
+spatialPlot(grid185001, backdrop.theme = "coastline",
+            color.theme = "BuGn",
+            rev.colors = FALSE,
+            sp.layout = list(list(refregions, first = FALSE, col = "blue"), regnameslayer))
+
+
+```
+Now calculate the EVS for this area: 
+```{r}
+grid1.wce_EVA <- as.numeric(grid1.wce$Data)
+grid1.wce_EVA <- na.omit(grid1.wce_EVA)
+evd_gev.wce <- extRemes::fevd(x = grid1.wce_EVA, type = "GEV", method = "MLE", units = "years")
+summary(evd_gev.wce)
+```
+```{r}
+return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
+
+return_level.wce <- extRemes::return.level(
+  evd_gev.wce,
+  return.period = return_period
+)
+df_return <- tibble(
+  return_period = return_period,
+  return_level = unname(c(return_level.wce)),
+  trans_period = -log( -log(1 - 1/return_period)) )
+
+df_return |> 
+  ggplot(aes(return_period, return_level)) +
+  geom_point() +
+  labs(x = "Return period (yr)", 
+       y = "Magnitude of annual CWD maximum (mm)",
+       title = "GEV - 1850 WCE")
+```
+Visualise the estimated event size with a return period of $T = 80$ y as the red line on top of the distribution of cumulative water deficit events.
+```{r}
+# Flatten the array into a vector
+deficit_vector <- c(grid1.wce_EVA)
+
+ggplot() +
+  geom_histogram(
+    aes(x = deficit_vector, y = after_stat(density)),
+    color = "black",
+    position="identity",
+    bins = 20
+    ) +
+  labs(x = "Cumulative water deficit (mm)") +
+  geom_vline(xintercept = df_return %>%
+               dplyr::filter(return_period == 80) %>%
+               pull(return_level),
+             col = "tomato")
+```
+
+loop over the dataset and extract return period value: 
+```{r, echo=FALSE, warnings=FALSE}
+# Extract dimensions and prepare storage
+x_coords <- grid1.wce$xyCoords$x
+y_coords <- grid1.wce$xyCoords$y
+
+# Dimensions of the Data array
+num_x <- length(x_coords)
+num_y <- length(y_coords)
+
+# Create an empty matrix to store 80-year return levels
+return_level_80yr.wce <- matrix(NA, nrow = num_x, ncol = num_y)
+
+# Loop through each grid cell
+for (i in seq_len(num_x)) {
+  for (j in seq_len(num_y)) {
+    # Extract time series for the grid cell
+    data <- grid1.wce$Data[, j, i]  # Adjust indexing: time (1st dim), y (2nd dim), x (3rd dim)
+    
+    # Check for NA or insufficient data
+    if (all(is.na(data)) || length(na.omit(data)) < 10) next
+    
+    # Calculate 80-year return level
+    return_level_80yr.wce[i, j] <- calculate_return_level(data, return_period = 80)
+  }
+}
+
+```
 
 
 
+```{r}
+# Coordinates (longitude and latitude)
+lon.wce <- grid1.wce$xyCoords$x
+lat.wce <- grid1.wce$xyCoords$y
+
+# Convert first year's data into a raster object
+r.wce <- raster(t(return_level_80yr.wce), xmn=min(lon.wce), xmx=max(lon.wce), ymn=min(lat.wce), ymx=max(lat.wce))
+crs(r.wce) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r.wce<- flip(r.wce, direction='y')
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r.wce))  # Ensure CRS alignment
+# Convert WCE to an sf object
+WCE_sf <- st_as_sf(WCE)
+# Ensure the CRS matches with the raster and other layers
+WCE_sf <- st_transform(WCE_sf, crs = st_crs(r.wce))
+# Calculate centroids for text placement
+WCE_centroids <- st_centroid(WCE_sf)
+# Add a column for region names (if not already available)
+WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
 
 
+# Mask the raster with land polygons to remove ocean values
+r_masked.wce <- mask(r.wce, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df.wce <- as.data.frame(r_masked.wce, xy = TRUE)
+colnames(r_df.wce) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom bins based on the actual data range
+custom_bins <- c(0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200)  # Adjust bins for your data range
+
+# Update custom color palette to match the number of bins
+custom_colors <- c("#004f5a", "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", 
+                   "#e8b249", "#e3842a", "#d45321", "#ba2e1f", "#9e2d2a")
+
+# Create labels for the legend
+break_labels <- paste0(custom_bins[-length(custom_bins)], " - ", custom_bins[-1])
+
+# Plot with ggplot2
+ggplot() +
+  # Raster layer for return levels
+  geom_raster(data = r_df.wce, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  # Custom color palette for return levels
+  scale_fill_manual(
+    name = "80 yr return level", 
+    values = custom_colors, 
+    na.value = "lightgrey", 
+    labels = break_labels
+  ) +
+  # Add title and axis labels
+  labs(
+    title = "PCWD ANNMAX 80 year return level m001 1850 set",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  # Base theme and styling
+  theme_classic() +
+  # Overlay land boundaries
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  # Overlay WCE outline
+  geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  # Add region name labels
+  geom_text(
+    data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = WCE_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  # Ensure proper coordinate scaling
+  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  # Adjust legend styling
+  theme(
+    legend.title = element_text(size = 12),  # Adjust legend title size
+    legend.text = element_text(size = 10)    # Adjust legend text size
+  ) +
+  # Adjust legend presentation
+  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE))
+
+```
+
+# Comparison between 1420 and 1850 dataset
+
+```{r}
+grid2 <- loadGridData(dataset = "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420_AbsTrsh/PCWD_ANNMAX.nc",
+                      var = "pcwd_annmax")
+
+proj4string(refregions)
+#An appropriate definition of the current coordinates projection will be later needed to ensure spatial consistency of geospatial operations:
+grid2 <- setGridProj(grid = grid2, proj = proj4string(refregions))
+#Once the spatial reference is defined, the spatial overlay is done:
+grid2.wce <- overGrid(grid2, WCE, subset = TRUE)
+
+#show data: 
+# Create a histogram
+hist(grid2.wce$Data, freq = FALSE, main = "Histogram and density")
+
+# Calculate density
+dx2 <- density(grid2.wce$Data, na.rm=TRUE)
+
+# Add density
+lines(dx2, lwd = 2, col = "red")
+
+# Plot the density without histogram
+plot(dx2, lwd = 2, col = "red",
+     main = "Density")
+
+# Add the data-poins with noise in the X-axis
+rug(jitter(grid2.wce$Data))
+
+```
+```{r}
+# Plot the density without histogram
+plot(dx, lwd = 2, col = "red",
+     main = "Density plots of m001 WCE annmax PCWD", ylim=c(0, 0.0030))
+# Add density for 1850 in blue
+lines(dx2, lwd = 2, col = "blue")
+# Add a legend
+legend("topright", inset=.02, legend=c("1850", "1420"),
+       col=c("red", "blue"), lty=1, cex=0.8)
 
 
+```
+Now calculate the EVS for this area: 
+```{r}
+grid2.wce_EVA <- as.numeric(grid2.wce$Data)
+grid2.wce_EVA <- na.omit(grid2.wce_EVA)
+evd_gev2.wce <- extRemes::fevd(x = grid2.wce_EVA, type = "GEV", method = "MLE", units = "years")
+summary(evd_gev2.wce)
+```
+```{r}
+return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
+
+return_level2.wce <- extRemes::return.level(
+  evd_gev2.wce,
+  return.period = return_period
+)
+df_return2 <- tibble(
+  return_period = return_period,
+  return_level = unname(c(return_level2.wce)),
+  trans_period = -log( -log(1 - 1/return_period)) )
+
+df_return2 |> 
+  ggplot(aes(return_period, return_level)) +
+  geom_point() +
+  labs(x = "Return period (yr)", 
+       y = "Magnitude of annual CWD maximum (mm)",
+       title = "GEV - WCE 1420")
+```
+
+```{r}
+# Flatten the array into a vector
+deficit_vector2 <- c(grid2.wce_EVA)
+
+ggplot() +
+  scale_color_manual(name = "sets", 
+                     values = c("1420" = "blue", "1850" = "tomato")) +
+  geom_histogram(
+    aes(x = deficit_vector2, y = after_stat(density),
+    color = "1420"),
+    position="identity",
+    bins = 20, alpha=I(0.5)
+    ) +
+  geom_histogram(
+    aes(x = deficit_vector, y = after_stat(density),
+    color = "1850"),
+    position="identity",
+    bins = 20, alpha=I(0.5)
+    ) +
+  labs(x = "Cumulative water deficit (mm)") +
+  geom_vline(xintercept = df_return2 %>%
+               dplyr::filter(return_period == 80) %>%
+               pull(return_level),
+             col = "blue")+
+  geom_vline(xintercept = df_return %>%
+               dplyr::filter(return_period == 80) %>%
+               pull(return_level),
+             col = "tomato")+
+  theme_classic2()
+```
+loop over the dataset and extract return period value: 
+```{r, echo=FALSE, warnings=FALSE}
+# Extract dimensions and prepare storage
+x_coords <- grid2.wce$xyCoords$x
+y_coords <- grid2.wce$xyCoords$y
+
+# Dimensions of the Data array
+num_x <- length(x_coords)
+num_y <- length(y_coords)
+
+# Create an empty matrix to store 80-year return levels
+return_level_80yr2.wce <- matrix(NA, nrow = num_x, ncol = num_y)
+
+# Loop through each grid cell
+for (i in seq_len(num_x)) {
+  for (j in seq_len(num_y)) {
+    # Extract time series for the grid cell
+    data <- grid2.wce$Data[, j, i]  # Adjust indexing: time (1st dim), y (2nd dim), x (3rd dim)
+    
+    # Check for NA or insufficient data
+    if (all(is.na(data)) || length(na.omit(data)) < 10) next
+    
+    # Calculate 80-year return level
+    return_level_80yr2.wce[i, j] <- calculate_return_level(data, return_period = 80)
+  }
+}
+
+```
+```{r}
+# Coordinates (longitude and latitude)
+lon.wce <- grid2.wce$xyCoords$x
+lat.wce <- grid2.wce$xyCoords$y
+
+# Convert first year's data into a raster object
+r2.wce <- raster(t(return_level_80yr2.wce), xmn=min(lon.wce), xmx=max(lon.wce), ymn=min(lat.wce), ymx=max(lat.wce))
+crs(r2.wce) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r2.wce<- flip(r2.wce, direction='y')
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r2.wce))  # Ensure CRS alignment
+# Convert WCE to an sf object
+WCE_sf <- st_as_sf(WCE)
+# Ensure the CRS matches with the raster and other layers
+WCE_sf <- st_transform(WCE_sf, crs = st_crs(r2.wce))
+# Calculate centroids for text placement
+WCE_centroids <- st_centroid(WCE_sf)
+# Add a column for region names (if not already available)
+WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
 
 
+# Mask the raster with land polygons to remove ocean values
+r_masked2.wce <- mask(r2.wce, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df2.wce <- as.data.frame(r_masked2.wce, xy = TRUE)
+colnames(r_df2.wce) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom bins based on the actual data range
+custom_bins <- c(0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200)  # Adjust bins for your data range
+
+# Update custom color palette to match the number of bins
+custom_colors <- c("#004f5a", "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", 
+                   "#e8b249", "#e3842a", "#d45321", "#ba2e1f", "#9e2d2a")
+
+# Create labels for the legend
+break_labels <- paste0(custom_bins[-length(custom_bins)], " - ", custom_bins[-1])
+
+# Plot with ggplot2
+ggplot() +
+  # Raster layer for return levels
+  geom_raster(data = r_df2.wce, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  # Custom color palette for return levels
+  scale_fill_manual(
+    name = "80 yr return level", 
+    values = custom_colors, 
+    na.value = "lightgrey", 
+    labels = break_labels
+  ) +
+  # Add title and axis labels
+  labs(
+    title = "PCWD ANNMAX 80 year return level m001 1420 set",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  # Base theme and styling
+  theme_classic() +
+  # Overlay land boundaries
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  # Overlay WCE outline
+  geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  # Add region name labels
+  geom_text(
+    data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = WCE_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  # Ensure proper coordinate scaling
+  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  # Adjust legend styling
+  theme(
+    legend.title = element_text(size = 12),  # Adjust legend title size
+    legend.text = element_text(size = 10)    # Adjust legend text size
+  ) +
+  # Adjust legend presentation
+  guides(fill = guide_legend(title = "PWCD [mm]", reverse = TRUE))
+
+```
+
+Difference between both (1850-1420): 
+```{r}
+return_level_diff.wce = return_level_80yr.wce - return_level_80yr2.wce
+```
+
+
+```{r}
+# Coordinates (longitude and latitude)
+lon.wce <- grid1.wce$xyCoords$x
+lat.wce <- grid1.wce$xyCoords$y
+
+# Convert first year's data into a raster object
+r.wce <- raster(t(return_level_diff.wce), xmn=min(lon.wce), xmx=max(lon.wce), ymn=min(lat.wce), ymx=max(lat.wce))
+crs(r.wce) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r.wce<- flip(r.wce, direction='y')
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r.wce))  # Ensure CRS alignment
+# Convert WCE to an sf object
+WCE_sf <- st_as_sf(WCE)
+# Ensure the CRS matches with the raster and other layers
+WCE_sf <- st_transform(WCE_sf, crs = st_crs(r.wce))
+# Calculate centroids for text placement
+WCE_centroids <- st_centroid(WCE_sf)
+# Add a column for region names (if not already available)
+WCE_centroids$region_name <- "WCE"  # Replace "WCE" with the actual region name if available
+
+
+# Mask the raster with land polygons to remove ocean values
+r_masked.wce <- mask(r.wce, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df.wce <- as.data.frame(r_masked.wce, xy = TRUE)
+colnames(r_df.wce) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+custom_bins <- c(-300,-100, -50, -20, -10, -1, 0, 1, 10, 20, 50, 100, Inf)  # Define breaks based on data range
+# Create a 10-color scale from blue to white to red
+custom_colors <- colorRampPalette(c("blue", "white", "red"))(13)
+# Create labels for the legend
+break_labels <- paste0(custom_bins[-length(custom_bins)], " - ", custom_bins[-1])
+
+# Plot with ggplot2
+ggplot() +
+  # Raster layer for return levels
+  geom_raster(data = r_df.wce, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  # Custom color palette for return levels
+  scale_fill_manual(
+    name = "80 yr return level", 
+    values = custom_colors, 
+    na.value = "lightgrey", 
+    labels = break_labels
+  ) +
+  # Add title and axis labels
+  labs(
+    title = "PCWD ANNMAX 80 year return level change 1850-1420",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  # Base theme and styling
+  theme_classic() +
+  # Overlay land boundaries
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  # Overlay WCE outline
+  geom_sf(data = WCE_sf, fill = NA, color = "blue", lwd = 0.8) +
+  # Add region name labels
+  geom_text(
+    data = WCE_centroids %>% st_coordinates() %>% as_tibble() %>% 
+      mutate(region_name = WCE_centroids$region_name), 
+    aes(x = X, y = Y, label = region_name), 
+    color = "blue", 
+    size = 4
+  ) +
+  # Ensure proper coordinate scaling
+  coord_sf(xlim = range(lon.wce), ylim = range(lat.wce), expand = FALSE) +
+  # Adjust legend styling
+  theme(
+    legend.title = element_text(size = 12),  # Adjust legend title size
+    legend.text = element_text(size = 10)    # Adjust legend text size
+  ) +
+  # Adjust legend presentation
+  guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE))
+
+```
 
