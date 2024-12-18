@@ -33,7 +33,7 @@ This demonstrates the workflow for fitting an extreme value distribution to annu
 
 ```{r read data from netcdf, echo=FALSE}
 ##read in data
-input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc"
+input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc"
 nc_pwcd_1850 <- nc_open(input_file)
 pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
 lon = ncvar_get(nc_pwcd_1850, varid="lon")
@@ -73,7 +73,7 @@ plot(time_dates, pcwd_gridcell, type = "l", xlab = "Time", ylab = "PCWD Annual M
 ```
 
 
-## Extreme value statistics
+## Extreme value statistics one gridcell
 
 Get an overview plot of the data: 
 ```{r}
@@ -254,6 +254,8 @@ for (i in seq_along(lon)) {
 
 #print(return_level_80yr)
 ```
+
+
 now plot 80 yr return values of PCWD on map: 
 
 ```{r}
@@ -333,7 +335,7 @@ coastLines <- readOGR(dsn = temp.dir, layer = "ne_110m_coastline")
 
 ```
 
-## Selecting specific regions
+## Selecting specific IPCC regions
 
 For instance, in order to extract one single region (e.g., Western Central Europe, WCE):
 ```{r}
@@ -646,7 +648,7 @@ ggplot() +
 
 ```
 
-# Comparison between 1420 and 1850 dataset
+### Comparison between 1420 and 1850 dataset
 
 ```{r}
 grid2 <- loadGridData(dataset = "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420_AbsTrsh/PCWD_ANNMAX.nc",
@@ -962,4 +964,119 @@ ggplot() +
   guides(fill = guide_legend(title = "PCWD [mm]", reverse = TRUE, override.aes = list(color = NA)))
 
 ```
+## Analysis on all ensemble members - first Model Set 
+
+Aggregate all 1850 files: 
+
+```{r}
+### append data i.e. get rid of time dimension and just append to exisiting data
+# Load necessary libraries
+library(ncdf4)
+
+# Define the base path
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+
+# Initialize an array to store the extended data
+# Extract dimensions from the first file to initialize the array
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Prepare an array to store the extended data
+extended_data <- array(NA, dim = c(dim_x, dim_y, dim_z * length(target_files)))
+
+# Loop through all the target files to extract the data and append along the third dimension
+current_index <- 1
+for (file in target_files) {
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Determine the slice of the extended array to update
+  slice_indices <- current_index:(current_index + dim(data)[3] - 1)
+  
+  # Append the data to the extended array
+  extended_data[,,slice_indices] <- data
+  
+  # Update the current index
+  current_index <- current_index + dim(data)[3]
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the extended data
+print(dim(extended_data))  # Check dimensions (x, y, extended z)
+
+# Optionally, inspect a slice of the extended data for verification
+print(extended_data[,,1:10])  # Inspect the first 10 slices
+```
+
+```{r}
+#do EVA for all this
+#use function defined above
+# Create an empty matrix to store 80-year return levels
+return_level_80yr_13EMs <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+# Loop through each grid cell
+for (i in seq_along(lon)) {
+  for (j in seq_along(lat)) {
+    # Extract time series for the grid cell
+    data <- extended_data[i, j, ]
+    
+    # Check for NA or insufficient data
+   # if (all(is.na(data)) || length(na.omit(data)) < 10) next
+    
+    # Calculate 80-year return level
+    return_level_80yr_13EMs[i, j] <- calculate_return_level(data, return_period = 80)
+  }
+}
+
+```
+
+```{r}
+# Convert first year's data into a raster object
+r <- raster(t(return_level_80yr_13EMs), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r<- flip(r, direction='y')
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+```
+
+```{r}
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "80 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX 80-yr RL m001-m013 1850 set", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "80 yr return level", reverse = TRUE))  # Adjust legend for better presentation
+
+ggsave("80yr_return_m001-m013_1850_10mm.tiff", width = 20, height = 14, units = "cm", dpi=320)
+```
+
 

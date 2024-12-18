@@ -1,0 +1,97 @@
+---
+title: "Forced vs Unforced Signals PCWD"
+author: "Patricia Helpap"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(readr)
+library(dplyr)
+library(here)
+library(lubridate)
+library(patchwork)
+library(extRemes)
+library(ggplot2)
+library(cwd)
+library(ncdf4)
+library(reshape2)
+library(ggpubr)
+library(maps)
+library(raster)
+library(rnaturalearth)
+library(sf)
+```
+
+### Data prep - bind files: 
+```{r}
+# Load necessary libraries
+library(ncdf4)
+library(abind)
+
+# Define the base path
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Initialize a list to store the data arrays
+data_list <- list()
+
+# Loop through each file to extract the data
+for (file in target_files) {
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Append the data to the list
+  data_list <- append(data_list, list(data))
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Combine all the data arrays along a new dimension
+# Assuming all data arrays have the same dimensions (time, lon, lat)
+aggregated_data <- abind::abind(data_list, along = 4)  # Create a 4th dimension for files
+
+# Output the structure of the aggregated data
+dimnames(aggregated_data) <- list(time = NULL, lon = NULL, lat = NULL, file = 1:length(data_list))
+print(dim(aggregated_data))  # Check dimensions (time, lon, lat, file)
+
+# Save the aggregated data to a new NetCDF file (optional)
+output_file <- "aggregated_4D.nc"
+nc_create_aggregated <- nc_create(
+  output_file,
+  list(
+    ncvar_def("time", "days since 1850-01-01", dim = list(ncdim_def("time", "time", seq_len(dim(aggregated_data)[1])))),
+    ncvar_def("lon", "degrees_east", dim = list(ncdim_def("lon", "longitude", seq_len(dim(aggregated_data)[2])))),
+    ncvar_def("lat", "degrees_north", dim = list(ncdim_def("lat", "latitude", seq_len(dim(aggregated_data)[3])))),
+    ncvar_def("data", "units", dim = list(
+      ncdim_def("time", "time", seq_len(dim(aggregated_data)[1])),
+      ncdim_def("lon", "longitude", seq_len(dim(aggregated_data)[2])),
+      ncdim_def("lat", "latitude", seq_len(dim(aggregated_data)[3])),
+      ncdim_def("file", "file_index", seq_len(dim(aggregated_data)[4]))
+    ))
+  )
+)
+ncvar_put(nc_create_aggregated, "data", aggregated_data)
+nc_close(nc_create_aggregated)
+
+```
+
+```{r}
+#using aggregate() function with FUN = stdev and FUN= mean to get signal to noise ratios for each gridcell
+```
+
+

@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="m006 1420 files"
+#SBATCH --job-name="m014 1850 files"
 #SBATCH --time=3-00:00:00
 #SBATCH --partition=icpu-stocker # if you have access, this gives you priority
 #SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes

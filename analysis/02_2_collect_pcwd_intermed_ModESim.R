@@ -13,8 +13,8 @@ library(lubridate)
 library(purrr)
 
 #indir        <- "~/scratch2/m001_tidy"
-indir       <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m005_tidy/02_1_pcwd_1850"
-outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m005_tidy/02_2_pcwd_result_1850/PCWD_maxlen" # adjust path to where the file should be written to
+indir       <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/02_1_pcwd_1850"
+outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/02_2_pcwd_result_1850/PCWD_maxlen" # adjust path to where the file should be written to
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_MAXLEN.rds", full.names = TRUE)

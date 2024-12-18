@@ -30,8 +30,8 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m005_tidy/02_pcwd_1850"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m005_tidy/02_1_pcwd_1850"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/02_pcwd_1850"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/02_1_pcwd_1850"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 #for development:
