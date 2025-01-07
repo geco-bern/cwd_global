@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r message=FALSE}
+```{r libraries, message=FALSE}
 library(readr)
 library(dplyr)
 library(here)
@@ -25,10 +25,24 @@ library(maps)
 library(raster)
 library(rnaturalearth)
 library(sf)
+library(rgdal)
+library(sp)
+library(RColorBrewer)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+library(tidyverse)
+library(abind)
+library(patchwork)
 ```
 
 Load reference regions and coastlines:
-```{r}
+```{r regions setup, echo=FALSE}
+#Load reference regions and coastlines:
+
 load("/storage/homefs/ph23v078/Reference_regions/IPCC-WGI-reference-regions-v4_R.rda", verbose = TRUE)
 
 #simplify this object by converting it to a SpatialPolygons class object (i.e., only the polygons are retained and their attributes discarded):
@@ -38,75 +52,673 @@ temp.dir <- tempdir()
 unzip("/storage/homefs/ph23v078/Reference_regions/ne_110m_coastline.zip", exdir = temp.dir)
 coastLines <- readOGR(dsn = temp.dir, layer = "ne_110m_coastline")
 
+names(names(refregions))
+
+proj4string(refregions)
+WCE <- refregions[c("WCE")]
+
 ```
 
-```{r}
+```{r map of regions}
+# Convert `refregions` (SpatialPolygons) to an `sf` object for ggplot compatibility
+refregions_sf <- st_as_sf(refregions)
+
+# Define continent assignments
+continent_mapping <- list(
+  "Europe" = c("NEU", "WCE", "EEU", "MED"),
+  "North America" = c("NWN", "NEN", "WNA", "CNA", "ENA", "GIC"),
+  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
+  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
+  "Central America" =c("NCA", "SCA", "CAR"),
+  "South America" = c("NWS", "NSA", "NES", "SAM", "SWS", "SES", "SSA"),
+  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
+)
+
+# Assign continents to regions
+refregions_sf <- refregions_sf %>%
+  mutate(
+    continent = case_when(
+      row.names(refregions) %in% continent_mapping$Europe ~ "Europe",
+      row.names(refregions) %in% continent_mapping$`North America` ~ "North America",
+      row.names(refregions) %in% continent_mapping$Africa ~ "Africa",
+      row.names(refregions) %in% continent_mapping$Asia ~ "Asia",
+      row.names(refregions) %in% continent_mapping$`Central America` ~ "Central America",
+      row.names(refregions) %in% continent_mapping$`South America` ~ "South America",
+      row.names(refregions) %in% continent_mapping$Australia ~ "Australia",
+      TRUE ~ "Other"  # For regions not mapped to a continent
+    )
+  ) 
+
+
+# Define continent colors
+continent_colors <- c(
+  "Europe" = "pink",
+  "North America" = "lightgreen",
+  "Africa" = "purple",
+  "Asia" = "orange",
+  "Central America" = "lightblue",
+  "South America" = "yellow",
+  "Australia" = "blue",
+  "Other" = "white"
+)
+
+# Extract region centroids for labeling
+region_labels <- refregions_sf %>%
+  st_centroid() %>%
+  mutate(label = row.names(refregions))  # Add region names as labels
+
+
+# Load land data for filling continents
+land <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Plot the map with ggplot2
+ggplot() +
+  geom_sf(data = land, fill = "lightgray", color = NA) +  # Fill land areas
+  geom_sf(data = refregions_sf, aes(fill = continent), color = "black", alpha = 0.6) +  # Transparent overlay
+  geom_sf_text(data = region_labels, aes(label = label), size = 3, color = "black", check_overlap = TRUE) +  # Add region names
+  scale_fill_manual(values = continent_colors, name = "Continent") +
+  theme_minimal() +
+  labs(title = "Map of Regions by Continent",
+       subtitle = "Continents Colored by Assigned Regions, Region Names Labeled") +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+```
+
+
+```{r read in EMs WCE only, echo=FALSE, message=FALSE}
+#here reading in only for WCE region for development
 #aggregate EM for region i.e. 2 for loops, 1 looping over EMs, second looping over region, aggregating into one file
 
-
-###############################
-#e.g. loop for EMs: ### append data i.e. get rid of time dimension and just append to exisiting data
-# Load necessary libraries
-library(ncdf4)
-
-# Define the base path
-path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
-
-# List all the directories within the base path
-folders <- list.files(path, full.names = TRUE)
+###############################read in data##################################
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
+folders <- list.files(path, full.names = TRUE, pattern = "m[0-9]{3}_tidy")
 
 # Identify the target files
 target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
-target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+target_files <- target_files[file.exists(target_files)]
 
 
-# Initialize an array to store the extended data
-# Extract dimensions from the first file to initialize the array
-nc <- nc_open(target_files[1])
-dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
-dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
-dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
-nc_close(nc)
+#################################all EMS#######################################
+#e.g. loop for EMs: ### append data i.e. get rid of time dimension and just append to exisiting data
+# Extract unique ensemble member identifiers from folder names
+ensemble_members <- unique(basename(folders))
 
-# Prepare an array to store the extended data
-extended_data <- array(NA, dim = c(dim_x, dim_y, dim_z * length(target_files)))
+# Initialize an empty list to store spatial averages for each file
+spatial_avg_list <- list()
 
-# Loop through all the target files to extract the data and append along the third dimension
-current_index <- 1
-for (file in target_files) {
-  # Open the NetCDF file
-  nc <- nc_open(file)
+# Loop over all ensemble member folders
+for (em in ensemble_members) {
+  # Construct the folder path for the current ensemble member
+  folder <- file.path(path, em)
+  # Construct file paths for the two time periods
+  file_1420 <- file.path(folder, "04_result_1420/PCWD_ANNMAX.nc")
+  file_1850 <- file.path(folder, "04_result_1850/PCWD_ANNMAX.nc")
   
-  # Extract the data variable
-  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
-  
-  # Determine the slice of the extended array to update
-  slice_indices <- current_index:(current_index + dim(data)[3] - 1)
-  
-  # Append the data to the extended array
-  extended_data[,,slice_indices] <- data
-  
-  # Update the current index
-  current_index <- current_index + dim(data)[3]
-  
-  # Close the file
-  nc_close(nc)
+  # Check if both files exist
+  if (file.exists(file_1420) && file.exists(file_1850)) {
+    # Load grid data for each time period
+    grid_1420 <- loadGridData(dataset = file_1420, var = "pcwd_annmax")
+    grid_1850 <- loadGridData(dataset = file_1850, var = "pcwd_annmax")
+    
+    # Set spatial projection
+    grid_1420 <- setGridProj(grid = grid_1420, proj = proj4string(refregions))
+    grid_1850 <- setGridProj(grid = grid_1850, proj = proj4string(refregions))
+    
+    # Perform spatial overlay
+    grid.eu_1420 <- overGrid(grid_1420, WCE)
+    grid.eu_1850 <- overGrid(grid_1850, WCE)
+    
+    # Extract data arrays
+    data_array_1420 <- grid.eu_1420$Data[1:430,,]
+    data_array_1850 <- grid.eu_1850$Data
+    
+    # Combine data arrays along the time dimension
+    combined_data_array <- abind::abind(data_array_1420, data_array_1850, along = 1)
+    
+    # Compute spatial average for each time step
+    spatial_avg <- apply(combined_data_array, 1, function(slice) {
+      mean(slice, na.rm = TRUE) # Compute mean for the spatial dimensions, ignoring NA
+    })
+    
+    # Store the spatial average in the list
+    spatial_avg_list[[em]] <- spatial_avg
+  } else {
+    warning(paste("Missing data for ensemble member:", em))
+  }
 }
 
-# Output the structure of the extended data
-print(dim(extended_data))  # Check dimensions (x, y, extended z)
+# Combine all spatial averages into a single array with dimensions 160 x EMs
+result_array.wce <- do.call(cbind, spatial_avg_list)
 
-# Optionally, inspect a slice of the extended data for verification
-print(extended_data[,,1:10])  # Inspect the first 10 slices
-
-
-########### integrate loop for regions: (do for all based on list with all regions)
-
-MED <- refregions["MED"]
-NEU <- refregions["NEU"]
-WCE <- refregions["WCE"]
+# Check the result
+dim(result_array.wce) # Should be 160 x EMs
 
 
-#should end with aggregated object containing all info for region i.e. 160 values for second period region x20 for all EMs
 ```
 
+```{r read in EMS all regions, echo=FALSE}
+###############################read in data##################################
+#as before but loop over all regions also, saving everything in an array
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
+folders <- list.files(path, full.names = TRUE, pattern = "m[0-9]{3}_tidy")
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]
+
+# Extract unique ensemble member identifiers from folder names
+ensemble_members <- unique(basename(folders))
+
+# List of regions to loop over
+regions <- c("GIC", "NWN", "NEN", "WNA", "CNA", "ENA", "NCA", "SCA", "CAR", "NWS", 
+             "NSA", "NES", "SAM", "SWS", "SES", "SSA", "NEU", "WCE", "EEU", "MED", 
+             "SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG", "RAR", "WSB", 
+             "ESB", "RFE", "WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "NAU", 
+             "CAU", "EAU", "SAU", "NZ", "EAN", "WAN", "ARO", "NPO", "EPO", "SPO", 
+             "NAO", "EAO", "SAO", "ARS", "BOB", "EIO", "SIO", "SOO")
+
+# Initialize a list to store results for all regions
+regional_results <- list()
+
+# Loop over all regions
+for (region in regions) {
+  # Extract the spatial object corresponding to the current region
+  region_object <- refregions[c(region)]
+  
+  # Check if the subset is valid
+  if (is.null(region_object)) {
+    warning(paste("Region not found:", region))
+    next
+  }
+  
+  # Initialize a list to store spatial averages for each file in the current region
+  spatial_avg_list <- list()
+  
+  # Loop over all ensemble member folders
+  for (em in ensemble_members) {
+    # Construct the folder path for the current ensemble member
+    folder <- file.path(path, em)
+    # Construct file paths for the two time periods
+    file_1420 <- file.path(folder, "04_result_1420/PCWD_ANNMAX.nc")
+    file_1850 <- file.path(folder, "04_result_1850/PCWD_ANNMAX.nc")
+    
+    # Check if both files exist
+    if (file.exists(file_1420) && file.exists(file_1850)) {
+      # Load grid data for each time period
+      grid_1420 <- loadGridData(dataset = file_1420, var = "pcwd_annmax")
+      grid_1850 <- loadGridData(dataset = file_1850, var = "pcwd_annmax")
+      
+      # Set spatial projection
+      grid_1420 <- setGridProj(grid = grid_1420, proj = proj4string(refregions))
+      grid_1850 <- setGridProj(grid = grid_1850, proj = proj4string(refregions))
+      
+      # Perform spatial overlay for the current region
+      grid_region_1420 <- overGrid(grid_1420, region_object)
+      grid_region_1850 <- overGrid(grid_1850, region_object)
+      
+      # Extract data arrays
+      data_array_1420 <- grid_region_1420$Data[1:430,,]
+      data_array_1850 <- grid_region_1850$Data
+      
+      # Combine data arrays along the time dimension
+      combined_data_array <- abind::abind(data_array_1420, data_array_1850, along = 1)
+      
+      # Compute spatial average for each time step
+      spatial_avg <- apply(combined_data_array, 1, function(slice) {
+        mean(slice, na.rm = TRUE) # Compute mean for the spatial dimensions, ignoring NA
+      })
+      
+      # Store the spatial average in the list
+      spatial_avg_list[[em]] <- spatial_avg
+    } else {
+      warning(paste("Missing data for ensemble member:", em, "in region:", region))
+    }
+  }
+  
+  # Combine all spatial averages into a single array for the current region
+  result_array_region <- do.call(cbind, spatial_avg_list)
+  
+  # Store the result for the current region
+  regional_results[[region]] <- result_array_region
+}
+
+# Save or process `regional_results` as needed
+# Example: access results for a specific region
+dim(regional_results[["WCE"]]) # Check dimensions of the result for WCE
+
+```
+
+
+
+```{r return levels, echo=FALSE, message=FALSE}
+######calculate EVA for region i.e. WCE here for development
+#new dataframe that contains a PCWD value for 2 year return period for each 30yr sliding window
+
+# Define the window size (here 31 years) and return period
+window_size <- 15
+return_period <- 2
+
+# Time information for the combined period
+time_info <- seq(from = as.numeric(1420), to = as.numeric(2009))
+
+
+# Initialize a vector to store the 2-year return levels (one value per time step)
+num_time_steps <- nrow(result_array.eu)
+return_level_vector <- rep(NA, num_time_steps)
+
+# Loop over time steps (ensuring a 31-year moving window)
+for (t in (window_size + 1):(num_time_steps - window_size)) {
+  # Extract the data for the current 31-year window across all ensemble members
+  window_data <- result_array.eu[(t - window_size):(t + window_size), ]
+  window_data <- as.vector(window_data) # Flatten the matrix to a single vector
+  
+  # Remove NA values (if any) before fitting
+  window_data <- window_data[!is.na(window_data)]
+  
+  # Fit the GEV distribution to the combined data
+  gev_fit <- fevd(window_data, type = "GEV", verbose = FALSE)
+  
+  # Calculate the 2-year return level
+  return_level <- return.level(gev_fit, return.period = return_period)
+  
+  # Store the result in the vector
+  return_level_vector[t] <- return_level
+}
+
+
+# Create a data.frame combining time and return levels
+result_df_RL <- data.frame(
+  time = time_info,
+  return_level = return_level_vector
+)
+
+```
+
+
+
+
+Show temporal evolution of 2-year return levels
+```{r plot return values, echo=FALSE}
+ggplot(data = result_df_RL) +
+  geom_line(mapping= aes(x=time, y=return_level))+
+  ylim(min(result_df_RL$return_level), max(result_df_RL$return_level)) +
+  xlim(min(result_df_RL$time), max(result_df_RL$time)) +
+  labs(
+    x = "Year", 
+    y = "PCWD(mm)",
+    title = "2-year return level - 30yr sliding window"
+  ) +
+  theme_classic()
+
+```
+### Assessing the change in frequency of 2-year drought events (Moderate drought)
+
+- 2-year event threshold baseline calculated from start of simulation period (depends on window size)
+
+```{r calculate return period WCE, echo=FALSE, message=FALSE}
+#same thing but instead calculate 2yr return period frequency for events?
+#define a reference period? First 30 years: Take 30 year average of 2 year event as baseline and see how frequency of events with that threshold change
+
+# Define parameters
+window_size <- 50
+return_period <- 2
+
+# Calculate the baseline 2-year return level using the first 30 years
+baseline_window_data <- as.vector(result_array.eu[1:(2 * window_size), ])
+
+# Fit the GEV model to the baseline window
+baseline_gev_fit <- fevd(baseline_window_data, type = "GEV", verbose = FALSE)
+
+# Calculate the 2-year return level for the baseline period
+baseline_return_level <- return.level(baseline_gev_fit, return.period = return_period)
+
+# Initialize a vector to store the effective return period for each time step
+num_time_steps <- nrow(result_array.eu)
+effective_return_period_vector <- rep(NA, num_time_steps)
+
+# Loop over time steps (ensuring a 31-year moving window)
+for (t in (window_size + 1):(num_time_steps - window_size)) {
+  # Extract the data for the current 31-year window across all ensemble members
+  window_data <- result_array.eu[(t - window_size):(t + window_size), ]
+  window_data <- as.vector(window_data) # Flatten the matrix to a single vector
+  
+  # Remove NA values
+  window_data <- window_data[!is.na(window_data)]
+  
+  # Count how many events exceed the baseline 2-year return level
+  exceedances <- sum(window_data > baseline_return_level, na.rm = TRUE)
+  
+  # Calculate the effective return period
+  if (exceedances > 0) {
+    effective_return_period <- length(window_data) / exceedances
+  } else {
+    effective_return_period <- Inf # No events exceed the baseline threshold
+  }
+  
+  # Store the effective return period
+  effective_return_period_vector[t] <- effective_return_period
+}
+
+# Create a data.frame combining time and effective return period
+result_df_RP_100yr <- data.frame(
+  time = time_info,
+  effective_return_period = effective_return_period_vector
+)
+
+```
+
+
+```{r plot 2yr return periods WCE, echo = FALSE}
+ggplot() +
+  geom_line(data = result_df_RP_10yr, mapping= aes(x=time, y=effective_return_period, color="10yr"))+
+  geom_line(data = result_df_RP_30yr, mapping= aes(x=time, y=effective_return_period, color="30yr"))+
+  geom_line(data = result_df_RP_100yr, mapping= aes(x=time, y=effective_return_period, color="100yr"))+
+  geom_hline(yintercept=2, linetype="dashed", color = "black")+
+  ylim(min(result_df_RP$effective_return_period), max(result_df_RP$effective_return_period)) +
+  xlim(min(result_df_RP$time), max(result_df_RP$time)) +
+  labs(
+    x = "Year", 
+    y = "return period",
+    title = "frequency change of 2yr events - sliding window"
+  ) +
+  theme_classic()+
+      scale_color_manual(name="window size",values = c("10yr" = "cadetblue","30yr" = "chocolate1", "100yr" = "chartreuse"))
+```
+
+```{r calculate return periods all regions, echo=FALSE, message=FALSE}
+# Define parameters, can change window size
+window_size <- 15  # Half window size (e.g., 50 means a 101-year moving window)
+return_period <- 2
+
+#####for development: 
+# Define the European regions (modify this as per your actual region names)
+european_regions <- c("NEU", "WCE", "EEU", "MED")  # List of European regions
+
+# Initialize a list to store results for all regions
+all_regions_results <- list()
+
+# Loop through each region in regional_results
+for (region in european_regions) { #swap european_regions for regional_results for all regions
+  # Extract the result array for the current region
+  result_array_region <- regional_results[[region]]
+  
+  # Flatten the array across all ensemble members for the baseline calculation
+  baseline_window_data <- as.vector(result_array_region[1:(2 * window_size), ])
+  
+  # Fit the GEV model to the baseline window
+  baseline_gev_fit <- fevd(baseline_window_data, type = "GEV", verbose = FALSE)
+  
+  # Calculate the 2-year return level for the baseline period
+  baseline_return_level <- return.level(baseline_gev_fit, return.period = return_period)
+  
+  # Initialize a vector to store the effective return period for each time step
+  num_time_steps <- nrow(result_array_region)
+  effective_return_period_vector <- rep(NA, num_time_steps)
+  
+  # Loop over time steps (ensuring a 101-year moving window)
+  for (t in (window_size + 1):(num_time_steps - window_size)) {
+    # Extract the data for the current window across all ensemble members
+    window_data <- result_array_region[(t - window_size):(t + window_size), ]
+    window_data <- as.vector(window_data) # Flatten the matrix to a single vector
+    
+    # Remove NA values
+    window_data <- window_data[!is.na(window_data)]
+    
+    # Count how many events exceed the baseline 2-year return level
+    exceedances <- sum(window_data > baseline_return_level, na.rm = TRUE)
+    
+    # Calculate the effective return period
+    if (exceedances > 0) {
+      effective_return_period <- length(window_data) / exceedances
+    } else {
+      effective_return_period <- Inf # No events exceed the baseline threshold
+    }
+    
+    # Store the effective return period
+    effective_return_period_vector[t] <- effective_return_period
+  }
+  
+  # Create a dataframe for the current region
+  time_info <- seq(from = as.numeric(1420), to = as.numeric(2009))  # Replace with actual time if available
+  region_df <- data.frame(
+    time = time_info,
+    effective_return_period = effective_return_period_vector,
+    region = region
+  )
+  
+  # Store the region's dataframe in the results list
+  all_regions_results[[region]] <- region_df
+}
+
+# Combine all region results into a single dataframe
+combined_results <- do.call(rbind, all_regions_results)
+
+# Save or process the combined dataframe
+# Example: Save to a CSV file
+write.csv(combined_results, "~/cwd_global/data/effective_return_periods_europe_30.csv", row.names = FALSE)
+
+
+```
+
+
+```{r timeseries and map plots for each region}
+###### 1. Read in return period data
+# Load the CSV files for each window size
+df_10yr <- read.csv("~/cwd_global/data/effective_return_periods_europe_10.csv")
+df_30yr <- read.csv("~/cwd_global/data/effective_return_periods_europe_30.csv")
+df_100yr <- read.csv("~/cwd_global/data/effective_return_periods_europe_100.csv")
+
+# Add a new column to identify window size for each dataframe
+df_10yr$window_size <- "10yr"
+df_30yr$window_size <- "30yr"
+df_100yr$window_size <- "100yr"
+
+# Combine the three dataframes into one
+combined_df <- bind_rows(df_10yr, df_30yr, df_100yr)
+
+# Time information for the combined period
+time_info <- seq(from = as.numeric(1420), to = as.numeric(2009))
+
+
+##### Step 2: Filter European regions for the map
+european_regions_sf <- refregions_sf %>% filter(continent == "Europe")
+# Define the bounding box for Europe
+europe_bbox <- c(xmin = -30, xmax = 70, ymin = 25, ymax = 75)  # Approximate bounding box for Europe
+
+
+##### Step 4: Create the map
+map_plot <- ggplot() +
+  geom_sf(data = land, fill = "lightgray", color = NA) +  # Fill land areas
+  geom_sf(data = european_regions_sf, aes(fill = continent), color = "black", alpha = 0.6) +  # Transparent overlay
+  geom_sf_text(data = region_labels, aes(label = label), size = 3, color = "black", check_overlap = TRUE) +  # Add region names
+  scale_fill_manual(values = continent_colors, name = "Continent") +
+  theme_classic() +
+  labs(title = "IPCC Regions", ylabs="", xlabs="") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  ) +
+  coord_sf(xlim = europe_bbox[1:2], ylim = europe_bbox[3:4], expand = FALSE)  # Crop the map to Europe
+
+
+##### Step 5: Plot the time series data with faceting
+time_series_plot <- ggplot(combined_df, aes(x = time, y = effective_return_period, color = window_size)) +
+  geom_line() +  # Plot lines for each region's return period
+  geom_hline(yintercept = 2, linetype = "dashed", color = "black") +  # Add a reference line for 2-year return period
+  labs(
+    x = "Year",
+    y = "Effective Return Period",
+    title = "Frequency Change of 2-Year Events"
+  ) +
+  scale_color_manual(name = "Window Size", values = c("10yr" = "cadetblue", "30yr" = "chocolate1", "100yr" = "chartreuse")) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10)  # Size for facet labels
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+##### Step 6: Arrange the two plots side by side using patchwork
+# Explicitly control the layout with patchwork
+
+# Arrange the Map and Time Series Side by Side
+grid.arrange(
+  map_plot, time_series_plot,
+  ncol = 2,  # Side-by-side layout
+  widths = c(1, 2)  # Adjust the relative width of the plots
+)
+```
+
+
+### Assessing the change in frequency of 20-year drought events (Severe drought)
+
+```{r}
+#same thing but instead calculate 2yr return period frequency for events?
+#define a reference period? First 30 years: Take 30 year average of 2 year event as baseline and see how frequency of events with that threshold change
+
+# Define parameters
+window_size <- 50
+return_period <- 20
+
+# Calculate the baseline 2-year return level using the first 30 years
+baseline_window_data <- as.vector(result_array.eu[1:(2 * window_size), ])
+
+# Fit the GEV model to the baseline window
+baseline_gev_fit <- fevd(baseline_window_data, type = "GEV", verbose = FALSE)
+
+# Calculate the 2-year return level for the baseline period
+baseline_return_level <- return.level(baseline_gev_fit, return.period = return_period)
+
+# Initialize a vector to store the effective return period for each time step
+num_time_steps <- nrow(result_array.eu)
+effective_return_period_vector <- rep(NA, num_time_steps)
+
+# Loop over time steps (ensuring a 31-year moving window)
+for (t in (window_size + 1):(num_time_steps - window_size)) {
+  # Extract the data for the current 31-year window across all ensemble members
+  window_data <- result_array.eu[(t - window_size):(t + window_size), ]
+  window_data <- as.vector(window_data) # Flatten the matrix to a single vector
+  
+  # Remove NA values
+  window_data <- window_data[!is.na(window_data)]
+  
+  # Count how many events exceed the baseline 2-year return level
+  exceedances <- sum(window_data > baseline_return_level, na.rm = TRUE)
+  
+  # Calculate the effective return period
+  if (exceedances > 0) {
+    effective_return_period <- length(window_data) / exceedances
+  } else {
+    effective_return_period <- Inf # No events exceed the baseline threshold
+  }
+  
+  # Store the effective return period
+  effective_return_period_vector[t] <- effective_return_period
+}
+
+# Create a data.frame combining time and effective return period
+result_df_RP_100yr <- data.frame(
+  time = time_info,
+  effective_return_period = effective_return_period_vector
+)
+
+```
+
+
+```{r}
+ggplot() +
+  geom_line(data = result_df_RP_40yr, mapping= aes(x=time, y=effective_return_period, color="40yr"))+
+  geom_line(data = result_df_RP_70yr, mapping= aes(x=time, y=effective_return_period, color="70yr"))+
+  geom_line(data = result_df_RP_100yr, mapping= aes(x=time, y=effective_return_period, color="100yr"))+
+  geom_hline(yintercept=20, linetype="dashed", color = "black")+
+  ylim(min(result_df_RP$effective_return_period), max(result_df_RP$effective_return_period)) +
+  xlim(min(result_df_RP$time), max(result_df_RP$time)) +
+  labs(
+    x = "Year", 
+    y = "return period",
+    title = "frequency change of 20 yr events - sliding window"
+  ) +
+  theme_classic()+
+      scale_color_manual(name="window size",values = c("40yr" = "cadetblue","70yr" = "chocolate1", "100yr" = "chartreuse"))
+```
+
+
+### Assessing the change in frequency of 100-year drought events (Extremely severe drought)
+
+```{r}
+#same thing but instead calculate 2yr return period frequency for events?
+#define a reference period? First 30 years: Take 30 year average of 2 year event as baseline and see how frequency of events with that threshold change
+
+# Define parameters
+window_size <- 25
+return_period <- 100
+
+# Calculate the baseline 2-year return level using the first 30 years
+baseline_window_data <- as.vector(result_array.eu[1:(2 * window_size), ])
+
+# Fit the GEV model to the baseline window
+baseline_gev_fit <- fevd(baseline_window_data, type = "GEV", verbose = FALSE)
+
+# Calculate the 2-year return level for the baseline period
+baseline_return_level <- return.level(baseline_gev_fit, return.period = return_period)
+
+# Initialize a vector to store the effective return period for each time step
+num_time_steps <- nrow(result_array.eu)
+effective_return_period_vector <- rep(NA, num_time_steps)
+
+# Loop over time steps (ensuring a 31-year moving window)
+for (t in (window_size + 1):(num_time_steps - window_size)) {
+  # Extract the data for the current 31-year window across all ensemble members
+  window_data <- result_array.eu[(t - window_size):(t + window_size), ]
+  window_data <- as.vector(window_data) # Flatten the matrix to a single vector
+  
+  # Remove NA values
+  window_data <- window_data[!is.na(window_data)]
+  
+  # Count how many events exceed the baseline 2-year return level
+  exceedances <- sum(window_data > baseline_return_level, na.rm = TRUE)
+  
+  # Calculate the effective return period
+  if (exceedances > 0) {
+    effective_return_period <- length(window_data) / exceedances
+  } else {
+    effective_return_period <- Inf # No events exceed the baseline threshold
+  }
+  
+  # Store the effective return period
+  effective_return_period_vector[t] <- effective_return_period
+}
+
+# Create a data.frame combining time and effective return period
+result_df_RP_50yr <- data.frame(
+  time = time_info,
+  effective_return_period = effective_return_period_vector
+)
+
+```
+
+
+```{r}
+ggplot() +
+  geom_line(data = result_df_RP_150yr, mapping= aes(x=time, y=effective_return_period, color="150yr"))+
+    geom_line(data = result_df_RP_50yr, mapping= aes(x=time, y=effective_return_period, color="50yr"))+
+  #geom_line(data = result_df_RP_200yr, mapping= aes(x=time, y=effective_return_period, color="200yr"))+
+  geom_line(data = result_df_RP_300yr, mapping= aes(x=time, y=effective_return_period, color="300yr"))+
+  #  geom_line(data = result_df_RP_100yr, mapping= aes(x=time, y=effective_return_period, color="100yr"))+
+  geom_hline(yintercept=100, linetype="dashed", color = "black")+
+  ylim(min(result_df_RP$effective_return_period), max(result_df_RP$effective_return_period)) +
+  xlim(min(result_df_RP$time), max(result_df_RP$time)) +
+  labs(
+    x = "Year", 
+    y = "return period",
+    title = "frequency change of 100 yr events - sliding window"
+  ) +
+  theme_classic()+
+      scale_color_manual(name="window size",values = c("50yr" = "cadetblue","100yr" = "chocolate1", "150yr" = "chartreuse", "200yr" = "deeppink", "300yr" = "darkturquoise"))
+```
