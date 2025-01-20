@@ -645,6 +645,7 @@ ggplot() +
   ) +
   scale_color_manual(values = c("Algeria 1850_AT" = "deepskyblue","Algeria 1850_AT_30" = "darkslategray", "Algeria 1850" = "deepskyblue4"))
 ```
+
 ```{r}
 #To save html markdown files: 
 #rmarkdown::render("vignettes/Spatial_maps_m001.Rmd")

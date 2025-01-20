@@ -294,15 +294,15 @@ break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-l
 ```{r}
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
-  scale_fill_manual(name = "80 yr return level", values = custom_colors, na.value = "lightgrey", 
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD ANNMAX 80 year return level m001 1850 set", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD ANNMAX X5 1420-1450", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
   theme(legend.title = element_text(size = 12),  # Adjust legend title size
         legend.text = element_text(size = 10)) +  # Adjust legend text size
-  guides(fill = guide_legend(title = "80 yr return level", reverse = TRUE))  # Adjust legend for better presentation
+  guides(fill = guide_legend(title = "5 yr return level", reverse = TRUE))  # Adjust legend for better presentation
 
 ggsave("80yr_return_m001_1850_10mm.tiff", width = 20, height = 14, units = "cm", dpi=320)
 ```
@@ -678,6 +678,8 @@ plot(dx2, lwd = 2, col = "red",
 rug(jitter(grid2.wce$Data))
 
 ```
+
+
 ```{r}
 # Plot the density without histogram
 plot(dx, lwd = 2, col = "red",
@@ -697,6 +699,8 @@ grid2.wce_EVA <- na.omit(grid2.wce_EVA)
 evd_gev2.wce <- extRemes::fevd(x = grid2.wce_EVA, type = "GEV", method = "MLE", units = "years")
 summary(evd_gev2.wce)
 ```
+
+
 ```{r}
 return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
 
@@ -747,6 +751,8 @@ ggplot() +
              col = "tomato")+
   theme_classic2()
 ```
+
+
 loop over the dataset and extract return period value: 
 ```{r, echo=FALSE, warnings=FALSE}
 # Extract dimensions and prepare storage
@@ -775,6 +781,8 @@ for (i in seq_len(num_x)) {
 }
 
 ```
+
+
 ```{r}
 # Coordinates (longitude and latitude)
 lon.wce <- grid2.wce$xyCoords$x
