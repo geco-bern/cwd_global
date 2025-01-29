@@ -25,7 +25,22 @@ library(maps)
 library(raster)
 library(rnaturalearth)
 library(sf)
+library(rgdal)
+library(sp)
+library(RColorBrewer)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+library(tidyverse)
+library(abind)
+library(patchwork)
+library(gridExtra)
 ```
+# Trend calculation and Signal to Noise ratios
+
 
 ### Data prep - read in aggregated data aggregated for each region: 
 ```{r}
@@ -80,16 +95,16 @@ for (region in names(regional_results_1420)) {
   ensemble_trends[[region]] <- trends_matrix
 }
 
-# Example: Visualize trends for one ensemble member in one region
-region <- "WSAF"  # Specify region
-ensemble <- 1  # Specify ensemble member
-
-plot(as.numeric(rownames(ensemble_trends[[region]])),
-     ensemble_trends[[region]][, ensemble], type = "l",
-     main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
-     xlab = "Year", ylab = "Trend (mm/yr)")
+# # Example: Visualize trends for one ensemble member in one region
+# region <- "WSAF"  # Specify region
+# ensemble <- 1  # Specify ensemble member
+#
+# plot(as.numeric(rownames(ensemble_trends[[region]])),
+#      ensemble_trends[[region]][, ensemble], type = "l",
+#      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
+#      xlab = "Year", ylab = "Trend (mm/yr)")
 # 
-write.csv(ensemble_trends, "~/cwd_global/data/1420_trends.csv")
+saveRDS(ensemble_trends, file="~/cwd_global/data/1420_30yr_trends.RData")  ## 100 year trends
 
 #################################### 1850 epoch ############################################
 #running window trend analysis with 30 year windows - 1850 epoch
@@ -136,23 +151,23 @@ for (region in names(regional_results_1850)) {
   ensemble_trends_1850[[region]] <- trends_matrix
 }
 
-# Example: Visualize trends for one ensemble member in one region
-region <- "WSAF"  # Specify region
-ensemble <- 1  # Specify ensemble member
-
-plot(as.numeric(rownames(ensemble_trends_1850[[region]])),
-     ensemble_trends_1850[[region]][, ensemble], type = "l",
-     main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
-     xlab = "Year", ylab = "Trend (mm/yr)")
+# # Example: Visualize trends for one ensemble member in one region
+# region <- "WSAF"  # Specify region
+# ensemble <- 1  # Specify ensemble member
 # 
-write.csv(ensemble_trends_1850, "~/cwd_global/data/1850_trends.csv")
+# plot(as.numeric(rownames(ensemble_trends_1850[[region]])),
+#      ensemble_trends_1850[[region]][, ensemble], type = "l",
+#      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
+#      xlab = "Year", ylab = "Trend (mm/yr)")
+# 
+saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_30yr_trends.RData")  ### 1850_trends has 100 year trends
 
 ```
 Calculate signal (ensemble mean) and noise (standard deviation) for each region: 
 
 ```{r}
 ###################### 1420 epoch ##########################
-#ensemble_trends <- read.csv("~/cwd_global/data/1420_trends.csv")
+ensemble_trends <- readRDS("~/cwd_global/data/1420_30yr_trends.RData") ### 1420_trends has 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1420 <- list()  # Mean for each region
@@ -174,7 +189,7 @@ for (region_name in names(ensemble_trends)) {
 
 
 ###################### 1850 epoch ##########################
-#ensemble_trends <- read.csv("~/cwd_global/data/1850_trends.csv")
+ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_30yr_trends.RData") ### 1850_trends has 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1850 <- list()  # Mean for each region
@@ -202,6 +217,8 @@ Calculate Signal to noise ratio timeseries for each region i.e. EM/STD
 ################## 1420 epoch ######################
 # Initialize a list to store signal-to-noise ratios for each region
 SNRs_1420 <- list()
+stds_1420 <- list()
+trends_1420 <- list()
 
 # Loop over regions
 for (region_name in names(ensemble_trends)) {
@@ -216,13 +233,16 @@ for (region_name in names(ensemble_trends)) {
   snr[is.infinite(snr)] <- NA  # Replace infinite values (mean / 0) with NA
   
   # Store the result in the list
+  trends_1420[[region_name]] <- means
+  stds_1420[[region_name]] <- stds
   SNRs_1420[[region_name]] <- snr
 }
 
 ################## 1850 epoch ######################
 # Initialize a list to store signal-to-noise ratios for each region
 SNRs_1850 <- list()
-
+trends_1850 <- list()
+stds_1850 <- list()
 # Loop over regions
 for (region_name in names(ensemble_trends_1850)) {
   
@@ -236,6 +256,8 @@ for (region_name in names(ensemble_trends_1850)) {
   snr[is.infinite(snr)] <- NA  # Replace infinite values (mean / 0) with NA
   
   # Store the result in the list
+  trends_1850[[region_name]] <- means
+  stds_1850[[region_name]] <- stds
   SNRs_1850[[region_name]] <- snr
 }
 
@@ -255,12 +277,25 @@ continent_colors <- c(
   "Other" = "white"
 )
 
+# Define continent assignments
+continent_mapping <- list(
+  "Europe" = c("NEU", "WCE", "EEU", "MED"),
+  "North America" = c("NWN", "NEN", "WNA", "CNA", "ENA", "GIC"),
+  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
+  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
+  "Central America" =c("NCA", "SCA", "CAR"),
+  "South America" = c("NWS", "NSA", "NES", "SAM", "SWS", "SES", "SSA"),
+  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
+)
+
 ########### 1420 period
 # Convert SNR list into a data frame
 snr_df_1420 <- do.call(rbind, lapply(names(SNRs_1420), function(region) {
   data.frame(
     time = as.numeric(names(SNRs_1420[[region]])),  # Extract time from names
-    SNR = SNRs_1420[[region]],                     # Extract SNR values
+    SNR = SNRs_1420[[region]],  # Extract SNR values
+    trend = trends_1420[[region]],
+    std = stds_1420[[region]],
     region = region                                # Add region identifier
   )
 }))
@@ -279,6 +314,8 @@ snr_df_1850 <- do.call(rbind, lapply(names(SNRs_1850), function(region) {
   data.frame(
     time = as.numeric(names(SNRs_1850[[region]])),  # Extract time from names
     SNR = SNRs_1850[[region]],                     # Extract SNR values
+    trend = trends_1850[[region]],
+    std = stds_1850[[region]],
     region = region                                # Add region identifier
   )
 }))
@@ -298,13 +335,367 @@ Plot timeseries of EM/STD for WCE:
 ```{r}
 # Example: Visualize trends for one ensemble member in one region
 
-plot(SNRs_1420$NZ, type = "l",
-     main = paste("Signal/Noise for PCWD trends (mm/yr)"),
-     xlab = "Year", ylab = "EM/STD")
+plot(trends_1420$WCE, type = "l",
+     main = paste("PCWD trends (mm/yr)"),
+     xlab = "Year", ylab = "EM trend")
 
-plot(SNRs_1850$NZ, type = "l",
-     main = paste("Signal/Noise for PCWD trends (mm/yr)"),
-     xlab = "Year", ylab = "EM/STD")
+plot(trends_1850$WCE, type = "l",
+     main = paste("PCWD trends (mm/yr)"),
+     xlab = "Year", ylab = "EM trend")
+
+```
+
+Plot timeseries of trend timeseries for all regions: 
+
+```{r}
+#################all continents for 1420 epoch ###################################
+
+#### Europe ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Europe"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Asia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+    geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+##### Australia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "blue")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+##### Africa ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### North America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Central America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### South America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+snr_filtered <- snr_df_1420 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+```
+
+```{r}
+#################all continents for 1850 epoch ###################################
+
+#### Europe ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Europe"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Asia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+##### Australia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "blue")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+##### Africa ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### North America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Central America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### South America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+snr_filtered <- snr_df_1850 %>% filter(continent == selected_continent)
+
+# Plot SNR time series
+ggplot(snr_filtered, aes(x = time, y = trend)) +
+  geom_line() +  # Plot lines for each region
+  geom_ribbon(aes(ymin = trend - std, ymax = trend + std), fill = "grey", alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  labs(
+    x = "Year",
+    y = "Trends (mm/yr)",
+    title = paste("30 year trend time series for", selected_continent)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow")
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
 
 ```
 
@@ -828,13 +1219,737 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   scale_fill_manual(values = c("1420" = "red", "1850" = "blue"))  # Customize colors
 ```
 
+## Maps showing variability of droughts per gridcell 
+
+- 1420 mean epoch variability for each gridcell
+- 1850 mean epoch variabiltiy for each gridcell
+- 50 year variability for 1420-1470, 1700-1750, 1950-2000
+- which regions show high variability? Is it the same for each time period? 
+
+Read in lat, lon and time info: 
+```{r}
+#lat lon and time info from netcdf files
+##read in data
+input_file_1850 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc"
+input_file_1420 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420/PCWD_ANNMAX.nc"
+
+nc_pwcd_1850 <- nc_open(input_file_1850)
+pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1850, varid="lon")
+lat = ncvar_get(nc_pwcd_1850, varid="lat")
+time_1850 = ncvar_get(nc_pwcd_1850, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates_1850 <- reference_date + time_1850
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1850)
+
+#1420 file for 1420 time
+nc_pwcd_1420 <- nc_open(input_file_1420)
+pcwd_annmax_1420 = ncvar_get(nc_pwcd_1420, varid="pcwd_annmax")
+time_1420 = ncvar_get(nc_pwcd_1420, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+time_dates_1420 <- reference_date + time_1420
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1420)
+```
+
+Aggregate all 1850 files: 
+
+```{r}
+# Define the base path
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Extract ensemble member identifiers from folder names
+ensemble_members <- basename(folders)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Filter ensemble members to match target files
+ensemble_members <- ensemble_members[file.exists(target_files)]
+
+# Initialize a list to store data for each ensemble member
+data_by_ensemble_1850 <- list()
+
+# Extract dimensions from the first file to initialize the array size for consistency
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Loop through all the target files and store the data in a list
+for (i in seq_along(target_files)) {
+  file <- target_files[i]
+  member <- ensemble_members[i]
+  
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Store the data in the list, keyed by the ensemble member
+  data_by_ensemble_1850[[member]] <- data
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the data list
+print(names(data_by_ensemble_1850))  # Check stored ensemble members
+print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the first ensemble member
+
+```
+
+Aggregate all 1420 files: 
+
+```{r}
+# Define the base path
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Extract ensemble member identifiers from folder names
+ensemble_members <- basename(folders)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1420/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Filter ensemble members to match target files
+ensemble_members <- ensemble_members[file.exists(target_files)]
+
+# Initialize a list to store data for each ensemble member
+data_by_ensemble_1420 <- list()
+
+# Extract dimensions from the first file to initialize the array size for consistency
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Loop through all the target files and store the data in a list
+for (i in seq_along(target_files)) {
+  file <- target_files[i]
+  member <- ensemble_members[i]
+  
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Store the data in the list, keyed by the ensemble member
+  data_by_ensemble_1420[[member]] <- data
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the data list
+print(names(data_by_ensemble_1420))  # Check stored ensemble members
+print(dim(data_by_ensemble_1420[[1]]))  # Check dimensions of the data for the first ensemble member
+
+```
+
+
+```{r}
+# Combine the list into a 4D array
+ensemble_array_1420 <- abind(data_by_ensemble_1420, along = 4)
+
+# Check dimensions of the resulting array
+dim(ensemble_array_1420)  # Should be [192, 96, 431, 19]
+
+# 2. Calculate the mean across all ensemble members (4th dimension)
+# This reduces the array to [192, 96, 431]
+ensemble_mean_1420 <- apply(ensemble_array_1420, c(1, 2, 3), mean, na.rm = TRUE)
+
+# 3. Calculate the standard deviation over the 431 years (3rd dimension)
+# This reduces the array to [192, 96] (longitude × latitude)
+std_dev_over_time_1420 <- apply(ensemble_mean_1420, c(1, 2), sd, na.rm = TRUE)
+
+#### 1850 epoch ######
+
+# Combine the list into a 4D array
+ensemble_array_1850 <- abind(data_by_ensemble_1850, along = 4)
+
+# Check dimensions of the resulting array
+dim(ensemble_array_1850)  # Should be [192, 96, 431, 19]
+
+# 2. Calculate the mean across all ensemble members (4th dimension)
+# This reduces the array to [192, 96, 431]
+ensemble_mean_1850 <- apply(ensemble_array_1850, c(1, 2, 3), mean, na.rm = TRUE)
+
+# 3. Calculate the standard deviation over the 431 years (3rd dimension)
+# This reduces the array to [192, 96] (longitude × latitude)
+std_dev_over_time_1850 <- apply(ensemble_mean_1850, c(1, 2), sd, na.rm = TRUE)
+
+```
+Plot mean values for African regions in certain time periods
+
+```{r}
+#select year that should be plotted: 
+time_chunk_index <- 160  # Subset of the time dimension
+
+data <- ensemble_mean_1850[, , time_chunk_index]
+
+#plot
+# Convert first year's data into a raster object
+r <- raster(t(data), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+custom_bins <- c(0, 20, 40, 60, 80, 100, 150, 200, 300, 500, 700, 900, 1200, 2000, Inf)  # Define breaks based on data range
+# Define a custom 13-color palette from deep turquoise to bright pink with earthy tones in between
+# Updated custom color palette with two additional colors
+custom_colors <- c("#004f5a",  # New color: a darker turquoise at the beginning
+                   "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", "#e8b249", 
+                   "#e3842a", "#d45321", "#ba2e1f", "#9e2d2a", "#803c3d", "#63363f", 
+                   "#9c276e",  # New color: a deeper shade in the pink tones
+                   "#d238a5")
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define bounding box for Africa
+bbox <- c(xmin = -30, xmax = 60, ymin = -35, ymax = 30)  # Approximate bounding box for Oceania
+
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "mean PCWD (mm)", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "mean PCWD in 2009", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = bbox[1:2], ylim = bbox[3:4], expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+```
 
 
 
+Plot standard deviation of mean PCWD for both epochs
+
+```{r}
+###### 1420 epoch #######
+
+# Convert first year's data into a raster object
+r <- raster(t(std_dev_over_time_1420), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+custom_bins <- c(0, 10, 20, 40, 60, 80, 100, 150, 200, 300, 500, 700, 900, Inf)  # No bins beyond 900
+
+# Define a custom color palette ranging from white to light yellow to dark red
+custom_colors <- colorRampPalette(c("lightyellow", "orange", "red", "darkred"))(length(custom_bins) - 1)
 
 
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX STD over 1420 epoch (EM)", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "STD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
 
+###### 1850 epoch #######
+
+# Convert first year's data into a raster object
+r <- raster(t(std_dev_over_time_1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+custom_bins <- c(0, 10, 20, 40, 60, 80, 100, 150, 200, 300, 500, 700, 900, Inf)  # No bins beyond 900
+
+# Define a custom color palette ranging from white to light yellow to dark red
+custom_colors <- colorRampPalette(c("lightyellow", "orange", "red", "darkred"))(length(custom_bins) - 1)
 
 
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
 
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX STD over 1850 epoch (EM)", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "STD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+```
+- PCWD variability increases over many areas in the later epoch
+
+
+50 year chunks for EM STD: 
+1: 1420-1470, 
+2: 1700-1750,
+3: 1950-2000
+
+```{r}
+################### 1420-1469 ###############################
+# Define the 50-year chunk indices (1:50 corresponds to the first 50 years)
+time_chunk_indices <- 1:50  # Subset of the time dimension
+
+# Create a new list to store the subsetted data
+data_1 <- lapply(data_by_ensemble_1420, function(ensemble_data) {
+  # Subset the time dimension for the first 50 years
+  ensemble_data[, , time_chunk_indices]
+})
+
+# Combine the list into a 4D array
+ensemble_array_1 <- abind(data_1, along = 4)
+
+# Check dimensions of the resulting array
+dim(ensemble_array_1)  # Should be [192, 96, 50, 19]
+
+# 2. Calculate the mean across all ensemble members (4th dimension)
+# This reduces the array to [192, 96, 431]
+ensemble_mean_1 <- apply(ensemble_array_1, c(1, 2, 3), mean, na.rm = TRUE)
+
+# 3. Calculate the standard deviation over the 431 years (3rd dimension)
+# This reduces the array to [192, 96] (longitude × latitude)
+std_dev_over_time_1 <- apply(ensemble_mean_1, c(1, 2), sd, na.rm = TRUE)
+
+################### 1700-1750 ###############################
+# Define the 50-year chunk indices (1:50 corresponds to the first 50 years)
+time_chunk_indices <- 280:329  # Subset of the time dimension
+
+# Create a new list to store the subsetted data
+data_2 <- lapply(data_by_ensemble_1420, function(ensemble_data) {
+  # Subset the time dimension for the first 50 years
+  ensemble_data[, , time_chunk_indices]
+})
+
+# Combine the list into a 4D array
+ensemble_array_2 <- abind(data_2, along = 4)
+
+# Check dimensions of the resulting array
+dim(ensemble_array_2)  # Should be [192, 96, 50, 19]
+
+# 2. Calculate the mean across all ensemble members (4th dimension)
+# This reduces the array to [192, 96, 431]
+ensemble_mean_2 <- apply(ensemble_array_2, c(1, 2, 3), mean, na.rm = TRUE)
+
+# 3. Calculate the standard deviation over the 431 years (3rd dimension)
+# This reduces the array to [192, 96] (longitude × latitude)
+std_dev_over_time_2 <- apply(ensemble_mean_2, c(1, 2), sd, na.rm = TRUE)
+
+
+################### 1950-2000 ###############################
+# Define the 50-year chunk indices (1:50 corresponds to the first 50 years)
+time_chunk_indices <- 100:149  # Subset of the time dimension
+
+# Create a new list to store the subsetted data
+data_3 <- lapply(data_by_ensemble_1850, function(ensemble_data) {
+  # Subset the time dimension for the first 50 years
+  ensemble_data[, , time_chunk_indices]
+})
+
+# Combine the list into a 4D array
+ensemble_array_3 <- abind(data_3, along = 4)
+
+# Check dimensions of the resulting array
+dim(ensemble_array_3)  # Should be [192, 96, 50, 19]
+
+# 2. Calculate the mean across all ensemble members (4th dimension)
+# This reduces the array to [192, 96, 431]
+ensemble_mean_3 <- apply(ensemble_array_3, c(1, 2, 3), mean, na.rm = TRUE)
+
+# 3. Calculate the standard deviation over the 431 years (3rd dimension)
+# This reduces the array to [192, 96] (longitude × latitude)
+std_dev_over_time_3 <- apply(ensemble_mean_3, c(1, 2), sd, na.rm = TRUE)
+
+```
+
+
+```{r}
+###### 1420 - 1470 #######
+
+# Convert first year's data into a raster object
+r <- raster(t(std_dev_over_time_1), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+custom_bins <- c(0, 10, 20, 40, 60, 80, 100, 150, 200, 300, 500, 700, 900, Inf)  # No bins beyond 900
+
+# Define a custom color palette ranging from white to light yellow to dark red
+custom_colors <- colorRampPalette(c("lightyellow", "orange", "red", "darkred"))(length(custom_bins) - 1)
+
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX STD for 1420-1470", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "STD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+###### 1700 - 1750 epoch #######
+
+# Convert first year's data into a raster object
+r <- raster(t(std_dev_over_time_2), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX STD for 1700-1750", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "STD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+###### 1950 - 2000 epoch #######
+
+# Convert first year's data into a raster object
+r <- raster(t(std_dev_over_time_3), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX STD for 1950-2000", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "STD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+```
+
+
+## Investigate trends entire epoch
+
+- calculate linear trend over entire period for 1420 epoch and 1850 epoch for each ensemble member
+
+```{r}
+################### 1420-1849 ###############################
+
+##loop through ensemble member and calculate linear trend for each one
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+# Initialize an empty list to store results
+trend_results <- list()
+
+# Iterate through each ensemble member
+for (ensemble_name in names(data_by_ensemble_1420)) {
+  # Extract the data for the current ensemble member (3D array)
+  ensemble_data <- data_by_ensemble_1420[[ensemble_name]]
+  
+  # Get dimensions
+  lon_dim <- dim(ensemble_data)[1]
+  lat_dim <- dim(ensemble_data)[2]
+  time_dim <- dim(ensemble_data)[3]
+  
+  # Create a data frame for regression: Reshape data into `grid_cell x time`
+  reshaped_data <- as.data.frame(
+    array(ensemble_data, dim = c(lon_dim * lat_dim, time_dim))
+  )
+  colnames(reshaped_data) <- 1:time_dim  # Name columns as time indices
+  
+  # Add grid cell indices
+  reshaped_data <- reshaped_data %>%
+    mutate(grid_id = 1:(lon_dim * lat_dim)) %>%
+    pivot_longer(
+      cols = -grid_id,
+      names_to = "time",
+      values_to = "value"
+    ) %>%
+    mutate(time = as.numeric(time))
+  
+  # Perform linear regression for each grid cell
+  trends <- reshaped_data %>%
+    group_by(grid_id) %>%
+    summarize(
+      trend = coef(lm(value ~ time))[["time"]],  # Extract slope (trend)
+      .groups = "drop"
+    )
+  
+  # Reshape trend data back into 2D array (lon x lat)
+  trend_matrix <- matrix(trends$trend, nrow = lon_dim, ncol = lat_dim)
+  
+  # Store the trend matrix in the results list
+  trend_results[[ensemble_name]] <- trend_matrix
+}
+
+# `trend_results` now contains a 2D trend array (lon x lat) for each ensemble member
+
+
+#### 1850 - 2009 trends
+
+# Initialize an empty list to store results
+trend_results_1850 <- list()
+
+# Iterate through each ensemble member
+for (ensemble_name in names(data_by_ensemble_1850)) {
+  # Extract the data for the current ensemble member (3D array)
+  ensemble_data <- data_by_ensemble_1850[[ensemble_name]]
+  
+  # Get dimensions
+  lon_dim <- dim(ensemble_data)[1]
+  lat_dim <- dim(ensemble_data)[2]
+  time_dim <- dim(ensemble_data)[3]
+  
+  # Create a data frame for regression: Reshape data into `grid_cell x time`
+  reshaped_data <- as.data.frame(
+    array(ensemble_data, dim = c(lon_dim * lat_dim, time_dim))
+  )
+  colnames(reshaped_data) <- 1:time_dim  # Name columns as time indices
+  
+  # Add grid cell indices
+  reshaped_data <- reshaped_data %>%
+    mutate(grid_id = 1:(lon_dim * lat_dim)) %>%
+    pivot_longer(
+      cols = -grid_id,
+      names_to = "time",
+      values_to = "value"
+    ) %>%
+    mutate(time = as.numeric(time))
+  
+  # Perform linear regression for each grid cell
+  trends <- reshaped_data %>%
+    group_by(grid_id) %>%
+    summarize(
+      trend = coef(lm(value ~ time))[["time"]],  # Extract slope (trend)
+      .groups = "drop"
+    )
+  
+  # Reshape trend data back into 2D array (lon x lat)
+  trend_matrix <- matrix(trends$trend, nrow = lon_dim, ncol = lat_dim)
+  
+  # Store the trend matrix in the results list
+  trend_results_1850[[ensemble_name]] <- trend_matrix
+}
+
+
+```
+
+
+```{r}
+### calculate mean of all trends for plotting: 
+# Calculate the mean trend across all ensemble members for each grid cell
+mean_trend_1420 <- Reduce("+", trend_results) / length(trend_results)
+
+#range(mean_trend_1420)
+
+# Calculate the mean trend across all ensemble members for each grid cell
+mean_trend_1850 <- Reduce("+", trend_results_1850) / length(trend_results_1850)
+range(mean_trend_1850)
+```
+
+
+Plot EM trend for 1420-1850:
+```{r}
+# Convert first year's data into a raster object
+r <- raster(t(mean_trend_1420), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+min_value <- min(mean_trend_1420, na.rm = TRUE)
+max_value <- max(mean_trend_1420, na.rm = TRUE)
+
+# Define custom bins (you can modify these based on your data range)
+custom_bins <- c(-60, -40, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 40, 60, 80, 100, 200, 500, 750, 1000, 2000)
+
+# Define a custom color palette for the bins (21 colors, corresponding to 21 bins)
+custom_colors <- c("darkblue", "blue", "lightblue", "white", "yellow", "orange", "red", "darkred", "brown", "black", "pink", "purple", "darkgreen", "lightgreen", "grey", "cyan", "magenta", "lightgrey", "gold", "turquoise", "beige")
+
+# Convert data into bins using `cut()`
+r_df$bin_layer <- cut(r_df$layer, breaks = custom_bins, include.lowest = TRUE, right = FALSE)
+
+# Create the plot
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = bin_layer), na.rm = TRUE) +  # Use the binned layer for color
+  scale_fill_manual(name = "Trend (mm/yr)", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(r_df$bin_layer), "Ocean")) +  # Assign the custom colors
+  labs(title = "Mean ANNMAX PCWD Trend (1420-1849)", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10)) +
+  guides(fill = guide_legend(title = "mm/yr"))
+
+```
+```{r}
+# Convert first year's data into a raster object
+r <- raster(t(mean_trend_1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom bins (you can modify these based on your data range)
+custom_bins <- c(-60, -40, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 40, 60, 80, 100, 200, 500, 750, 1000, 2000)
+
+# Define a custom color palette for the bins (21 colors, corresponding to 21 bins)
+custom_colors <- c("darkblue", "blue", "lightblue", "white", "yellow", "orange", "red", "darkred", "brown", "black", "pink", "purple", "darkgreen", "lightgreen", "grey", "cyan", "magenta", "lightgrey", "gold", "turquoise", "beige")
+
+
+# Convert data into bins using `cut()`
+r_df$bin_layer <- cut(r_df$layer, breaks = custom_bins, include.lowest = TRUE, right = FALSE)
+
+# Create the plot
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = bin_layer), na.rm = TRUE) +  # Use the binned layer for color
+  scale_fill_manual(name = "Trend (mm/yr)", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(r_df$bin_layer), "Ocean")) +  # Assign the custom colors
+  labs(title = "Mean ANNMAX PCWD Trend (1850-2009)", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10)) +
+  guides(fill = guide_legend(title = "mm/yr"))
+
+```

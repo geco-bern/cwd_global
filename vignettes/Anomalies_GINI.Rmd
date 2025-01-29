@@ -1,0 +1,24 @@
+---
+title: "PCWD Anomalies and GINI calculation"
+author: "Patricia Helpap"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Anomalies wrt anomaly
+
+- calculate timeseries of moving anomalies wrt a reference; try 1420-1450 as reference, 30 year window? Use PCWD mean values
+- timeseries for each region including std? 
+
+
+
+### Gini Index for inequality
+
+- calculate Gini index for both each epoch for every gridcell
+- plot as map to show variability/ meausre of inequality or unequalness
+- low number (close to 0 rather than 1) implies low inequality i.e. over time PCWD values stable for that gridcell
+- Gini index is more sensitive to changes in the middle of income distribution and less sensitive to changes at the top and the bottom of income distribution (Atkinson, 1970)

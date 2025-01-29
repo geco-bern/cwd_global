@@ -203,6 +203,8 @@ ggplot() +
   guides(fill = guide_legend(title = "PCWD ANNMAX", reverse = TRUE))  # Adjust legend for better presentation
 
 ```
+
+
 ```{r prep data for difference in periods}
 # Convert to raster
 r_diff <- raster(diff_data, xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))

@@ -379,41 +379,41 @@ GIC panel is showing interesting results in terms of return period changes; plot
 regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
 regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
 
-GIC_1420 <- regional_results_1420[["GIC"]]
-GIC_1850 <- regional_results_1850[["GIC"]]
+NWS_1420 <- regional_results_1420[["NWS"]]
+NWS_1850 <- regional_results_1850[["NWS"]]
 
 time_info_1420 <- seq(from = as.numeric(1420), to = as.numeric(1849))
 time_info_1850 <- seq(from = as.numeric(1850), to = as.numeric(2009))
 
-GIC_1420_mean <- data.frame(
+NWS_1420_mean <- data.frame(
   time = time_info_1420,  # Keep the time column
-  PCWD = rowMeans(GIC_1420[, -1], na.rm = TRUE)  # Calculate row means, excluding the first column
+  PCWD = rowMeans(NWS_1420[, -1], na.rm = TRUE)  # Calculate row means, excluding the first column
 )
 
-GIC_1850_mean <- data.frame(
+NWS_1850_mean <- data.frame(
   time = time_info_1850,  # Keep the time column
-  PCWD = rowMeans(GIC_1850[, -1], na.rm = TRUE)  # Calculate row means, excluding the first column
+  PCWD = rowMeans(NWS_1850[, -1], na.rm = TRUE)  # Calculate row means, excluding the first column
 )
  
-ggplot(data = GIC_1420_mean) +
+ggplot(data = NWS_1420_mean) +
   geom_line(mapping= aes(x=time, y=PCWD))+
-  ylim(50, 70) +
-  xlim(min(GIC_1420_mean$time), max(GIC_1420_mean$time)) +
+ # ylim(50, 70) +
+  xlim(min(NWS_1420_mean$time), max(NWS_1420_mean$time)) +
   labs(
     x = "Year", 
     y = "PCWD(mm)",
-    title = "GIC - EM PCWD values"
+    title = "NWS - EM PCWD values"
   ) +
   theme_classic()
 
-ggplot(data = GIC_1850_mean) +
+ggplot(data = NWS_1850_mean) +
   geom_line(mapping= aes(x=time, y=PCWD))+
-  ylim(50, 70) +
-  xlim(min(GIC_1850_mean$time), max(GIC_1850_mean$time)) +
+  #ylim(0, 13000) +
+  xlim(min(NWS_1850_mean$time), max(NWS_1850_mean$time)) +
   labs(
     x = "Year", 
     y = "PCWD(mm)",
-    title = "GIC - EM PCWD values"
+    title = "NWS - EM PCWD values"
   ) +
   theme_classic()
 
@@ -424,12 +424,12 @@ if (!require(moments)) install.packages("moments")
 library(moments)
 
 # Calculate skewness for each curve
-skew_1420 <- skewness(as.vector(GIC_1420))
-skew_1850 <- skewness(as.vector(GIC_1850))
+skew_1420 <- skewness(as.vector(NWS_1420))
+skew_1850 <- skewness(as.vector(NWS_1850))
 
 # Calculate density
-dx_1420 <- density(as.vector(GIC_1420))
-dx_1850 <- density(as.vector(GIC_1850))
+dx_1420 <- density(as.vector(NWS_1420))
+dx_1850 <- density(as.vector(NWS_1850))
 
 # Convert the densities into data frames for ggplot
 df_1420 <- data.frame(x = dx_1420$x, y = dx_1420$y, set = "1420")
@@ -463,6 +463,8 @@ ggplot(df_combined, aes(x = x, y = y, color = set)) +
 
 
 ```
+
+
 ## Skewness of PCWD data sets
 
 ```{r}
@@ -4956,6 +4958,8 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
   theme_classic()
 
 ```
+
+
 ```{r scatterplot 100yr RP 1435 and 1994, echo=FALSE}
 # Load the CSV files for each window size
 combined_RP_1850 <- read.csv("~/cwd_global/data/100yr_return_periods_regions_1850.csv")
@@ -5329,7 +5333,7 @@ print(names(data_by_ensemble_1420))  # Check stored ensemble members
 print(dim(data_by_ensemble_1420[[1]]))  # Check dimensions of the data for the first ensemble member
 
 ```
-Calculate return level values for 30 year slices e.g. 1420-1450, 1600-1630, 1800-1830, 2000
+Calculate return level values for 30 year slices e.g. 1420-1450, 1819-1849, 1850-1880, 1979-2009 and calculate delta values
 - 30 year chunks
 - for 5 year return levels and 500 year return levels
 - pooled from all ensemble members i.e. 30 yrs x 20 EMs
@@ -5401,7 +5405,69 @@ for (i in seq_along(lon)) {
   }
 }
 
-################### 1600 - 1630 X5 ###############################
+# ################### 1600 - 1630 X5 ###############################
+# # Create an empty list to store pooled data for each grid cell
+# pooled_data <- array(NA, dim = c(dim_x, dim_y, years_to_pool * length(data_by_ensemble_1420)))
+# 
+# # Index to keep track of where to store the pooled data
+# current_index <- 1
+# 
+# # Loop through each ensemble member and extract the first 30 years
+# for (member_data in data_by_ensemble_1420) {
+#   # Extract the first 30 years
+#   data_subset <- member_data[,,180:(180+years_to_pool-1)] #edit 1 to whenever need to start e.g. for 1600 at 180:years to pool
+#   
+#   # Calculate the slice indices to store the data
+#   slice_indices <- current_index:(current_index + years_to_pool - 1)
+#   
+#   # Store the extracted data in the pooled array
+#   pooled_data[,,slice_indices] <- data_subset
+#   
+#   # Update the index
+#   current_index <- current_index + years_to_pool
+# }
+# 
+# # Output the structure of the pooled data
+# print(dim(pooled_data))  # Should have (x, y, years_to_pool * number of ensemble members)
+# 
+# #####################EVA: 
+# 
+# # Create an empty matrix to store 5-year return levels
+# X5_1630 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+# 
+# # Loop through each grid cell
+# for (i in seq_along(lon)) {
+#   for (j in seq_along(lat)) {
+#     # Extract time series for the grid cell
+#     data <- pooled_data[i, j, 1:30]
+#     
+#     # Check for NA or insufficient data
+#    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
+#     
+#     # Calculate 80-year return level
+#     X5_1630[i, j] <- calculate_return_level(data, return_period = 5)
+#   }
+# }
+# 
+# # Create an empty matrix to store 5-year return levels
+# X500_1630 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+# 
+# # Loop through each grid cell
+# for (i in seq_along(lon)) {
+#   for (j in seq_along(lat)) {
+#     # Extract time series for the grid cell
+#     data <- pooled_data[i, j, 1:30]
+#     
+#     # Check for NA or insufficient data
+#    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
+#     
+#     # Calculate 80-year return level
+#     X500_1630[i, j] <- calculate_return_level(data, return_period = 500)
+#   }
+# }
+
+
+################### 1819 - 1849 X5 ###############################
 # Create an empty list to store pooled data for each grid cell
 pooled_data <- array(NA, dim = c(dim_x, dim_y, years_to_pool * length(data_by_ensemble_1420)))
 
@@ -5411,7 +5477,7 @@ current_index <- 1
 # Loop through each ensemble member and extract the first 30 years
 for (member_data in data_by_ensemble_1420) {
   # Extract the first 30 years
-  data_subset <- member_data[,,180:(180+years_to_pool-1)] #edit 1 to whenever need to start e.g. for 1600 at 180:years to pool
+  data_subset <- member_data[,,399:(399+years_to_pool-1)] #edit 1 to whenever need to start e.g. for 1600 at 180:years to pool
   
   # Calculate the slice indices to store the data
   slice_indices <- current_index:(current_index + years_to_pool - 1)
@@ -5429,7 +5495,7 @@ print(dim(pooled_data))  # Should have (x, y, years_to_pool * number of ensemble
 #####################EVA: 
 
 # Create an empty matrix to store 5-year return levels
-X5_1630 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+X5_1849 <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 # Loop through each grid cell
 for (i in seq_along(lon)) {
@@ -5441,12 +5507,12 @@ for (i in seq_along(lon)) {
    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
     
     # Calculate 80-year return level
-    X5_1630[i, j] <- calculate_return_level(data, return_period = 5)
+    X5_1849[i, j] <- calculate_return_level(data, return_period = 5)
   }
 }
 
 # Create an empty matrix to store 5-year return levels
-X500_1630 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+X500_1849 <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 # Loop through each grid cell
 for (i in seq_along(lon)) {
@@ -5458,22 +5524,21 @@ for (i in seq_along(lon)) {
    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
     
     # Calculate 80-year return level
-    X500_1630[i, j] <- calculate_return_level(data, return_period = 500)
+    X500_1849[i, j] <- calculate_return_level(data, return_period = 500)
   }
 }
 
-
-################### 1800 - 1830 X5 ###############################
+################### 1850 - 1880 X5 ###############################
 # Create an empty list to store pooled data for each grid cell
-pooled_data <- array(NA, dim = c(dim_x, dim_y, years_to_pool * length(data_by_ensemble_1420)))
+pooled_data <- array(NA, dim = c(dim_x, dim_y, years_to_pool * length(data_by_ensemble_1850)))
 
 # Index to keep track of where to store the pooled data
 current_index <- 1
 
 # Loop through each ensemble member and extract the first 30 years
-for (member_data in data_by_ensemble_1420) {
+for (member_data in data_by_ensemble_1850) {
   # Extract the first 30 years
-  data_subset <- member_data[,,380:(380+years_to_pool-1)] #edit 1 to whenever need to start e.g. for 1600 at 180:years to pool
+  data_subset <- member_data[,,1:years_to_pool] #edit 1 to whenever need to start e.g. for 1600 at 180:years to pool
   
   # Calculate the slice indices to store the data
   slice_indices <- current_index:(current_index + years_to_pool - 1)
@@ -5491,7 +5556,7 @@ print(dim(pooled_data))  # Should have (x, y, years_to_pool * number of ensemble
 #####################EVA: 
 
 # Create an empty matrix to store 5-year return levels
-X5_1830 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+X5_1880 <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 # Loop through each grid cell
 for (i in seq_along(lon)) {
@@ -5503,12 +5568,12 @@ for (i in seq_along(lon)) {
    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
     
     # Calculate 80-year return level
-    X5_1830[i, j] <- calculate_return_level(data, return_period = 5)
+    X5_1880[i, j] <- calculate_return_level(data, return_period = 5)
   }
 }
 
 # Create an empty matrix to store 5-year return levels
-X500_1830 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+X500_1880 <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 # Loop through each grid cell
 for (i in seq_along(lon)) {
@@ -5520,9 +5585,10 @@ for (i in seq_along(lon)) {
    # if (all(is.na(data)) || length(na.omit(data)) < 10) next
     
     # Calculate 80-year return level
-    X500_1830[i, j] <- calculate_return_level(data, return_period = 500)
+    X500_1880[i, j] <- calculate_return_level(data, return_period = 500)
   }
 }
+
 
 
 ################### 1979 - 2009 X5 ###############################
@@ -5587,27 +5653,22 @@ for (i in seq_along(lon)) {
 }
 ```
 
+```{r}
+####calculate delta values for earlier epoch (1819-1849 - 1420-1450)
+X5_D1420 <- X5_1849 - X5_1450
+X500_D1420 <- X500_1849 - X500_1450
+
+####calculate delta values for later epoch (1850-1880 - 1979-2009)
+X5_D1850<- X5_2009 - X5_1880
+X500_D1850 <- X500_2009 - X500_1880
+
+
+```
+
+
 Plot on maps: 
 
 Maps showing 5 year return values: 
-
-```{r}
-# # Convert data into a raster object
-# r <- raster(t(X5_1450), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
-# crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
-# r<- flip(r, direction='y')
-# # Retrieve land polygons and set the same CRS as the raster
-# land <- ne_countries(scale = "medium", returnclass = "sf")
-# land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
-# 
-# # Mask the raster with land polygons to remove ocean values
-# r_masked <- mask(r, as(land, "Spatial"))
-# 
-# # Convert the masked raster to a data frame for ggplot2
-# r_df <- as.data.frame(r_masked, xy = TRUE)
-# colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
-
-```
 
 ```{r}
 # Convert first year's data into a raster object
@@ -5652,10 +5713,10 @@ ggplot() +
         legend.text = element_text(size = 10)) +  # Adjust legend text size
   guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
-#################1600-1630 X5
+#################1819-1849 X5
 
 # Convert first year's data into a raster object
-r <- raster(t(X5_1630), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+r <- raster(t(X5_1849), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
@@ -5676,7 +5737,7 @@ ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
   scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD ANNMAX X5 1600-1630", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD ANNMAX X5 1819-1849", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
@@ -5684,10 +5745,10 @@ ggplot() +
         legend.text = element_text(size = 10)) +  # Adjust legend text size
   guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
-#################1800-1830 X5
+#################1850-1880 X5
 
 # Convert first year's data into a raster object
-r <- raster(t(X5_1830), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+r <- raster(t(X5_1880), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
@@ -5708,7 +5769,7 @@ ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
   scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD ANNMAX X5 1800-1830", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD ANNMAX X5 1850-1880", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
@@ -5750,6 +5811,8 @@ ggplot() +
 
 ```
 
+Maps showing 500 year return values: 
+
 ```{r}
 # Convert first year's data into a raster object
 r <- raster(t(X500_1450), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
@@ -5783,7 +5846,7 @@ break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-l
 # Define the ggplot2 object with the gradient scale
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
-  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
   labs(title = "PCWD ANNMAX X500 1420-1450", x = "Longitude", y = "Latitude") +
   theme_classic() +
@@ -5793,10 +5856,10 @@ ggplot() +
         legend.text = element_text(size = 10)) +  # Adjust legend text size
   guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
-#################1600-1630 X500
+#################1819-1849 X500
 
 # Convert first year's data into a raster object
-r <- raster(t(X500_1630), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+r <- raster(t(X500_1849), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
@@ -5815,9 +5878,9 @@ colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expecta
 # Define the ggplot2 object with the gradient scale
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
-  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD ANNMAX X500 1600-1630", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD ANNMAX X500 1819-1849", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
@@ -5825,10 +5888,10 @@ ggplot() +
         legend.text = element_text(size = 10)) +  # Adjust legend text size
   guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
-#################1800-1830 X500
+#################1850-1880 X500
 
 # Convert first year's data into a raster object
-r <- raster(t(X500_1830), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+r <- raster(t(X500_1880), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
@@ -5847,9 +5910,9 @@ colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expecta
 # Define the ggplot2 object with the gradient scale
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
-  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD ANNMAX X500 1800-1830", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD ANNMAX X500 1850-1880", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
@@ -5879,7 +5942,7 @@ colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expecta
 # Define the ggplot2 object with the gradient scale
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
-  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
   labs(title = "PCWD ANNMAX X500 1979-2009", x = "Longitude", y = "Latitude") +
   theme_classic() +
@@ -5891,13 +5954,12 @@ ggplot() +
 
 ```
 
-
+Delta values 5 yr events: 
 ```{r}
-# Define the range for the gradient scale
-value_range <- c(0, 4000)  # Adjust the range as needed
+###1420 epoch:
 
 # Convert first year's data into a raster object
-r <- raster(t(X5_1450), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+r <- raster(t(X5_D1420), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
@@ -5912,31 +5974,152 @@ r_masked <- mask(r, as(land, "Spatial"))
 r_df <- as.data.frame(r_masked, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
 
-# Remove rows with NA values in `layer` to exclude ocean data from the color scale
-r_df_filtered <- r_df[!is.na(r_df$layer), ]
+# Define custom color bins
+# Plot using ggplot2
+custom_bins <- c(-Inf,-500, -100, -50, -20, -10, -1, 0, 1, 10, 20, 50,100, 500, Inf)  # Define breaks based on data range
+# Create a 10-color scale from blue to white to red
+custom_colors <- colorRampPalette(c("blue", "white", "red"))(15)
 
-# Define the ggplot2 object with the gradient scale and custom range
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
 ggplot() +
-  geom_raster(data = r_df_filtered, aes(x = x, y = y, fill = layer)) +
-  scale_fill_gradientn(
-    colours = terrain.colors(10),  # Use terrain.colors for gradient
-    limits = value_range,          # Set the range for the gradient
-    name = "5 yr return level",    # Label for the legend
-    na.value = "lightgrey"         # Handle NA values (oceans) with a neutral color
-  ) +
-  labs(
-    title = "PCWD ANNMAX X5 1420-1450",
-    x = "Longitude",
-    y = "Latitude"
-  ) +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX X5 delta 1849-1450", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
-  theme(
-    legend.title = element_text(size = 12),  # Adjust legend title size
-    legend.text = element_text(size = 10)    # Adjust legend text size
-  )
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+###1850 epoch delta:
+
+# Convert first year's data into a raster object
+r <- raster(t(X5_D1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+# Plot using ggplot2
+custom_bins <- c(-Inf,-500, -100, -50, -20, -10, -1, 0, 1, 10, 20, 50,100, 500, Inf)  # Define breaks based on data range
+# Create a 10-color scale from blue to white to red
+custom_colors <- colorRampPalette(c("blue", "white", "red"))(15)
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "5 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX X5 delta 2009-1880", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
 
 ```
 
+Delta values 500 yr events: 
+```{r}
+###1420 epoch:
 
+# Convert first year's data into a raster object
+r <- raster(t(X500_D1420), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+# Plot using ggplot2
+custom_bins <- c(-Inf,-500, -100, -50, -20, -10, -1, 0, 1, 10, 20, 50,100, 500, Inf)  # Define breaks based on data range
+# Create a 10-color scale from blue to white to red
+custom_colors <- colorRampPalette(c("blue", "white", "red"))(15)
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX X500 delta 1849-1450", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+
+###1850 epoch delta:
+
+# Convert first year's data into a raster object
+r <- raster(t(X500_D1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+# Plot using ggplot2
+custom_bins <- c(-Inf,-500, -100, -50, -20, -10, -1, 0, 1, 10, 20, 50,100, 500, Inf)  # Define breaks based on data range
+# Create a 10-color scale from blue to white to red
+custom_colors <- colorRampPalette(c("blue", "white", "red"))(15)
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "500 yr return level", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD ANNMAX X500 delta 2009-1880", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+```

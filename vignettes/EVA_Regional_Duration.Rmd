@@ -240,7 +240,7 @@ ggplot(filtered_data, aes(x = Year, y = Duration)) +
 #new dataframe that contains a len value for 2 year return period for each 30yr sliding window
 
 # Define the window size (here 31 years) and return period
-window_size <- 15
+window_size <- 50
 return_period <- 2
 
 # Time information for the combined period
@@ -285,8 +285,8 @@ ggplot(data = result_df_RL) +
   xlim(min(result_df_RL$time), max(result_df_RL$time)) +
   labs(
     x = "Year", 
-    y = "PCWD(mm)",
-    title = "2-year return level - 30yr sliding window"
+    y = "Max Consecutive dry days",
+    title = "2-year return level - 100yr sliding window"
   ) +
   theme_classic()
 ```
