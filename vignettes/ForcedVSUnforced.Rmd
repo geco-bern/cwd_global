@@ -1403,9 +1403,9 @@ Plot mean values for African regions in certain time periods
 
 ```{r}
 #select year that should be plotted: 
-time_chunk_index <- 160  # Subset of the time dimension
+time_chunk_index <- 1  # Subset of the time dimension
 
-data <- ensemble_mean_1850[, , time_chunk_index]
+data <- ensemble_mean_1420[, , time_chunk_index]
 
 #plot
 # Convert first year's data into a raster object
@@ -1438,7 +1438,7 @@ custom_colors <- c("#004f5a",  # New color: a darker turquoise at the beginning
 break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
 
 # Define bounding box for Africa
-bbox <- c(xmin = -30, xmax = 60, ymin = -35, ymax = 30)  # Approximate bounding box for Oceania
+#bbox <- c(xmin = -30, xmax = 60, ymin = -35, ymax = 30)  # Approximate bounding box for Oceania
 
 
 # Define the ggplot2 object with the gradient scale
@@ -1446,13 +1446,15 @@ ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
   scale_fill_manual(name = "mean PCWD (mm)", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "mean PCWD in 2009", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD in 1420", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
-  coord_sf(xlim = bbox[1:2], ylim = bbox[3:4], expand = FALSE) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
   theme(legend.title = element_text(size = 12),  # Adjust legend title size
         legend.text = element_text(size = 10)) +  # Adjust legend text size
   guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+ggsave("PCWD_1420.png", width = 20, height = 12, units = "cm")
 
 ```
 
