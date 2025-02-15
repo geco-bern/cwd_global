@@ -51,10 +51,24 @@ library(ggsci)
 ```{r}
 #read in aggregated regional data
 # #Load with
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData")
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
 
 ```
+
+```{r}
+# Define continent assignments
+continent_mapping <- list(
+  "Europe" = c("NEU", "WCE", "EEU", "MED"),
+  "North America" = c("NWN", "NEN", "WNA", "CNA", "ENA", "GIC"),
+  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
+  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
+  "Central America" =c("NCA", "SCA", "CAR"),
+  "South America" = c("NWS", "NSA", "NES", "SAM", "SWS", "SES", "SSA"),
+  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
+)
+```
+
 
 ```{r}
 #read in volcanic forcing data for set 1: 
@@ -88,6 +102,8 @@ library(dplyr)
 aod_annual_mean_1420 <- df %>%
   group_by(year) %>%
   summarise(annual_mean_value = mean(mean_value, na.rm = TRUE))
+
+write.csv(aod_annual_mean_1420, "~/cwd_global/data/AOD_annual_mean_1420epoch.csv")
 
 ```
 
@@ -171,17 +187,6 @@ for (region_name in names(regional_results_1850)) {
 
 Create Dataframe region, SNR and time: 
 ```{r}
-# Define continent assignments
-continent_mapping <- list(
-  "Europe" = c("NEU", "WCE", "EEU", "MED"),
-  "North America" = c("NWN", "NEN", "WNA", "CNA", "ENA", "GIC"),
-  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
-  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
-  "Central America" =c("NCA", "SCA", "CAR"),
-  "South America" = c("NWS", "NSA", "NES", "SAM", "SWS", "SES", "SSA"),
-  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
-)
-
 ########### 1420 period
 # Convert SNR list into a data frame
 anom_df_1420 <- do.call(rbind, lapply(names(anoms_1420), function(region) {
@@ -361,7 +366,7 @@ ggplot(anom_filtered, aes(x = time, y = anomalies)) +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
@@ -536,7 +541,7 @@ ggplot(anom_filtered, aes(x = time, y = anomalies)) +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
@@ -666,8 +671,16 @@ for (region_name in names(regional_results_1420)) {
   anom_baseline[[region_name]] <- colMeans(ensemble_members[1:30, ], na.rm = TRUE)
   
   # Compute baseline standard deviation (over first 30 years) for each ensemble member
-  anom_baseline_sd[[region_name]] <- apply(ensemble_members[1:30, ], 2, sd, na.rm = TRUE)
+  anom_baseline_sd[[region_name]] <- apply(ensemble_members[1:30, ], 2, sd, na.rm = TRUE) #calc sd across columns(years)
 }
+
+# ## calculate baseline spread of means
+# baseline_spread <- list()
+# # Loop over regions
+# for (region_name in names(regional_results_1420)) {
+#   # Compute baseline spread across EMs
+#   baseline_spread[[region_name]] <- sd(anom_baseline[[region_name]], na.rm = TRUE) # Use sd directly
+# }
 
 # Initialize lists to store results
 ensemble_anoms_1420 <- list()      # Mean anomalies for each region
@@ -703,7 +716,7 @@ sd_zscores_1420 <- list()
 for (region_name in names(regional_results_1420)) {
   
   # Compute standard deviation of z-scores across ensemble members
-  sd_zscores_1420[[region_name]] <- apply(ensemble_zscores_1420[[region_name]], 1, sd, na.rm = TRUE)
+  sd_zscores_1420[[region_name]] <- apply(ensemble_zscores_1420[[region_name]], 1, sd, na.rm = TRUE) #calc sd across rows (EMs)
 }
 
 ########### 1420 period
@@ -729,6 +742,39 @@ for (continent in names(continent_mapping)) {
 ```
 
 plot z-score anomalies overlain with volcanic forcing for earlier epoch: 
+
+
+```{r}
+#plot all ensemble member z-scores for GIC region: 
+# Extract the z-scores for the 'GIC' field (you can replace this with any other field if needed)
+ensemble_data <- ensemble_zscores_1420$GIC
+
+# Check the structure to confirm it is a matrix with dimensions 430 x 20
+str(ensemble_data)
+
+# Create a time vector for the x-axis (corresponding to 430 years from 1420 to 1849)
+time <- 1420:1849
+
+# Convert the data to a data frame and reshape it for plotting
+ensemble_df <- as.data.frame(ensemble_data)
+ensemble_df$time <- time  # Add the time variable
+
+# Reshape the data to long format
+library(tidyr)
+ensemble_long <- ensemble_df %>%
+  pivot_longer(cols = -time, names_to = "ensemble_member", values_to = "z_score")
+
+# Plot all z-scores for ensemble members
+library(ggplot2)
+ggplot(ensemble_long, aes(x = time, y = z_score, group = ensemble_member), color = "black", linewidth=0.2) +
+  geom_line() +
+  labs(title = "Ensemble Member Z-Scores Over Time",
+       x = "Year", y = "Z-Score") +
+  theme_minimal() +
+  theme(legend.position = "none")  # Optional: Hide legend if you don't need it
+
+```
+
 
 ```{r}
 #################all continents for 1420 epoch ###################################
@@ -756,17 +802,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -777,7 +823,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the honeydew4 background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -785,7 +844,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "pink")
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -812,17 +872,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -833,7 +893,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -841,7 +914,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "orange")
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -867,17 +941,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -888,15 +962,29 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
     legend.position = "top",
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "blue")
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -922,17 +1010,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -943,7 +1031,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -951,7 +1052,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "purple")
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -977,17 +1079,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -998,7 +1100,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1006,7 +1121,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightgreen")
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1032,17 +1148,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1053,7 +1169,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1061,7 +1190,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightblue")
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1087,17 +1217,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1108,7 +1238,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1116,7 +1259,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "yellow")
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1348,17 +1492,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1369,7 +1513,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1377,7 +1534,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "pink")
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1404,17 +1562,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1425,7 +1583,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1433,7 +1604,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "orange")
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1459,17 +1631,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1480,15 +1652,29 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
     legend.position = "top",
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "blue")
+    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1514,17 +1700,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1535,7 +1721,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1543,7 +1742,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "purple")
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1569,17 +1769,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1590,7 +1790,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1598,7 +1811,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightgreen")
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1624,17 +1838,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1645,7 +1859,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1653,7 +1880,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightblue")
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1679,17 +1907,17 @@ annual_mean <- aod_annual_mean_1420 %>%
 
 # Plot zscore time series
 ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
-  geom_line() +  # Plot lines for each region
-  #geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
   # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
   # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
   # Secondary Y-axis: Volcanic Forcing (AOD)
-  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted") +
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1700,7 +1928,20 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   # Manual color scale for legend
   scale_color_manual(
-    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red")
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
   ) +
   theme_classic() +
   theme(
@@ -1708,7 +1949,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     legend.title = element_text(face = "bold"),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "yellow")
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
 
@@ -1726,23 +1968,39 @@ selected_continent <- "Europe"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "pink")
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1752,23 +2010,39 @@ selected_continent <- "Asia"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "orange")
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1778,23 +2052,39 @@ selected_continent <- "Australia"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "blue")
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1805,23 +2095,40 @@ selected_continent <- "Africa"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
-  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+  
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "purple")
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1832,23 +2139,40 @@ selected_continent <- "North America"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightgreen")
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1858,23 +2182,40 @@ selected_continent <- "Central America"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightblue")
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1885,23 +2226,40 @@ selected_continent <- "South America"
 zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "yellow")
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1917,23 +2275,39 @@ selected_continent <- "Europe"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "pink")
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1943,23 +2317,39 @@ selected_continent <- "Asia"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "orange")
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1969,23 +2359,39 @@ selected_continent <- "Australia"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "blue")
+    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -1996,23 +2402,39 @@ selected_continent <- "Africa"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "purple")
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -2023,23 +2445,39 @@ selected_continent <- "North America"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightgreen")
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -2049,23 +2487,39 @@ selected_continent <- "Central America"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
   ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "lightblue")
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
@@ -2076,28 +2530,949 @@ selected_continent <- "South America"
 zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
 
 # Plot zscore time series
-ggplot(zscore_filtered, aes(x = time, y = mean_zscore)) +
-  geom_line() +  # Plot lines for each region
-  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore), fill = "grey", alpha = 0.3) +
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
-  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD Z-Scores for", selected_continent)
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+    scale_color_manual(
+    values = c("PCWD Z-Scores" = "black"),
+    labels = c("PCWD Z-Scores (Mean)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2))+  # Fill scale: SD across Ensemble Members
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+```
+Showing each individual ensemble member instead of the geom_ribbon: 
+
+```{r}
+# Convert ensemble z-score data into a long format for plotting individual members
+zscore_long_1420 <- do.call(rbind, lapply(names(ensemble_zscores_1420), function(region) {
+  df <- as.data.frame(ensemble_zscores_1420[[region]])
+  df$time <- seq(1435, 1834)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "z_score")
+  return(df_long)
+}))
+
+# Add a continent column
+zscore_long_1420$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  zscore_long_1420$continent[zscore_long_1420$region %in% continent_mapping[[continent]]] <- continent
+}
+
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### Asia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic()+
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+##### Australia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+##### Africa ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
   ) +
   theme_classic() +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "yellow")
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
+
+#### North America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Central America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### South America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+zscore_filtered <- zscore_long_1420 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1420-1450)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+
 ```
-Maps showing z-scores for specific 30-year periods (e.g. volcanic eruptions, trends etc)
+
+```{r}
+########### for 1850 epoch:.
+
+# Convert ensemble z-score data into a long format for plotting individual members
+zscore_long_1850 <- do.call(rbind, lapply(names(ensemble_zscores_1850), function(region) {
+  df <- as.data.frame(ensemble_zscores_1850[[region]])
+  df$time <- seq(1865, 1994)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "z_score")
+  return(df_long)
+}))
+
+# Add a continent column
+zscore_long_1850$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  zscore_long_1850$continent[zscore_long_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### Asia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic()+
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+##### Australia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+##### Africa ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### North America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+#### Central America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+#### South America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+zscore_filtered <- zscore_long_1850 %>% filter(continent == selected_continent)
+# Plot zscore time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = zscore_filtered, aes(x = time, y = z_score, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
+            aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
+  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
+    labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+
+
+```
+
+
+
+Maps showing z-scores (annual) for specific 30-year periods (e.g. volcanic eruptions, trends etc)
+- showing Europe after 1783 eruption (Laki? - caused french revolution)
+- showing North America 
+- showing Central America
+
+Read in lat, lon and time info: 
+```{r}
+#lat lon and time info from netcdf files
+##read in data
+input_file_1850 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc"
+input_file_1420 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1420/PCWD_ANNMAX.nc"
+
+nc_pwcd_1850 <- nc_open(input_file_1850)
+pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1850, varid="lon")
+lat = ncvar_get(nc_pwcd_1850, varid="lat")
+time_1850 = ncvar_get(nc_pwcd_1850, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates_1850 <- reference_date + time_1850
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1850)
+
+#1420 file for 1420 time
+nc_pwcd_1420 <- nc_open(input_file_1420)
+pcwd_annmax_1420 = ncvar_get(nc_pwcd_1420, varid="pcwd_annmax")
+time_1420 = ncvar_get(nc_pwcd_1420, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+time_dates_1420 <- reference_date + time_1420
+
+# # Print the resulting dates
+# print(time_dates)
+
+nc_close(nc_pwcd_1420)
+```
+
+aggregate files: 
+```{r}
+#read in netcdf data and aggregate
+
+#### 1420 set:
+# Define the base path - have to seperate sets once there are more!
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)  #only want m001-m020 for now
+
+# Extract ensemble member identifiers from folder names
+ensemble_members <- basename(folders)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1420/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Filter ensemble members to match target files
+ensemble_members <- ensemble_members[file.exists(target_files)]
+
+# Initialize a list to store data for each ensemble member
+data_by_ensemble_1420 <- list()
+
+# Extract dimensions from the first file to initialize the array size for consistency
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Loop through all the target files and store the data in a list
+for (i in seq_along(target_files)) {
+  file <- target_files[i]
+  member <- ensemble_members[i]
+  
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Store the data in the list, keyed by the ensemble member
+  data_by_ensemble_1420[[member]] <- data
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the data list
+print(names(data_by_ensemble_1420))  # Check stored ensemble members
+print(dim(data_by_ensemble_1420[[1]]))  # Check dimensions of the data for the first ensemble member
+
+
+#### 1850 set: 
+# Define the base path - have to think of way to seperate sets once there is data!!
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Extract ensemble member identifiers from folder names
+ensemble_members <- basename(folders)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Filter ensemble members to match target files
+ensemble_members <- ensemble_members[file.exists(target_files)]
+
+# Initialize a list to store data for each ensemble member
+data_by_ensemble_1850 <- list()
+
+# Extract dimensions from the first file to initialize the array size for consistency
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Loop through all the target files and store the data in a list
+for (i in seq_along(target_files)) {
+  file <- target_files[i]
+  member <- ensemble_members[i]
+  
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Store the data in the list, keyed by the ensemble member
+  data_by_ensemble_1850[[member]] <- data
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the data list
+print(names(data_by_ensemble_1850))  # Check stored ensemble members
+print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the first ensemble member
+
+```
+
+```{r}
+## Z-Score global grid cell values for 1420 epoch: 
+# Convert list of 20 ensemble members into a single 4D array: [192, 96, 431, 20]
+ensemble_array <- simplify2array(data_by_ensemble_1420)  # Shape: [192, 96, 431, 20]
+
+# Compute the ensemble mean across the 4th dimension (ensemble members)
+ensemble_mean_1420 <- apply(ensemble_array, c(1, 2, 3), mean, na.rm = TRUE)  # Shape: [192, 96, 431]
+
+# `ensemble_mean_1420` now contains the ensemble-averaged values for each grid cell over time
+# Define dimensions
+num_years <- 431  # Total years in the dataset
+window_size <- 30  # Reference period (first 30 years)
+
+# Create an array of the same shape [192, 96, 431] to store means and standard deviations
+mean_reference_1420 <- array(NA, dim = c(192, 96))  # Mean for first 30 years
+sd_reference_1420 <- array(NA, dim = c(192, 96))    # Standard deviation for first 30 years
+zscore_array_1420 <- array(NA, dim = c(192, 96, num_years))  # Store z-scores
+
+# Compute reference mean & standard deviation over first 30 years (years 1:30)
+for (i in 1:192) {
+  for (j in 1:96) {
+    reference_values <- ensemble_mean_1420[i, j, 1:window_size]  # First 30 years
+    mean_reference_1420[i, j] <- mean(reference_values, na.rm = TRUE)
+    sd_reference_1420[i, j] <- sd(reference_values, na.rm = TRUE)
+  }
+}
+
+# Compute z-scores for each time step
+for (t in 1:num_years) {  # Loop through all years
+  for (i in 1:192) {
+    for (j in 1:96) {
+      if (!is.na(sd_reference_1420[i, j]) && sd_reference_1420[i, j] != 0) {
+        zscore_array_1420[i, j, t] <- (ensemble_mean_1420[i, j, t] - mean_reference_1420[i, j]) / sd_reference_1420[i, j]
+      } else {
+        zscore_array_1420[i, j, t] <- NA  # Avoid division by zero
+      }
+    }
+  }
+}
+
+# zscore_array_1420 now contains z-scores for each grid cell at each time step
+
+
+## EM Z_score global grid cell values for 1850 epoch:
+# Convert list of 20 ensemble members into a single 4D array: [192, 96, 160, 20]
+ensemble_array <- simplify2array(data_by_ensemble_1850)  # Shape: [192, 96, 160, 20]
+
+# Compute the ensemble mean across the 4th dimension (ensemble members)
+ensemble_mean_1850 <- apply(ensemble_array, c(1, 2, 3), mean, na.rm = TRUE)  # Shape: [192, 96, 160]
+
+# `ensemble_mean_1850` now contains the ensemble-averaged values for each grid cell over time
+# Define dimensions
+num_years <- 160  # Total years in the dataset
+window_size <- 30  # Reference period (first 30 years)
+
+# Create an array of the same shape [192, 96, 160] to store means and standard deviations
+mean_reference_1850 <- array(NA, dim = c(192, 96))  # Mean for first 30 years
+sd_reference_1850 <- array(NA, dim = c(192, 96))    # Standard deviation for first 30 years
+zscore_array_1850 <- array(NA, dim = c(192, 96, num_years))  # Store z-scores
+
+# Compute reference mean & standard deviation over first 30 years (years 1:30)
+for (i in 1:192) {
+  for (j in 1:96) {
+    reference_values <- ensemble_mean_1850[i, j, 1:window_size]  # First 30 years
+    mean_reference_1850[i, j] <- mean(reference_values, na.rm = TRUE)
+    sd_reference_1850[i, j] <- sd(reference_values, na.rm = TRUE)
+  }
+}
+
+# Compute z-scores for each time step
+for (t in 1:num_years) {  # Loop through all years
+  for (i in 1:192) {
+    for (j in 1:96) {
+      if (!is.na(sd_reference_1850[i, j]) && sd_reference_1850[i, j] != 0) {
+        zscore_array_1850[i, j, t] <- (ensemble_mean_1850[i, j, t] - mean_reference_1850[i, j]) / sd_reference_1850[i, j]
+      } else {
+        zscore_array_1850[i, j, t] <- NA  # Avoid division by zero
+      }
+    }
+  }
+}
+
+# zscore_array_1850 now contains z-scores for each grid cell at each time step
+
+```
+
+plot maps: 
+```{r}
+# Convert `refregions` (SpatialPolygons) to an `sf` object for ggplot compatibility
+refregions_sf <- st_as_sf(refregions)
+# Load land data for filling continents
+land <- ne_countries(scale = "medium", returnclass = "sf")
+
+
+```
+
+Region specifications: 
+Continent	Longitude (xlim)	Latitude (ylim)
+Europe	c(-15, 50)	c(30, 75)
+North America	c(-170, -10)	c(25, 90)
+Africa	c(-25, 60)	c(-35, 40)
+Asia	c(30, 180)	c(5, 80)
+Central America	c(-120, -60)	c(5, 35)
+South America	c(-85, -30)	c(-60, 15)
+Australia	c(110, 180)	c(-50, 0)
+
+```{r}
+#global z-score map for 1783: 
+# Find the index for the year specified
+year_index <- 1783 - 1420 + 1  #-1420 or 1850 depending on dataset
+plot_data <- zscore_array_1420[,,year_index] #specify dataset, 1420 or 1850
+
+# Convert the first year's data into a raster object
+r <- raster(t(plot_data), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Ensure that the layer values are numeric (continuous)
+r_df$layer <- as.numeric(r_df$layer)
+
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
+  scale_fill_distiller(name = "EM z-scores (w.r.t. 1420-1450)", 
+                       palette = "RdBu",  # Red-Blue diverging palette
+                       limits = c(-3, 3),  # Adjust scale to focus on values between -1 and 1
+                       na.value = "lightgrey") +  # Color for missing values
+  labs(title = "PCWD Z-Scores for 1783", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  #coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) + #whole globe
+  coord_sf(xlim = c(-120, -60)	, ylim = 	c(5, 35)	, expand = FALSE) +  # Adjusted for Europe
+  
+  theme(legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))
+
+```
+
 
 
 ### Gini Index for inequality
@@ -2245,6 +3620,8 @@ print(names(data_by_ensemble_1850))  # Check stored ensemble members
 print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the first ensemble member
 
 ```
+
+
 ```{r}
 ##### 1850 epoch
 # Create an array of the same shape [192, 96, 160] to store means
@@ -2299,14 +3676,8 @@ land <- st_transform(land, crs=st_crs(r)) #Ensure CRS alignment
 #Mask the raster with land polygons to remove ocean values
 r_masked <- mask(r, as(land, "Spatial"))
 #Convert the masked raster to a dataframe for ggplot
-r_df <- as.data.frame(r_masked, xy = TRUE)
+r_df <- as.data.frame(r, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")
-
-# ## colour palette: 
-# library(wesanderson)
-# #pal <- wes_palette("Zissou1", 100, type = "continuous")
-# #or scientific colour palette: 
-# library("ggsci")
 
 ggplot() +
   geom_raster(data = r_df, aes(x=x, y=y, fill = layer), na.rm = TRUE) +
@@ -2317,8 +3688,8 @@ ggplot() +
   coord_sf(xlim = range(lon), ylim = range(lat), expand=FALSE)+
   theme(legend.title = element_text(size=12), legend.text = element_text(size=10)) +
   guides(fill = guide_legend(title = "Gini index", reverse = TRUE))
-
 ```
+
 
 ```{r}
 #plot map with 1420 GINI index
@@ -2331,9 +3702,9 @@ r <- flip(r, direction='y') #Flip the raster to correct orientation
 land <- ne_countries(scale = "medium", returnclass = "sf")
 land <- st_transform(land, crs=st_crs(r)) #Ensure CRS alignment
 #Mask the raster with land polygons to remove ocean values
-r_masked <- mask(r, as(land, "Spatial"))
+#r_masked <- mask(r, as(land, "Spatial"))
 #Convert the masked raster to a dataframe for ggplot
-r_df <- as.data.frame(r_masked, xy = TRUE)
+r_df <- as.data.frame(r, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")
 
 ggplot() +
@@ -2519,6 +3890,758 @@ print("All plots saved successfully!")
   
 ```
 
-plot Gini timeseries with 30-year moving window for each region: 
+### Gini timeseries
+
+Create and plot Gini timeseries with 30-year moving window for each region: 
+
+```{r}
+################## 1420 epoch #############
+window_size <- 31  # Define window size
+
+###################### Compute 30-year moving Gini coefficients
+# Initialize lists to store Gini values
+regional_gini_1420 <- list()
+
+# Loop over regions
+for (region_name in names(regional_results_1420)) {
+  
+  # Extract ensemble members for the region
+  ensemble_members <- regional_results_1420[[region_name]]
+  num_years <- nrow(ensemble_members)
+  
+  # Initialize matrix to store Gini values (one per ensemble member per time step)
+  gini_window <- matrix(NA, nrow = num_years - window_size + 1, ncol = ncol(ensemble_members))
+  
+  # Compute 30-year moving Gini values for each ensemble member
+  for (t in 1:(num_years - window_size + 1)) {  # Prevent going out of bounds
+    
+    # Loop over ensemble members
+    for (member in 1:ncol(ensemble_members)) {
+      
+      # Extract data for the current window
+      window_data <- ensemble_members[t:(t + window_size - 1), member]
+      
+      # Compute Gini coefficient for this ensemble member
+      gini_window[t, member] <- Gini(window_data, na.rm = TRUE)
+    }
+  }
+  
+  # Store results
+  regional_gini_1420[[region_name]] <- gini_window
+}
+
+###################### Compute Mean Gini across Ensemble Members
+# Initialize a list to store mean Gini values
+mean_gini_1420 <- list()
+
+# Loop over regions
+for (region_name in names(regional_gini_1420)) {
+  
+  # Compute the mean Gini coefficient across ensemble members for each time step
+  mean_gini_1420[[region_name]] <- rowMeans(regional_gini_1420[[region_name]], na.rm = TRUE)
+}
+
+
+################## 1850 epoch #############
+window_size <- 31  # Define window size
+
+###################### Compute 30-year moving Gini coefficients
+# Initialize lists to store Gini values
+regional_gini_1850 <- list()
+
+# Loop over regions
+for (region_name in names(regional_results_1850)) {
+  
+  # Extract ensemble members for the region
+  ensemble_members <- regional_results_1850[[region_name]]
+  num_years <- nrow(ensemble_members)
+  
+  # Initialize matrix to store Gini values (one per ensemble member per time step)
+  gini_window <- matrix(NA, nrow = num_years - window_size + 1, ncol = ncol(ensemble_members))
+  
+  # Compute 30-year moving Gini values for each ensemble member
+  for (t in 1:(num_years - window_size + 1)) {  # Prevent going out of bounds
+    
+    # Loop over ensemble members
+    for (member in 1:ncol(ensemble_members)) {
+      
+      # Extract data for the current window
+      window_data <- ensemble_members[t:(t + window_size - 1), member]
+      
+      # Compute Gini coefficient for this ensemble member
+      gini_window[t, member] <- Gini(window_data, na.rm = TRUE)
+    }
+  }
+  
+  # Store results
+  regional_gini_1850[[region_name]] <- gini_window
+}
+
+###################### Compute Mean Gini across Ensemble Members
+# Initialize a list to store mean Gini values
+mean_gini_1850 <- list()
+
+# Loop over regions
+for (region_name in names(regional_gini_1850)) {
+  
+  # Compute the mean Gini coefficient across ensemble members for each time step
+  mean_gini_1850[[region_name]] <- rowMeans(regional_gini_1850[[region_name]], na.rm = TRUE)
+}
+
+######################### Pooled values across EMs ###################################
+# nyears <- 30   # bin width
+# 
+# # Initialize a list to store results for all regions
+# regional_gini_1420 <- list()
+# 
+# # Loop through each region in regional_results
+# for (region in names(regional_results_1420)) { #swap european_regions for regional_results for all regions
+#   # Extract the result array for the current region
+#   result_array_region <- regional_results_1420[[region]]
+# 
+#   # initialise
+#   gini_window <- rep(NA, nrow(result_array_region) - nyears + 1)
+# 
+#   for (window_start in 1:(nrow(result_array_region) - nyears + 1)){
+# 
+#     # Extract data for the current window
+#     window_data <- result_array_region[window_start:(window_start + nyears - 1), ]
+#   
+#     # Flatten the matrix into a single vector
+#     window_data <- as.vector(window_data)
+# 
+# 	  gini_window[window_start] <- Gini(window_data, na.rm = TRUE) #calc gini here!
+# 
+#   }
+#   # Create a dataframe for the current region
+#   time_info <- seq(from = as.numeric(1420), to = as.numeric(1849))  # Replace with actual time if available
+#   region_df <- data.frame(
+#     time = time_info[15:415],
+#     GINI = gini_window,
+#     region = region
+#   )
+#     # Store the region's dataframe in the results list
+#   regional_gini_1420[[region]] <- region_df
+# }
+# 
+# # Combine all region results into a single dataframe
+# combined_gini_1420 <- do.call(rbind, regional_gini_1420)
+# # Add a continent column to the SNR data frame
+# combined_gini_1420$continent <- NA  # Initialize continent column
+# 
+# for (continent in names(continent_mapping)) {
+#   combined_gini_1420$continent[combined_gini_1420$region %in% continent_mapping[[continent]]] <- continent
+# }
+# 
+# 
+# ##### 1850 epoch #####
+# 
+# nyears <- 30   # bin width
+# 
+# # Initialize a list to store results for all regions
+# regional_gini_1850 <- list()
+# 
+# # Loop through each region in regional_results
+# for (region in names(regional_results_1850)) { #swap european_regions for regional_results for all regions
+#   # Extract the result array for the current region
+#   result_array_region <- regional_results_1850[[region]]
+# 
+#   # initialise
+#   gini_window <- rep(NA, nrow(result_array_region) - nyears + 1)
+# 
+#   for (window_start in 1:(nrow(result_array_region) - nyears + 1)){
+# 
+#     # Extract data for the current window
+#     window_data <- result_array_region[window_start:(window_start + nyears - 1), ]
+#   
+#     # Flatten the matrix into a single vector
+#     window_data <- as.vector(window_data)
+# 
+# 	  # determine return period of cwd_ref based on new fit (How much more/less probably is an event that corresponded to an X-yearly event in the reference period?)
+# 	  gini_window[window_start] <- Gini(window_data, na.rm = TRUE) #calc gini here!
+# 
+#   }
+#   # Create a dataframe for the current region
+#   time_info <- seq(from = as.numeric(1850), to = as.numeric(2009))  # Replace with actual time if available
+#   region_df <- data.frame(
+#     time = time_info[15:145],
+#     GINI = gini_window,
+#     region = region
+#   )
+#     # Store the region's dataframe in the results list
+#   regional_gini_1850[[region]] <- region_df
+# }
+# 
+# # Combine all region results into a single dataframe
+# combined_gini_1850 <- do.call(rbind, regional_gini_1850)
+# # Add a continent column to the SNR data frame
+# combined_gini_1850$continent <- NA  # Initialize continent column
+# 
+# for (continent in names(continent_mapping)) {
+#   combined_gini_1850$continent[combined_gini_1850$region %in% continent_mapping[[continent]]] <- continent
+# }
+
+```
+
+Plot 1420 timeseries for Gini: 
+
+```{r}
+# Convert ensemble z-score data into a long format for plotting individual members
+gini_long_1420 <- do.call(rbind, lapply(names(regional_gini_1420), function(region) {
+  df <- as.data.frame(regional_gini_1420[[region]])
+  df$time <- seq(1435, 1834)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "gini")
+  return(df_long)
+}))
+
+# Add a continent column
+gini_long_1420$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  gini_long_1420$continent[gini_long_1420$region %in% continent_mapping[[continent]]] <- continent
+}
+
+####################################### EUROPE #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Europe"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### ASIA #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Australia #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Africa #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### North America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Central America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Southern America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+```
+
+
+Plot timeseries for 1850 epoch: 
+
+```{r}
+# Convert ensemble z-score data into a long format for plotting individual members
+gini_long_1850 <- do.call(rbind, lapply(names(regional_gini_1850), function(region) {
+  df <- as.data.frame(regional_gini_1850[[region]])
+  df$time <- seq(1865, 1994)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "gini")
+  return(df_long)
+}))
+
+# Add a continent column
+gini_long_1850$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  gini_long_1850$continent[gini_long_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
+####################################### EUROPE #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Europe"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### ASIA #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Australia #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Africa #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### North America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Central America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+####################################### Southern America #####################################
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
+
+# Plot anom time series
+ggplot(gini_filtered) +
+  geom_line(aes(x = time, y = gini, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  # Plot mean gini as a bold black line
+  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
+            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
+  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
+  labs(
+    x = "Year",
+    y = "Gini Index (unitless)",
+    title = paste("30 year moving GINI for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
+    labels = c("Ensemble Members", "PCWD Gini (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
+
+```
 
 

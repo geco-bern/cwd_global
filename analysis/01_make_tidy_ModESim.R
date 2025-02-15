@@ -11,37 +11,37 @@ library(tidyr)
 
 # list demo file path
 # adjust path to where your ModE-Sim data is located
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m015_tidy/"
+outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m024_tidy/"
 
-# Precipitation - daily resolution--------------------------------------------------
-path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
-varnam <- "precip";
-set_name <- "m015_1420_1"
-filnam <- list.files(
-  paste0(path_ModESim, "/", varnam, "/", set_name),
-  pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m015_precip")
-prefix <- "set1420_1_m015_precip"
-
-# convert to tidy   -----commented out for running in the shell
-res_pr <- map2tidy(
-  nclist = filnam[1:431],  #[1:431] for 1420 onwards; [1:431] for 1420
-  varnam = "precip",
-  lonnam = "lon",
-  latnam = "lat",
-  timenam = "time",
-  do_chunks = TRUE,
-  outdir = output_dir,
-  fileprefix = "set1420_1_m015_precip",
-  ncores = 1,
-  overwrite = FALSE
-  #filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
-  )
-
+# # Precipitation - daily resolution--------------------------------------------------
+# path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
+# varnam <- "precip";
+# set_name <- "m024_1420_2"
+# filnam <- list.files(
+#   paste0(path_ModESim, "/", varnam, "/", set_name),
+#   pattern = ".nc", full.names = TRUE)
+# output_dir = file.path(outdir, "1420_02_m024_precip")
+# prefix <- "set1420_2_m024_precip"
+#
+# # convert to tidy   -----commented out for running in the shell
+# res_pr <- map2tidy(
+#   nclist = filnam[1:431],  #[1:431] for 1420 onwards; [1:431] for 1420
+#   varnam = "precip",
+#   lonnam = "lon",
+#   latnam = "lat",
+#   timenam = "time",
+#   do_chunks = TRUE,
+#   outdir = output_dir,
+#   fileprefix = "set1420_2_m024_precip",
+#   ncores = 1,
+#   overwrite = FALSE
+#   #filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
+#   )
+#
 # # #######loop through remaining files for date conversion:
 # #
 # # Define directories
-# tmpdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m015_tidy/1420_01_m015_precip"  # directory where your RDS files are located
+# tmpdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m024_tidy/1420_02_m024_precip"  # directory where your RDS files are located
 # outdir_ref <- tmpdir  # Assuming output directory is same as input directory
 #
 # # List all RDS files in the directory
@@ -55,19 +55,19 @@ res_pr <- map2tidy(
 # # Exclude already processed files
 # remaining_files <- rds_files[!basename(rds_files) %in% basename(processed_files)]
 #
-#
-# # # Define the reference time
-# # reference_time <- as.POSIXct("2024-11-13 19:16", tz = "CET")
 # #
-# # # Function to check if a file was created or modified before the reference time
-# # needs_processing <- function(file_path) {
-# #   # Check if the file modification time is before the reference time
-# #   return(file.info(file_path)$mtime < reference_time)
-# # }
+# # # # Define the reference time
+# # # reference_time <- as.POSIXct("2024-11-13 19:16", tz = "CET")
+# # #
+# # # # Function to check if a file was created or modified before the reference time
+# # # needs_processing <- function(file_path) {
+# # #   # Check if the file modification time is before the reference time
+# # #   return(file.info(file_path)$mtime < reference_time)
+# # # }
+# # #
+# # # # Identify files that need processing
+# # # remaining_files <- rds_files[sapply(rds_files, needs_processing)]
 # #
-# # # Identify files that need processing
-# # remaining_files <- rds_files[sapply(rds_files, needs_processing)]
-#
 #
 # # Function to process and save each RDS file
 # process_file <- function(file_path) {
@@ -88,44 +88,51 @@ res_pr <- map2tidy(
 #
 # # Loop through the remaining files and process them
 # purrr::walk(remaining_files, process_file)
-
-# test1 <- readRDS("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/1420_01_m014_precip/set1420_1_m014_precip_LON_-120.000.rds")
 #
-# test1 %>% slice(1) %>% unnest(data) %>%
-#   tidyr::separate(datetime, into = c("datetime", "fractional_day"), sep = "\\.") %>%
-#   mutate(datetime = lubridate::ymd(datetime))
-
-
-## Temperature - daily resolution-------------------------------------------------
-path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
-varnam <- "tsurf";
-set_name <- "m015_1420_1"
-filnam <- list.files(
-  paste0(path_ModESim, "/", varnam, "/", set_name),
-  pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m015_tsurf")
-
-
-prefix <- "set1420_1_m015_tsurf"
-# convert to tidy
-res_ts <- map2tidy(
-  nclist = filnam[1:431],
-  varnam = "tsurf",
-  lonnam = "lon",
-  latnam = "lat",
-  timenam = "time",
-  do_chunks = TRUE,
-  outdir = output_dir,
-  fileprefix = "set1420_1_m015_tsurf",
-  ncores = 1,
-  overwrite = FALSE
- # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
-)
-
+# # ###test:
+# # df3 <- readRDS("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/1420_01_m014_precip/set1420_1_m014_precip_LON_-120.000.rds")
+# #
+# #df <- readRDS("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m024_tidy/1420_01_m024_patm/set1420_1_m024_patm_LON_-120.000.rds")
+# #
+# #   # Apply the datetime fix
+# #   df2 <- df |>
+# #     dplyr::mutate(data = purrr::map(data, function(x){
+# #       x |>
+# #         tidyr::separate(datetime, sep = "\\.", into = c('date', 'fract_day')) |>
+# #         dplyr::mutate(date = lubridate::ymd(date)) |>
+# #         dplyr::select(-fract_day)
+# #     }))
+#
+# ## Temperature - daily resolution-------------------------------------------------
+# path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
+# varnam <- "tsurf";
+# set_name <- "m024_1420_2"
+# filnam <- list.files(
+#   paste0(path_ModESim, "/", varnam, "/", set_name),
+#   pattern = ".nc", full.names = TRUE)
+# output_dir = file.path(outdir, "1420_02_m024_tsurf")
+#
+#
+# prefix <- "set1420_2_m024_tsurf"
+# # convert to tidy
+# res_ts <- map2tidy(
+#   nclist = filnam[1:431],
+#   varnam = "tsurf",
+#   lonnam = "lon",
+#   latnam = "lat",
+#   timenam = "time",
+#   do_chunks = TRUE,
+#   outdir = output_dir,
+#   fileprefix = "set1420_2_m024_tsurf",
+#   ncores = 1,
+#   overwrite = FALSE
+#  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
+# )
+#
 # #######loop through remaining files for date conversion:
 #
 # # Define directories
-# tmpdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m015_tidy/1420_01_m015_tsurf"  # directory where your RDS files are located
+# tmpdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m024_tidy/1420_02_m024_tsurf"  # directory where your RDS files are located
 # outdir_ref <- tmpdir  # Assuming output directory is same as input directory
 #
 # # List all RDS files in the directory
@@ -139,17 +146,17 @@ res_ts <- map2tidy(
 # # Exclude already processed files
 # remaining_files <- rds_files[!basename(rds_files) %in% basename(processed_files)]
 #
-# # # Define the reference time
-# # reference_time <- as.POSIXct("2024-11-19 16:48", tz = "CET")
-# #
-# # # Function to check if a file was created or modified before the reference time
-# # needs_processing <- function(file_path) {
-# #   # Check if the file modification time is before the reference time
-# #   return(file.info(file_path)$mtime < reference_time)
-# # }
-# #
-# # # Identify files that need processing
-# # remaining_files <- rds_files[sapply(rds_files, needs_processing)]
+# # # # Define the reference time
+# # # reference_time <- as.POSIXct("2024-11-19 16:48", tz = "CET")
+# # #
+# # # # Function to check if a file was created or modified before the reference time
+# # # needs_processing <- function(file_path) {
+# # #   # Check if the file modification time is before the reference time
+# # #   return(file.info(file_path)$mtime < reference_time)
+# # # }
+# # #
+# # # # Identify files that need processing
+# # # remaining_files <- rds_files[sapply(rds_files, needs_processing)]
 #
 # # Function to process and save each RDS file
 # process_file <- function(file_path) {
@@ -170,18 +177,18 @@ res_ts <- map2tidy(
 #
 # # Loop through the remaining files and process them
 # purrr::walk(remaining_files, process_file)
-
+#
 
 # ## Net Radiation - monthly resolution -------------------------------------------
 path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
 varnam <- "netradiation";
-set_name <- "m015_1420_1"
+set_name <- "m024_1420_2"
 filnam <- list.files(
   paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m015_netrad")
+output_dir = file.path(outdir, "1420_02_m024_netrad")
 
-prefix <- "set1420_1_m015_netrad"
+prefix <- "set1420_2_m024_netrad"
 
 # for files that do not contain a date variable:
 # define a function that derives the necessary dates from the filename and pass that function to fgetdate
@@ -202,7 +209,7 @@ res_nr <- map2tidy(
   latnam = "latitude",
   timenam = "Time",
   do_chunks = TRUE, ncores = 1, fgetdate = filename_to_monthly_datelist,
-  outdir = output_dir, fileprefix = "set1420_1_m015_netrad",
+  outdir = output_dir, fileprefix = "set1420_2_m024_netrad",
   overwrite = FALSE
  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
 )
@@ -211,11 +218,11 @@ res_nr <- map2tidy(
 # ## Surface Pressure - monthly resolution ----------------------------------------
 path_ModESim <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim"
 varnam <- "surfaceP";
-set_name <- "m015_1420_1"
+set_name <- "m024_1420_2"
 filnam <- list.files(
   paste0(path_ModESim, "/", varnam, "/", set_name),
   pattern = ".nc", full.names = TRUE)
-output_dir = file.path(outdir, "1420_01_m015_patm")
+output_dir = file.path(outdir, "1420_02_m024_patm")
 
 # for files that do not contain a date variable:
 # define a function that derives the necessary dates from the filename and pass that function to fgetdate
@@ -228,7 +235,7 @@ filename_to_monthly_datelist <- function(filename){
   return(sprintf("%s-%02d", year_str, c(1:12)))
 }
 
-prefix <- "set1420_1_m015_patm"
+prefix <- "set1420_2_m024_patm"
 # convert to tidy
 res_patm <- map2tidy(
   nclist = filnam[1:431],
@@ -239,7 +246,7 @@ res_patm <- map2tidy(
   fgetdate = filename_to_monthly_datelist,
   do_chunks = TRUE,
   outdir = output_dir,
-  fileprefix = "set1420_1_m015_patm",
+  fileprefix = "set1420_2_m024_patm",
   ncores = 1,
   overwrite = FALSE
  # filter_lon_between_degrees = c(-122, -120) #longitude of US-Ton: -120.9660
