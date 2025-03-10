@@ -105,6 +105,17 @@ aod_annual_mean_1420 <- df %>%
 
 write.csv(aod_annual_mean_1420, "~/cwd_global/data/AOD_annual_mean_1420epoch.csv")
 
+
+####read in data: 
+##### volc forcing for 1420 - global annual mean: 
+aod_annual_mean_1420 <- read.csv("~/cwd_global/data/AOD_annual_mean_1420epoch.csv")
+##### volc forcing for 1850 - global annual mean: 
+aod_annual_mean_1850 <- read.csv("~/cwd_global/data/AOD_annual_mean_1850epoch.csv")
+aod_annual_mean_1850 <- aod_annual_mean_1850 %>% 
+  rename(
+    year = Year,
+    annual_mean_value = mean_AOD
+    )
 ```
 
 
@@ -738,6 +749,81 @@ for (continent in names(continent_mapping)) {
   zscore_df_1420$continent[zscore_df_1420$region %in% continent_mapping[[continent]]] <- continent
 }
 
+###################### 1850 epoch z-scores
+# Initialize lists to store baselines and standard deviations
+anom_baseline <- list()
+anom_baseline_sd <- list()
+
+# Loop over regions
+for (region_name in names(regional_results_1850)) {
+  
+  # Extract all ensemble members for the region
+  ensemble_members <- regional_results_1850[[region_name]]
+  
+  # Compute baseline mean (over first 30 years) for each ensemble member
+  anom_baseline[[region_name]] <- colMeans(ensemble_members[1:30, ], na.rm = TRUE)
+  
+  # Compute baseline standard deviation (over first 30 years) for each ensemble member
+  anom_baseline_sd[[region_name]] <- apply(ensemble_members[1:30, ], 2, sd, na.rm = TRUE) #calc sd across columns(years)
+}
+
+
+# Initialize lists to store results
+ensemble_anoms_1850 <- list()      # Mean anomalies for each region
+ensemble_zscores_1850 <- list()   # Standard deviation of anomalies for each region
+
+# Loop over regions to compute anomalies and z-scores
+for (region_name in names(regional_results_1850)) {
+  # Extract the ensemble members for the region
+  ensemble_members <- regional_results_1850[[region_name]]  # Now using full ensemble data
+  
+  # Compute anomalies per ensemble member (subtract baseline)
+  ensemble_anoms_1850[[region_name]] <- sweep(ensemble_members, 2, anom_baseline[[region_name]], "-")
+  
+  # Compute z-scores per ensemble member (divide by baseline standard deviation)
+  ensemble_zscores_1850[[region_name]] <- sweep(ensemble_anoms_1850[[region_name]], 2, anom_baseline_sd[[region_name]], "/")
+}
+
+#mean z-scores for each region
+# Initialize a list to store mean z-scores
+mean_zscores_1850 <- list()
+
+# Loop over regions
+for (region_name in names(regional_results_1850)) {
+  
+  # Compute the mean z-score across ensemble members for each time step
+  mean_zscores_1850[[region_name]] <- rowMeans(ensemble_zscores_1850[[region_name]], na.rm = TRUE)
+}
+
+# Initialize a list to store z-score standard deviations
+sd_zscores_1850 <- list()
+
+# Loop over regions
+for (region_name in names(regional_results_1850)) {
+  
+  # Compute standard deviation of z-scores across ensemble members
+  sd_zscores_1850[[region_name]] <- apply(ensemble_zscores_1850[[region_name]], 1, sd, na.rm = TRUE) #calc sd across rows (EMs)
+}
+
+########### 1850 period
+# Convert z-score data into a data frame for ggplot
+zscore_df_1850 <- do.call(rbind, lapply(names(mean_zscores_1850), function(region) {
+  data.frame(
+    time = seq(1850, 2009),  # Adjust time range accordingly
+    mean_zscore = mean_zscores_1850[[region]],  
+    sd_zscore = sd_zscores_1850[[region]],  # Standard deviation for uncertainty bands
+    region = region
+  )
+}))
+
+
+# Add a continent column to the SNR data frame
+zscore_df_1850$continent <- NA  # Initialize continent column
+
+for (continent in names(continent_mapping)) {
+  zscore_df_1850$continent[zscore_df_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
 
 ```
 
@@ -778,6 +864,9 @@ ggplot(ensemble_long, aes(x = time, y = z_score, group = ensemble_member), color
 
 ```{r}
 #################all continents for 1420 epoch ###################################
+
+## for Poster plots; have changed which regions are displayed by filtering for regions and the title description for NA and CA
+
 #test to incorporate volcanic forcings also: 
 
 #### Europe ####
@@ -812,7 +901,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -882,7 +971,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -922,7 +1011,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
 #### Australia ####
 # Filter data for the selected continent (e.g., Europe)
 selected_continent <- "Australia"
-zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
+selected_region <- "CAU"
+zscore_filtered <- zscore_df_1420 %>% filter(region == selected_region)
 
 # Normalize AOD data to fit the anomalies scale
 aod_min <- min(aod_annual_mean_1420$annual_mean_value, na.rm = TRUE)
@@ -951,7 +1041,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for Central Australia (1420-1849)")
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -972,7 +1062,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     # Adjust legend appearance and keep the ribbon and line separate
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", 
+    color = guide_legend(title = "Legend:", 
                          order = 1, 
                          override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
     fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
@@ -980,7 +1070,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   theme_classic() +
   theme(
     legend.position = "top",
-    legend.title = element_text(face = "bold"),
+    legend.title = element_text(),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
     strip.background = element_rect(fill = "blue"),
@@ -1020,7 +1110,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1060,7 +1150,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
 #### North America ####
 # Filter data for the selected continent (e.g., Europe)
 selected_continent <- "North America"
-zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
+selected_region <- "WNA"
+zscore_filtered <- zscore_df_1420 %>% filter(region == selected_region)
 
 # Normalize AOD data to fit the anomalies scale
 aod_min <- min(aod_annual_mean_1420$annual_mean_value, na.rm = TRUE)
@@ -1089,7 +1180,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for Western North America (1420-1849)")
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1105,12 +1196,12 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   ) +
   scale_fill_manual(
     values = c("SD across EMs" = "honeydew4"), 
-    labels = c("SD across EMs")
+    labels = c("SD across Ensemble")
   ) +
     # Adjust legend appearance and keep the ribbon and line separate
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", 
+    color = guide_legend(title = "Legend:", 
                          order = 1, 
                          override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
     fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
@@ -1118,7 +1209,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   theme_classic() +
   theme(
     legend.position = "top",
-    legend.title = element_text(face = "bold"),
+    legend.title = element_text(),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen"),
@@ -1129,7 +1220,8 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
 #### Central America ####
 # Filter data for the selected continent (e.g., Europe)
 selected_continent <- "Central America"
-zscore_filtered <- zscore_df_1420 %>% filter(continent == selected_continent)
+selected_region <- "NCA"
+zscore_filtered <- zscore_df_1420 %>% filter(region == selected_region)
 
 # Normalize AOD data to fit the anomalies scale
 aod_min <- min(aod_annual_mean_1420$annual_mean_value, na.rm = TRUE)
@@ -1158,7 +1250,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for Northern Central America (1420-1849)")
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1179,7 +1271,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
     # Adjust legend appearance and keep the ribbon and line separate
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", 
+    color = guide_legend(title = "Legend:", 
                          order = 1, 
                          override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
     fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
@@ -1187,7 +1279,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   theme_classic() +
   theme(
     legend.position = "top",
-    legend.title = element_text(face = "bold"),
+    legend.title = element_text(),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue"),
@@ -1227,7 +1319,7 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (annual) Z-Scores for", selected_continent)
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
   ) +
   # Secondary axis transformation ensuring zero alignment
   scale_y_continuous(
@@ -1267,7 +1359,502 @@ ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"))
 
 ```
 
+```{r}
+#################all continents for 1850 epoch ###################################
 
+## for Poster plots; have changed which regions are displayed by filtering for regions and the title description for NA and CA
+
+#test to incorporate volcanic forcings also: 
+
+#### Europe ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Europe"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the honeydew4 background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+
+#### Asia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Asia"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "orange"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### Australia ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Australia"
+selected_region <- "CAU"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for Central Australia (1850-1849)")
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend:", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10, colour = "white"),  # Size for facet labels
+    strip.background = element_rect(fill = "blue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### Africa ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Africa"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "purple"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### North America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "North America"
+selected_region <- "WNA"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1450)",
+    title = paste("Annual PCWD Z-Scores for Western North America (1850-1849)")
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across Ensemble")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend:", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightgreen"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### Central America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "Central America"
+selected_region <- "NCA"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for Northern Central America (1850-1849)")
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend:", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "lightblue"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+#### South America ####
+# Filter data for the selected continent (e.g., Europe)
+selected_continent <- "South America"
+zscore_filtered <- zscore_df_1850 %>% filter(continent == selected_continent)
+
+# Normalize AOD data to fit the anomalies scale
+aod_min <- min(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+aod_max <- max(aod_annual_mean_1850$annual_mean_value, na.rm = TRUE)
+zscore_min <- min(zscore_filtered$mean_zscore, na.rm = TRUE)
+zscore_max <- max(zscore_filtered$mean_zscore, na.rm = TRUE)
+
+# Calculate scale factor to ensure zero alignment
+aod_zero <- 0  # AOD zero point
+zs_zero <- 0  # Anomalies zero point
+scale_factor <- (zscore_max - zscore_min) / (aod_max - aod_min)  # Scale based on range
+
+# Scale AOD values to match the anomalies scale
+annual_mean <- aod_annual_mean_1850 %>%
+  mutate(scaled_aod = (annual_mean_value - aod_zero) * scale_factor + zs_zero)
+
+# Plot zscore time series
+ggplot(zscore_filtered, aes(x = time, y = mean_zscore, color = "PCWD Z-Scores")) +
+  geom_line(show.legend = TRUE) +  # Plot lines for each region
+  geom_ribbon(aes(ymin = mean_zscore - sd_zscore, ymax = mean_zscore + sd_zscore, fill = "SD across EMs"), alpha = 0.3,color = NA, show.legend = TRUE) +  # Ribbon shaded area with no black outline
+  geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
+  # geom_hline(yintercept = 2, color = "indianred", linetype = "dotted")+
+  # geom_hline(yintercept = -2, color = "indianred", linetype = "dotted")+
+  # Secondary Y-axis: Volcanic Forcing (AOD)
+  geom_line(data = annual_mean, aes(x = year, y = scaled_aod, color = "Volcanic Forcing (AOD)"), linewidth = 0.5, linetype = "dotted", show.legend = TRUE) +
+  labs(
+    x = "Year",
+    y = "z-score (w.r.t. 1850-1880)",
+    title = paste("Annual PCWD Z-Scores for", selected_continent)
+  ) +
+  # Secondary axis transformation ensuring zero alignment
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      ~ (. - zs_zero) / scale_factor + aod_zero, 
+      name = "Annual Mean AOD"
+    )
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("PCWD Z-Scores" = "black", "Volcanic Forcing (AOD)" = "red"),
+    labels = c("PCWD Z-Scores (Mean)", "Volcanic Forcing (AOD)")
+  ) +
+  scale_fill_manual(
+    values = c("SD across EMs" = "honeydew4"), 
+    labels = c("SD across EMs")
+  ) +
+    # Adjust legend appearance and keep the ribbon and line separate
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", 
+                         order = 1, 
+                         override.aes = list(fill = NA, shape = NA)),  # Remove background for color lines
+    fill = guide_legend(title = "", order = 2)  # Fill scale: SD across Ensemble Members
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "yellow"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+
+```
 
 Calculate z-scores (for 30 year moving window-climatic anomalies):
 
@@ -1278,145 +1865,146 @@ Interpreting the Z-Scores
 - z > ±3 → Extreme anomaly, suggesting an event outside typical variability.
 
 ```{r}
-# Initialize lists to store baselines and standard deviations
-anom_baseline <- list()
-anom_baseline_sd <- list()
-
-###################### 1420 epoch z-scores
-# Loop over regions
-for (region_name in names(regional_results_1420)) {
-  
-  # Extract all ensemble members for the region
-  ensemble_members <- regional_results_1420[[region_name]]
-  
-  # Compute baseline mean (over first 30 years) for each ensemble member
-  anom_baseline[[region_name]] <- colMeans(ensemble_members[1:30, ], na.rm = TRUE)
-  
-  # Compute baseline standard deviation (over first 30 years) for each ensemble member
-  anom_baseline_sd[[region_name]] <- apply(ensemble_members[1:30, ], 2, sd, na.rm = TRUE)
-}
-
-# Initialize lists to store results
-ensemble_anoms_1420 <- list()      # Mean anomalies for each region
-ensemble_zscores_1420 <- list()   # Standard deviation of anomalies for each region
+# Initialize list to store rolling 30-year means
+rolling_means <- list()
 
 # Define window size
-window_size <- 31
+window_size <- 30
 
-###################### Compute 30-year moving means and z-scores
-# Initialize lists to store z-scores
-ensemble_zscores_1420 <- list()
-
-# Loop over regions
+# Compute rolling means for each ensemble member
 for (region_name in names(regional_results_1420)) {
   
   # Extract ensemble members for the region
   ensemble_members <- regional_results_1420[[region_name]]
   num_years <- nrow(ensemble_members)
   
-  # Initialize matrix to store moving z-scores (we get num_years - window_size + 1 values)
-  z_scores <- matrix(NA, nrow=num_years - window_size + 1, ncol=ncol(ensemble_members))
+  # Initialize matrix to store rolling means
+  rolling_mean_matrix <- matrix(NA, nrow=num_years - window_size + 1, ncol=ncol(ensemble_members))
   
-  # Compute 30-year moving mean and z-scores
-  for (t in 1:(num_years - window_size + 1)) {  # Prevent going out of bounds
-    moving_mean <- colMeans(ensemble_members[t:(t+window_size-1), ], na.rm = TRUE)  # 30-year mean
-    
-    # Compute z-score using fixed baseline
-    z_scores[t, ] <- (moving_mean - anom_baseline[[region_name]]) / anom_baseline_sd[[region_name]]
+  # Compute rolling means
+  for (t in 1:(num_years - window_size + 1)) {
+    rolling_mean_matrix[t, ] <- colMeans(ensemble_members[t:(t+window_size-1), ], na.rm = TRUE)
+  }
+  
+  # Store rolling means
+  rolling_means[[region_name]] <- rolling_mean_matrix
+}
+
+# Initialize lists to store baselines and standard deviations
+anom_baseline <- list()
+anom_baseline_sd <- list()
+
+# Compute baseline mean and standard deviation from the first 30 values of rolling mean
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  
+  anom_baseline[[region_name]] <- colMeans(rolling_mean_matrix[1:30, ], na.rm = TRUE)
+  anom_baseline_sd[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, sd, na.rm = TRUE)
+}
+
+# Initialize lists to store z-scores
+ensemble_zscores_1420 <- list()
+
+# Compute z-scores
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store z-scores
+  z_scores <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute z-scores using rolling mean baseline
+  for (t in 1:num_years) {
+    z_scores[t, ] <- (rolling_mean_matrix[t, ] - anom_baseline[[region_name]]) / anom_baseline_sd[[region_name]]
   }
   
   # Store results
   ensemble_zscores_1420[[region_name]] <- z_scores
 }
-#mean z-scores for each region
-# Initialize a list to store mean z-scores
-mean_zscores_1420 <- list()
 
-# Loop over regions
-for (region_name in names(regional_results_1420)) {
-  
-  # Compute the mean z-score across ensemble members for each time step
+# Compute mean z-scores across ensemble members
+mean_zscores_1420 <- list()
+for (region_name in names(ensemble_zscores_1420)) {
   mean_zscores_1420[[region_name]] <- rowMeans(ensemble_zscores_1420[[region_name]], na.rm = TRUE)
 }
 
-# Initialize a list to store z-score standard deviations
+# Compute standard deviation of z-scores across ensemble members
 sd_zscores_1420 <- list()
-
-# Loop over regions
-for (region_name in names(regional_results_1420)) {
-  
-  # Compute standard deviation of z-scores across ensemble members
+for (region_name in names(ensemble_zscores_1420)) {
   sd_zscores_1420[[region_name]] <- apply(ensemble_zscores_1420[[region_name]], 1, sd, na.rm = TRUE)
 }
 
 
-
 ####################### 1850 epoch z-scores
-# Initialize lists to store baselines and standard deviations
-anom_baseline_1850 <- list()
-anom_baseline_sd_1850 <- list()
+# Initialize list to store rolling 30-year means
+rolling_means_1850 <- list()
 
-###################### 1420 epoch z-scores
-# Loop over regions
-for (region_name in names(regional_results_1850)) {
-  
-  # Extract all ensemble members for the region
-  ensemble_members <- regional_results_1850[[region_name]]
-  
-  # Compute baseline mean (over first 30 years) for each ensemble member
-  anom_baseline_1850[[region_name]] <- colMeans(ensemble_members[1:30, ], na.rm = TRUE)
-  
-  # Compute baseline standard deviation (over first 30 years) for each ensemble member
-  anom_baseline_sd_1850[[region_name]] <- apply(ensemble_members[1:30, ], 2, sd, na.rm = TRUE)
-}
 # Define window size
-window_size <- 31
+window_size <- 30
 
-###################### Compute 30-year moving means and z-scores
-# Initialize lists to store z-scores
-ensemble_zscores_1850 <- list()
-
-# Loop over regions
+# Compute rolling means for each ensemble member
 for (region_name in names(regional_results_1850)) {
   
   # Extract ensemble members for the region
   ensemble_members <- regional_results_1850[[region_name]]
   num_years <- nrow(ensemble_members)
   
-  # Initialize matrix to store moving z-scores (we get num_years - window_size + 1 values)
-  z_scores <- matrix(NA, nrow=num_years - window_size + 1, ncol=ncol(ensemble_members))
+  # Initialize matrix to store rolling means
+  rolling_mean_matrix <- matrix(NA, nrow=num_years - window_size + 1, ncol=ncol(ensemble_members))
   
-  # Compute 30-year moving mean and z-scores
-  for (t in 1:(num_years - window_size + 1)) {  # Prevent going out of bounds
-    moving_mean <- colMeans(ensemble_members[t:(t+window_size-1), ], na.rm = TRUE)  # 30-year mean
-    
-    # Compute z-score using fixed baseline
-    z_scores[t, ] <- (moving_mean - anom_baseline_1850[[region_name]]) / anom_baseline_sd_1850[[region_name]]
+  # Compute rolling means
+  for (t in 1:(num_years - window_size + 1)) {
+    rolling_mean_matrix[t, ] <- colMeans(ensemble_members[t:(t+window_size-1), ], na.rm = TRUE)
+  }
+  
+  # Store rolling means
+  rolling_means_1850[[region_name]] <- rolling_mean_matrix
+}
+
+# Initialize lists to store baselines and standard deviations
+anom_baseline_1850 <- list()
+anom_baseline_sd_1850 <- list()
+
+# Compute baseline mean and standard deviation from the first 30 values of rolling mean
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  
+  anom_baseline_1850[[region_name]] <- colMeans(rolling_mean_matrix[1:30, ], na.rm = TRUE)
+  anom_baseline_sd_1850[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, sd, na.rm = TRUE)
+}
+
+# Initialize lists to store z-scores
+ensemble_zscores_1850 <- list()
+
+# Compute z-scores
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store z-scores
+  z_scores <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute z-scores using rolling mean baseline
+  for (t in 1:num_years) {
+    z_scores[t, ] <- (rolling_mean_matrix[t, ] - anom_baseline_1850[[region_name]]) / anom_baseline_sd_1850[[region_name]]
   }
   
   # Store results
   ensemble_zscores_1850[[region_name]] <- z_scores
 }
 
-# Initialize a list to store mean z-scores
+# Compute mean z-scores across ensemble members
 mean_zscores_1850 <- list()
-
-# Loop over regions
-for (region_name in names(regional_results_1850)) {
-  
-  # Compute the mean z-score across ensemble members for each time step
+for (region_name in names(ensemble_zscores_1850)) {
   mean_zscores_1850[[region_name]] <- rowMeans(ensemble_zscores_1850[[region_name]], na.rm = TRUE)
 }
 
-# Initialize a list to store z-score standard deviations
+# Compute standard deviation of z-scores across ensemble members
 sd_zscores_1850 <- list()
-
-# Loop over regions
-for (region_name in names(regional_results_1850)) {
-  
-  # Compute standard deviation of z-scores across ensemble members
+for (region_name in names(ensemble_zscores_1850)) {
   sd_zscores_1850[[region_name]] <- apply(ensemble_zscores_1850[[region_name]], 1, sd, na.rm = TRUE)
 }
+
 
 
 ```
@@ -1428,12 +2016,22 @@ Convert to dataframes for plotting:
 # Convert z-score data into a data frame for ggplot
 zscore_df_1420 <- do.call(rbind, lapply(names(mean_zscores_1420), function(region) {
   data.frame(
-    time = seq(1435, 1834),  # Adjust time range accordingly
+    time = seq(1435, 1835),  # Adjust time range accordingly
     mean_zscore = mean_zscores_1420[[region]],  
     sd_zscore = sd_zscores_1420[[region]],  # Standard deviation for uncertainty bands
     region = region
   )
 }))
+
+continent_mapping <- list(
+  "Europe" = c("NEU", "MED"),
+  "North America" = c( "ENA", "WNA"),
+  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
+  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
+  "Central America" =c("NCA"),
+  "South America" = c("NSA"),
+  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
+)
 
 
 # Add a continent column to the SNR data frame
@@ -1448,13 +2046,23 @@ for (continent in names(continent_mapping)) {
 # Convert z-score data into a data frame for ggplot
 zscore_df_1850 <- do.call(rbind, lapply(names(mean_zscores_1850), function(region) {
   data.frame(
-    time = seq(1865, 1994),  # Adjust time range accordingly
+    time = seq(1865, 1995),  # Adjust time range accordingly
     mean_zscore = mean_zscores_1850[[region]],  
     sd_zscore = sd_zscores_1850[[region]],  # Standard deviation for uncertainty bands
     region = region
   )
 }))
 
+##### for poster: only show selected regions
+continent_mapping <- list(
+  "Europe" = c("NEU", "MED"),
+  "North America" = c( "ENA", "WNA"),
+  "Africa" = c("SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG"),
+  "Asia" = c("WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "WSB", "ESB", "RFE", "RAR"),
+  "Central America" =c("NCA", "SCA", "CAR"),
+  "South America" = c("NSA"),
+  "Australia" = c("NAU", "CAU", "EAU", "SAU", "NZ")
+)
 
 # Add a continent column to the SNR data frame
 zscore_df_1850$continent <- NA  # Initialize continent column
@@ -2573,7 +3181,7 @@ Showing each individual ensemble member instead of the geom_ribbon:
 # Convert ensemble z-score data into a long format for plotting individual members
 zscore_long_1420 <- do.call(rbind, lapply(names(ensemble_zscores_1420), function(region) {
   df <- as.data.frame(ensemble_zscores_1420[[region]])
-  df$time <- seq(1435, 1834)  # Adjust time range accordingly
+  df$time <- seq(1435, 1835)  # Adjust time range accordingly
   df$region <- region
   df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "z_score")
   return(df_long)
@@ -2808,16 +3416,18 @@ ggplot() +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+    title = paste("30-yr PCWD Z-Scores for Northern Central America (1420-1849)")
   ) +
   # Manual color scale for legend
   scale_color_manual(
     values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
     labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
   ) +
+  # Ensure y-axis tick marks appear every 2 units
+  scale_y_continuous(breaks = seq(-12, 32, by = 4)) +
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+    color = guide_legend(title = "Legend:", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
   ) +
   theme_classic() +
   theme(
@@ -2844,21 +3454,23 @@ ggplot() +
   geom_line(data = zscore_filtered %>% group_by(time, region) %>% summarise(mean_zscore = mean(z_score, na.rm = TRUE)),
             aes(x = time, y = mean_zscore, color = "PCWD Z-Scores"), linewidth = 1) +
   geom_hline(yintercept = 0, color = "grey2", linetype = "dashed")+
-  geom_hline(yintercept = 2, color = "violetred", linetype = "dotted")+
-  geom_hline(yintercept = -2, color = "violetred", linetype = "dotted")+
+  geom_hline(color = "violetred", yintercept = 2, linetype = "dotted")+
+  geom_hline(color = "violetred", yintercept = -2, linetype = "dotted")+
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1420-1450)",
-    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+    title = paste("30-yr PCWD Z-Scores for Northern South America (1420-1849)")
   ) +
   # Manual color scale for legend
   scale_color_manual(
     values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
     labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
   ) +
+  # Ensure y-axis tick marks appear every 2 units
+  scale_y_continuous(breaks = seq(-12, 30, by = 2)) +
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+    color = guide_legend(title = "Legend:", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
   ) +
   theme_classic() +
   theme(
@@ -2871,7 +3483,6 @@ ggplot() +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
 
-
 ```
 
 ```{r}
@@ -2880,7 +3491,7 @@ ggplot() +
 # Convert ensemble z-score data into a long format for plotting individual members
 zscore_long_1850 <- do.call(rbind, lapply(names(ensemble_zscores_1850), function(region) {
   df <- as.data.frame(ensemble_zscores_1850[[region]])
-  df$time <- seq(1865, 1994)  # Adjust time range accordingly
+  df$time <- seq(1865, 1995)  # Adjust time range accordingly
   df$region <- region
   df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "z_score")
   return(df_long)
@@ -2912,27 +3523,28 @@ ggplot() +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+    title = paste("30-yr PCWD Z-Scores for European regions (1850-2009)")
   ) +
   # Manual color scale for legend
   scale_color_manual(
     values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
     labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
   ) +
+  scale_y_continuous(breaks = seq(-8, 18, by = 2)) +
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+    color = guide_legend(title = "Legend:", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
   ) +
   theme_classic() +
   theme(
     legend.position = "top",
-    legend.title = element_text(face = "bold"),
+    legend.title = element_text(),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink"),
     axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
-  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+  facet_wrap(~region)  # Facet by region with independent y-axis scales
 
 #### Asia ####
 # Filter data for the selected continent (e.g., Europe)
@@ -3075,16 +3687,17 @@ ggplot() +
   labs(
     x = "Year",
     y = "z-score (w.r.t. 1850-1880)",
-    title = paste("EM PCWD (clim) Z-Scores for", selected_continent)
+    title = paste("30-yr PCWD Z-Scores for North American regions (1850-2009)")
   ) +
   # Manual color scale for legend
   scale_color_manual(
     values = c("Ensemble Members" = "grey60", "PCWD Z-Scores" = "black"),
     labels = c("Ensemble Members", "PCWD Z-Scores (Mean)")
   ) +
+  scale_y_continuous(breaks = seq(-8, 18, by = 2)) +
   # Customize the legend to avoid the grey background around lines (using override.aes)
   guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+    color = guide_legend(title = "Legend:", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
   ) +
   theme_classic() +
   theme(
@@ -3458,18 +4071,20 @@ r_df$layer <- as.numeric(r_df$layer)
 
 ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
-  scale_fill_distiller(name = "EM z-scores (w.r.t. 1420-1450)", 
+  scale_fill_distiller(name = "z-scores", 
                        palette = "RdBu",  # Red-Blue diverging palette
-                       limits = c(-3, 3),  # Adjust scale to focus on values between -1 and 1
+                       values = scales::rescale(c(-9, -2, 2, 9)),  # Rescales to emphasize 0-2 range
+                       limits = c(-9, 9),  # Adjust scale to focus on values between -1 and 1
                        na.value = "lightgrey") +  # Color for missing values
   labs(title = "PCWD Z-Scores for 1783", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   #coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) + #whole globe
-  coord_sf(xlim = c(-120, -60)	, ylim = 	c(5, 35)	, expand = FALSE) +  # Adjusted for Europe
+  coord_sf(xlim = c(110, 180), ylim = 	c(-50, 0), expand = FALSE) +  # Adjusted for Europe
   
   theme(legend.title = element_text(size = 12),
-        legend.text = element_text(size = 10))
+        legend.text = element_text(size = 10),
+        plot.title = element_text(face = "bold"))
 
 ```
 
@@ -3478,7 +4093,7 @@ ggplot() +
 ### Gini Index for inequality
 
 - calculate Gini index for both each epoch for every gridcell
-- plot as map to show variability/ meausre of inequality or unequalness
+- plot as map to show variability/ measure of inequality or unequalness
 - low number (close to 0 rather than 1) implies low inequality i.e. over time PCWD values stable for that gridcell
 - Gini index is more sensitive to changes in the middle of income distribution and less sensitive to changes at the top and the bottom of income distribution (Atkinson, 1970)
 
@@ -3719,42 +4334,6 @@ ggplot() +
 ```
 
 
-Plot as animation with moving window to highlight change over time (1850 epoch):
-```{r}
-library(gganimate)
-
-
-# Define time window size and step
-window_size <- 30   # Number of years per window
-step_size <- 30     # Shift window every 30 years
-years <- 1850:2009  # Full time range from 1850 to 2010 (adjust as needed)
-
-# Initialize list to store results
-gini_list <- list()
-
-# Loop through time using sliding window to compute Gini indices
-for (start_year in seq(1850, length(years) - window_size + 1850, by = step_size)) {
-  end_year <- start_year + window_size - 1
-  gini_values_window <- matrix(NA, nrow = 192, ncol = 96)
-  
-  # Calculate Gini index for each grid cell
-  for (i in 1:192) {
-    for (j in 1:96) {
-      # Correct indexing for the year range
-      gini_values_window[i, j] <- Gini(mean_ensemble_1850[i, j, (start_year - 1849):(end_year - 1849)], na.rm = TRUE)
-    }
-  }
-  
-  # Create time variable and store in the list
-  gini_list[[paste0("Year_", start_year, "_", end_year)]] <- list(
-    gini_values = gini_values_window,
-    time = start_year  # Store the first year of the time window
-  )
-}
-
-
-```
-
 ```{r}
 
 # Define output directory for saving images
@@ -3802,44 +4381,10 @@ for (time_label in names(gini_list)) {
 print("All plots saved successfully!")
   
   
-  
 ```
 
 
 1420 epoch: 
-```{r}
-library(gganimate)
-
-
-# Define time window size and step
-window_size <- 30   # Number of years per window
-step_size <- 30     # Shift window every 10 years
-years <- 1420:1849  # Full time range from 1420 to 2010 (adjust as needed)
-
-# Initialize list to store results
-gini_list_1420 <- list()
-
-# Loop through time using sliding window to compute Gini indices
-for (start_year in seq(1420, length(years) - window_size + 1420, by = step_size)) {
-  end_year <- start_year + window_size - 1
-  gini_values_window <- matrix(NA, nrow = 192, ncol = 96)
-  
-  # Calculate Gini index for each grid cell
-  for (i in 1:192) {
-    for (j in 1:96) {
-      # Correct indexing for the year range
-      gini_values_window[i, j] <- Gini(mean_ensemble_1420[i, j, (start_year - 1419):(end_year - 1419)], na.rm = TRUE)
-    }
-  }
-  
-  # Create time variable and store in the list
-  gini_list_1420[[paste0("Year_", start_year, "_", end_year)]] <- list(
-    gini_values = gini_values_window,
-    time = start_year  # Store the first year of the time window
-  )
-}
-
-```
 
 ```{r}
 
@@ -3895,6 +4440,7 @@ print("All plots saved successfully!")
 Create and plot Gini timeseries with 30-year moving window for each region: 
 
 ```{r}
+####################### Compute running GINI timeseries for each EM #########################
 ################## 1420 epoch #############
 window_size <- 31  # Define window size
 

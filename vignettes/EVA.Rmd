@@ -362,12 +362,12 @@ text(x = coordinates(europe)[,1],
 ## Example with ModE-Sim data:
 First, dataInventory provides basic information about the variables available in the file/dataset:
 ```{r, message=FALSE, echo=FALSE}
-di <- dataInventory("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc")
+di <- dataInventory("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc")
 str(di)
 ```
  To load pcwd_annmax data, the function loadGridData from package loadeR is used:
 ```{r}
-grid1 <- loadGridData(dataset = "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850_AbsTrsh/PCWD_ANNMAX.nc",
+grid1 <- loadGridData(dataset = "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc",
                       var = "pcwd_annmax")
 ```
 ## Extracting data for the region/s of interest
@@ -458,6 +458,8 @@ grid1.wce_EVA <- na.omit(grid1.wce_EVA)
 evd_gev.wce <- extRemes::fevd(x = grid1.wce_EVA, type = "GEV", method = "MLE", units = "years")
 summary(evd_gev.wce)
 ```
+
+
 ```{r}
 return_period <- c(2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 200, 250, 300, 500, 800)
 

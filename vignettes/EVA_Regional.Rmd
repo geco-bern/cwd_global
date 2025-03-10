@@ -86,7 +86,7 @@ refregions_sf <- refregions_sf %>%
       row.names(refregions) %in% continent_mapping$`Central America` ~ "Central America",
       row.names(refregions) %in% continent_mapping$`South America` ~ "South America",
       row.names(refregions) %in% continent_mapping$Australia ~ "Australia",
-      TRUE ~ "Other"  # For regions not mapped to a continent
+      TRUE ~ "Ocean"  # For regions not mapped to a continent
     )
   ) 
 
@@ -100,7 +100,7 @@ continent_colors <- c(
   "Central America" = "lightblue",
   "South America" = "yellow",
   "Australia" = "blue",
-  "Other" = "white"
+  "Ocean" = "white"
 )
 
 # Extract region centroids for labeling
@@ -116,10 +116,10 @@ land <- ne_countries(scale = "medium", returnclass = "sf")
 ggplot() +
   geom_sf(data = land, fill = "lightgray", color = NA) +  # Fill land areas
   geom_sf(data = refregions_sf, aes(fill = continent), color = "black", alpha = 0.6) +  # Transparent overlay
-  geom_sf_text(data = region_labels, aes(label = label), size = 3, color = "black", check_overlap = TRUE) +  # Add region names
+  geom_sf_text(data = region_labels, aes(label = label), size = 2.3, color = "black", check_overlap = FALSE) +  # Add region names
   scale_fill_manual(values = continent_colors, name = "Continent") +
   theme_minimal() +
-  labs(title = "Map of Regions by Continent",
+  labs(x= "", y="", title = "Map of IPCC Regions by Continent",
        subtitle = "Regions coloured by assigned continents, region names labeled") +
   theme(
     plot.title = element_text(size = 16, face = "bold"),
@@ -329,8 +329,8 @@ ggplot(df_combined, aes(x = x, y = y, color = set)) +
 ## Skewness of PCWD data sets
 
 ```{r}
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData")
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
 
 # Install required packages if not already installed
 if (!require(gridExtra)) install.packages("gridExtra")
@@ -1279,13 +1279,15 @@ ggplot(data_first_last, aes(x = year_1834, y = year_1435, color = continent)) +
     title = "PCWD RP in 1435 vs 1834 of 2yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
 
 Return level plots: 
 ```{r calc RL 1420 for scatterplot}
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData")
 
 use_rp <- 2    # return period of two years
 nyears <- 30   # bin width
@@ -1372,6 +1374,8 @@ ggplot(data_first_last, aes(x = year_1834, y = year_1435, color = continent)) +
     title = "2 year PCWD RL in 1435 vs 1834",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -1879,6 +1883,8 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
     title = "PCWD RP in 1864 vs 1994 of 2yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -1925,6 +1931,8 @@ ggplot(data_combined, aes(x = year_1994, y = year_1435, color = continent)) +
     title = "PCWD RP in 1435 vs 1994 of 2yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -1932,7 +1940,7 @@ ggplot(data_combined, aes(x = year_1994, y = year_1435, color = continent)) +
 
 
 ```{r calc RL 1850 for scatterplot}
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
 
 use_rp <- 2    # return period of two years
 nyears <- 30   # bin width
@@ -2019,6 +2027,8 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
     title = "2 year PCWD RL in 1864 vs 1994",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 ```
 plot the "outlier" regions as timeseries: 
@@ -2090,6 +2100,8 @@ ggplot(data_combined, aes(x = year_1994, y = year_1435, color = continent)) +
     title = "2 year PCWD RL in 1435 vs 1994",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -2755,12 +2767,14 @@ ggplot(data_first_last, aes(x = year_1834, y = year_1435, color = continent)) +
     title = "PCWD RP in 1435 vs 1834 of 20yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
 
 ```{r calc 20yr RL 1420 for scatterplot, echo=FALSE}
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData")
 
 use_rp <- 20    # return period of two years
 nyears <- 30   # bin width
@@ -3356,6 +3370,8 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
     title = "PCWD RP in 1864 vs 1994 of 20yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -3403,12 +3419,14 @@ ggplot(data_combined, aes(x = year_1994, y = year_1435, color = continent)) +
     title = "PCWD RP in 1435 vs 1994 of 20yr ref event (1420)",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
 
 ```{r calc 20 yr RL 1850 for scatterplot, echo=FALSE}
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
 
 use_rp <- 20    # return period of two years
 nyears <- 30   # bin width
@@ -3494,6 +3512,8 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
     title = "20 year PCWD RL in 1864 vs 1994",
     color = "Continent"
   ) +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -4226,13 +4246,15 @@ ggplot(data_first_last, aes(x = year_1834, y = year_1435, color = continent)) +
     y = "100 yr RP in 1435",
     title = "PCWD RP in 1435 vs 1834 of 100yr ref event (1420)",
     color = "Continent"
-  ) +
+  )  +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
 
 ```{r calc 100yr RL 1420 for scatterplot, echo=FALSE}
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData")
 
 use_rp <- 100    # return period of two years
 nyears <- 30   # bin width
@@ -4317,7 +4339,9 @@ ggplot(data_first_last, aes(x = year_1834, y = year_1435, color = continent)) +
     y = "100 yr PCWD (mm) in 1435",
     title = "100 year PCWD RL in 1435 vs 1834",
     color = "Continent"
-  ) +
+  )  +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -4815,7 +4839,9 @@ ggplot(data_first_last, aes(x = year_1994, y = year_1864, color = continent)) +
     y = "100 yr RP in 1864",
     title = "PCWD RP in 1864 vs 1994 of 100yr ref event (1420)",
     color = "Continent"
-  ) +
+  )  +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
@@ -4863,14 +4889,16 @@ ggplot(data_combined, aes(x = year_1994, y = year_1435, color = continent)) +
     y = "100 yr RP in 1435",
     title = "PCWD RP in 1435 vs 1994 of 100yr ref event (1420)",
     color = "Continent"
-  ) +
+  )  +
+  scale_x_continuous(limits = c(0, NA)) +  # Ensures x-axis starts from 0
+  scale_y_continuous(limits = c(0, NA)) +  # Ensures y-axis starts from 0
   theme_classic()
 
 ```
 
 
 ```{r calc 100 yr RL 1850 for scatterplot, echo=FALSE}
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
 
 use_rp <- 100    # return period of two years
 nyears <- 30   # bin width

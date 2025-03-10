@@ -44,19 +44,20 @@ library(gridExtra)
 
 ### Data prep - read in aggregated data aggregated for each region: 
 ```{r}
-regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420.RData")
-regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850.RData")
+regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData") ## Model set 1
+regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData") ## Model set 1
 
 ```
 
 Calculate trend for each region: 
 
 ```{r}
-#running window trend analysis with 30 year windows - 1420 epoch
+#running window trend analysis with 31 or 101 year windows - 1420 epoch
 
 # Define parameters
 years <- 1420:(1420 + 430 - 1)  # Year range based on data length
-window_size <- 31  # Moving window size
+#window_size <- 31  # Moving window size
+window_size <- 101  # Moving window size
 
 # Initialize a list to store results
 ensemble_trends <- list()
@@ -104,14 +105,16 @@ for (region in names(regional_results_1420)) {
 #      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
 #      xlab = "Year", ylab = "Trend (mm/yr)")
 # 
-saveRDS(ensemble_trends, file="~/cwd_global/data/1420_30yr_trends.RData")  ## 100 year trends
+saveRDS(ensemble_trends, file="~/cwd_global/data/1420_100yr_trends.RData")  ## 100 year trends
+#saveRDS(ensemble_trends, file="~/cwd_global/data/1420_30yr_trends.RData")  ## 30 year trends
 
 #################################### 1850 epoch ############################################
-#running window trend analysis with 30 year windows - 1850 epoch
+#running window trend analysis with 30 or 100 year windows - 1850 epoch
 
 # Define parameters
 years <- 1850:(1850 + 160 - 1)  # Year range based on data length
-window_size <- 31  # Moving window size
+#window_size <- 31  # Moving window size
+window_size <- 101  # Moving window size
 
 # Initialize a list to store results
 ensemble_trends_1850 <- list()
@@ -160,14 +163,17 @@ for (region in names(regional_results_1850)) {
 #      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
 #      xlab = "Year", ylab = "Trend (mm/yr)")
 # 
-saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_30yr_trends.RData")  ### 1850_trends has 100 year trends
+saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_100yr_trends.RData") 
+#saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_30yr_trends.RData")
 
 ```
 Calculate signal (ensemble mean) and noise (standard deviation) for each region: 
+- read in file depending on which trends to visualise; only have to change title description for plots
 
 ```{r}
 ###################### 1420 epoch ##########################
-ensemble_trends <- readRDS("~/cwd_global/data/1420_30yr_trends.RData") ### 1420_trends has 100 year trends
+#ensemble_trends <- readRDS("~/cwd_global/data/1420_30yr_trends.RData") ### 30 year trends
+ensemble_trends <- readRDS("~/cwd_global/data/1420_100yr_trends.RData") ## 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1420 <- list()  # Mean for each region
@@ -189,7 +195,8 @@ for (region_name in names(ensemble_trends)) {
 
 
 ###################### 1850 epoch ##########################
-ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_30yr_trends.RData") ### 1850_trends has 100 year trends
+#ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_30yr_trends.RData") ### 30 year trends
+ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_100yr_trends.RData") ## 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1850 <- list()  # Mean for each region
