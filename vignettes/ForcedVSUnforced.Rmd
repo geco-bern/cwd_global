@@ -1897,31 +1897,30 @@ r_masked <- mask(r, as(land, "Spatial"))
 r_df <- as.data.frame(r_masked, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
 
-min_value <- min(mean_trend_1420, na.rm = TRUE)
-max_value <- max(mean_trend_1420, na.rm = TRUE)
-
-# Define custom bins (you can modify these based on your data range)
-custom_bins <- c(-60, -40, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 40, 60, 80, 100, 200, 500, 750, 1000, 2000)
-
-# Define a custom color palette for the bins (21 colors, corresponding to 21 bins)
-custom_colors <- c("darkblue", "blue", "lightblue", "white", "yellow", "orange", "red", "darkred", "brown", "black", "pink", "purple", "darkgreen", "lightgreen", "grey", "cyan", "magenta", "lightgrey", "gold", "turquoise", "beige")
-
-# Convert data into bins using `cut()`
-r_df$bin_layer <- cut(r_df$layer, breaks = custom_bins, include.lowest = TRUE, right = FALSE)
 
 # Create the plot
 ggplot() +
-  geom_raster(data = r_df, aes(x = x, y = y, fill = bin_layer), na.rm = TRUE) +  # Use the binned layer for color
-  scale_fill_manual(name = "Trend (mm/yr)", values = custom_colors, na.value = "lightgrey", 
-                    labels = c(levels(r_df$bin_layer), "Ocean")) +  # Assign the custom colors
+  geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +  # Use the binned layer for color
+  scale_fill_distiller(
+    palette = "RdBu", direction = -1,
+    limits = c(-7, 7), name = "trends", na.value = "lightgrey", values = scales::rescale(c(-1, -0.1, 0, 0.1, 1))
+  ) +
   labs(title = "Mean ANNMAX PCWD Trend (1420-1849)", x = "Longitude", y = "Latitude") +
   theme_classic() +
+  
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
-  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10)) +
-  guides(fill = guide_legend(title = "mm/yr"))
+  
+  theme(
+    legend.title = element_text(size = 12), 
+    legend.text = element_text(size = 10)
+  ) +
+  guides(fill = guide_colorbar(title = "mm/yr"))
 
 ```
+
+
+
 ```{r}
 # Convert first year's data into a raster object
 r <- raster(t(mean_trend_1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
@@ -1939,26 +1938,49 @@ r_masked <- mask(r, as(land, "Spatial"))
 r_df <- as.data.frame(r_masked, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
 
-# Define custom bins (you can modify these based on your data range)
-custom_bins <- c(-60, -40, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 40, 60, 80, 100, 200, 500, 750, 1000, 2000)
-
-# Define a custom color palette for the bins (21 colors, corresponding to 21 bins)
-custom_colors <- c("darkblue", "blue", "lightblue", "white", "yellow", "orange", "red", "darkred", "brown", "black", "pink", "purple", "darkgreen", "lightgreen", "grey", "cyan", "magenta", "lightgrey", "gold", "turquoise", "beige")
-
-
-# Convert data into bins using `cut()`
-r_df$bin_layer <- cut(r_df$layer, breaks = custom_bins, include.lowest = TRUE, right = FALSE)
-
 # Create the plot
 ggplot() +
-  geom_raster(data = r_df, aes(x = x, y = y, fill = bin_layer), na.rm = TRUE) +  # Use the binned layer for color
-  scale_fill_manual(name = "Trend (mm/yr)", values = custom_colors, na.value = "lightgrey", 
-                    labels = c(levels(r_df$bin_layer), "Ocean")) +  # Assign the custom colors
+  geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +  # Continuous fill
+  
+  # # Continuous diverging blue-red color scale centered at zero with nonlinear scaling
+  # scale_fill_gradient2(
+  #   low = "blue", mid = "white", high = "red", midpoint = 0, 
+  #   limits = c(-7, 7), name = "trends", na.value = "lightgrey"
+  # ) +
+  
+  # Continuous diverging blue-red color scale centered at zero with improved scaling
+  scale_fill_distiller(
+    palette = "RdBu", direction = -1,
+    limits = c(-7, 7), name = "trends", na.value = "lightgrey", values = scales::rescale(c(-1, -0.1, 0, 0.1, 1))
+  ) +
+  
   labs(title = "Mean ANNMAX PCWD Trend (1850-2009)", x = "Longitude", y = "Latitude") +
   theme_classic() +
+  
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
-  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10)) +
-  guides(fill = guide_legend(title = "mm/yr"))
+  
+  theme(
+    legend.title = element_text(size = 12), 
+    legend.text = element_text(size = 10)
+  ) +
+  guides(fill = guide_colorbar(title = "mm/yr"))
+```
+```{r}
+### plot distribution of trend values
+
+# Convert raster data to a vector (excluding NA values)
+mean_trend_values <- as.vector(r_df$layer)
+summary(mean_trend_values)
+mean_trend_values <- mean_trend_values[!is.na(mean_trend_values)]  # Remove NAs
+
+# Create histogram with density overlay
+ggplot(data.frame(value = mean_trend_values), aes(x = value)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "blue", alpha = 0.5) +
+  geom_density(color = "red", size = 1) +  # Add density curve
+  labs(title = "Distribution of Mean ANNMAX PCWD Trend (1850-2009)",
+       x = "Trend Value (mm/yr)", y = "Density") +
+  theme_classic()
 
 ```
+

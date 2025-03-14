@@ -4090,6 +4090,629 @@ ggplot() +
 
 
 
+### Check method for 30 year anomalies
+
+Standard deviations for z-scores seem to be blowing up z-score results artificially
+- check absolute values first before normalising
+- try normalisation instead of standardization to avoid blown up values outside of the reference period
+
+```{r}
+# Convert ensemble z-score data into a long format for plotting individual members
+abs_long_1420 <- do.call(rbind, lapply(names(rolling_means), function(region) {
+  df <- as.data.frame(rolling_means[[region]])
+  df$time <- seq(1435, 1835)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "mean_PCWD")
+  return(df_long)
+}))
+
+# Add a continent column
+abs_long_1420$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  abs_long_1420$continent[abs_long_1420$region %in% continent_mapping[[continent]]] <- continent
+}
+
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+abs_filtered <- abs_long_1420 %>% filter(continent == selected_continent)
+
+# Plot rolling mean time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
+            aes(x = time, y = EM, color = "PCWD"), linewidth = 1) +
+  labs(
+    x = "Year",
+    y = "PCWD [mm]",
+    title = paste("rollling 30yr mean PCWD for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD" = "black"),
+    labels = c("Ensemble Members", "PCWD (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  
+  labs(
+    x = "Year",
+    y = "PCWD [mm]",
+    title = paste("Rolling 30yr mean PCWD for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+
+```
+
+```{r}
+# Convert ensemble z-score data into a long format for plotting individual members
+abs_long_1850 <- do.call(rbind, lapply(names(rolling_means_1850), function(region) {
+  df <- as.data.frame(rolling_means_1850[[region]])
+  df$time <- seq(1865, 1995)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "mean_PCWD")
+  return(df_long)
+}))
+
+# Add a continent column
+abs_long_1850$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  abs_long_1850$continent[abs_long_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+abs_filtered <- abs_long_1850 %>% filter(continent == selected_continent)
+
+# Plot rolling mean time series
+ggplot() +
+  # Plot individual ensemble members as fine grey lines
+  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
+            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
+            aes(x = time, y = EM, color = "PCWD"), linewidth = 1) +
+  labs(
+    x = "Year",
+    y = "PCWD [mm]",
+    title = paste("rollling 30yr mean PCWD for", selected_continent)
+  ) +
+  # Manual color scale for legend
+  scale_color_manual(
+    values = c("Ensemble Members" = "grey60", "PCWD" = "black"),
+    labels = c("Ensemble Members", "PCWD (Mean)")
+  ) +
+  # Customize the legend to avoid the grey background around lines (using override.aes)
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
+    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
+
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  
+  labs(
+    x = "Year",
+    y = "PCWD [mm]",
+    title = paste("Rolling 30yr mean PCWD for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+
+```
+
+#### Calculate anomalies of 30yr running mean and plot
+
+```{r}
+# Initialize lists to store baselines
+anom_baseline <- list()
+
+# Compute baseline mean from the first 30 values of rolling mean
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  
+  anom_baseline[[region_name]] <- colMeans(rolling_mean_matrix[1:30, ], na.rm = TRUE)
+}
+
+# Initialize lists to store anomalies
+ensemble_30anom_1850 <- list()
+
+# Compute z-scores
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store anomalies
+  anoms <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute anomalies using rolling mean baseline
+  for (t in 1:num_years) {
+    anoms[t, ] <- (rolling_mean_matrix[t, ] - anom_baseline[[region_name]])
+  }
+  
+  # Store results
+  ensemble_30anom_1850[[region_name]] <- anoms
+}
+
+# Compute mean anomalies across ensemble members
+mean_30anom_1850 <- list()
+for (region_name in names(ensemble_30anom_1850)) {
+  mean_30anom_1850[[region_name]] <- rowMeans(ensemble_30anom_1850[[region_name]], na.rm = TRUE)
+}
+
+
+
+
+# Convert ensemble data into a long format for plotting individual members
+anoms_long_1850 <- do.call(rbind, lapply(names(ensemble_30anom_1850), function(region) {
+  df <- as.data.frame(ensemble_30anom_1850[[region]])
+  df$time <- seq(1865, 1995)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "anomalies")
+  return(df_long)
+}))
+
+# Add a continent column
+anoms_long_1850$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  anoms_long_1850$continent[anoms_long_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
+
+### plot 
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+anoms_filtered <- anoms_long_1850 %>% filter(continent == selected_continent)
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  geom_hline(yintercept = 0, color= "darkgrey", linetype="dashed")+
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = anoms_filtered, aes(x = time, y = anomalies, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = anoms_filtered %>% group_by(time, region) %>% summarise(EM = mean(anomalies, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  labs(
+    x = "Year",
+    y = "PCWD anomalies (mm)",
+    title = paste("Rolling 30yr PCWD anomalies for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+
+```
+
+For 1420 period also: 
+```{r}
+# Initialize lists to store baselines
+anom_baseline <- list()
+
+# Compute baseline mean from the first 30 values of rolling mean
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  
+  anom_baseline[[region_name]] <- colMeans(rolling_mean_matrix[1:30, ], na.rm = TRUE)
+}
+
+# Initialize lists to store anomalies
+ensemble_30anom_1420 <- list()
+
+# Compute z-scores
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store anomalies
+  anoms <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute anomalies using rolling mean baseline
+  for (t in 1:num_years) {
+    anoms[t, ] <- (rolling_mean_matrix[t, ] - anom_baseline[[region_name]])
+  }
+  
+  # Store results
+  ensemble_30anom_1420[[region_name]] <- anoms
+}
+
+# Compute mean anomalies across ensemble members
+mean_30anom_1420 <- list()
+for (region_name in names(ensemble_30anom_1420)) {
+  mean_30anom_1420[[region_name]] <- rowMeans(ensemble_30anom_1420[[region_name]], na.rm = TRUE)
+}
+
+
+
+
+# Convert ensemble data into a long format for plotting individual members
+anoms_long_1420 <- do.call(rbind, lapply(names(ensemble_30anom_1420), function(region) {
+  df <- as.data.frame(ensemble_30anom_1420[[region]])
+  df$time <- seq(1435, 1835)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "anomalies")
+  return(df_long)
+}))
+
+# Add a continent column
+anoms_long_1420$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  anoms_long_1420$continent[anoms_long_1420$region %in% continent_mapping[[continent]]] <- continent
+}
+
+
+### plot 
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+anoms_filtered <- anoms_long_1420 %>% filter(continent == selected_continent)
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  geom_hline(yintercept = 0, color= "darkgrey", linetype="dashed")+
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = anoms_filtered, aes(x = time, y = anomalies, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = anoms_filtered %>% group_by(time, region) %>% summarise(EM = mean(anomalies, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  
+  labs(
+    x = "Year",
+    y = "PCWD anomalies (mm)",
+    title = paste("Rolling 30yr PCWD anomalies for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+```
+
+
+
+#### Calculate normalised version of 30yr running mean and plot - using standard scaling: 
+
+```{r}
+# Initialize lists to store baselines (median and IQR)
+anom_median <- list()
+anom_iqr <- list()
+
+# Compute baseline median and IQR from the first 30 values of rolling mean
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  
+  anom_median[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, median, na.rm = TRUE)
+  anom_iqr[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, IQR, na.rm = TRUE)
+}
+
+# Initialize lists to store robustly scaled anomalies
+ensemble_30anom_robust <- list()
+
+# Compute robust anomalies
+for (region_name in names(rolling_means)) {
+  rolling_mean_matrix <- rolling_means[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store anomalies
+  anoms <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute robustly scaled anomalies using rolling median and IQR
+  for (t in 1:num_years) {
+    anoms[t, ] <- (rolling_mean_matrix[t, ] - anom_median[[region_name]]) / anom_iqr[[region_name]]
+  }
+  
+  # Store results
+  ensemble_30anom_robust[[region_name]] <- anoms
+}
+
+# Compute mean robust anomalies across ensemble members
+mean_30anom_robust <- list()
+for (region_name in names(ensemble_30anom_robust)) {
+  mean_30anom_robust[[region_name]] <- rowMeans(ensemble_30anom_robust[[region_name]], na.rm = TRUE)
+}
+
+# Convert ensemble data into a long format for plotting individual members
+anoms_long_robust <- do.call(rbind, lapply(names(ensemble_30anom_robust), function(region) {
+  df <- as.data.frame(ensemble_30anom_robust[[region]])
+  df$time <- seq(1435, 1835)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "scaled_values")
+  return(df_long)
+}))
+
+# Add a continent column
+anoms_long_robust$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  anoms_long_robust$continent[anoms_long_robust$region %in% continent_mapping[[continent]]] <- continent
+}
+
+
+### plot 
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+anoms_robust_filtered <- anoms_long_robust %>% filter(continent == selected_continent)
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  geom_hline(yintercept = 0, color= "darkgrey", linetype="dashed")+
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = anoms_robust_filtered, aes(x = time, y = scaled_values, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = anoms_robust_filtered %>% group_by(time, region) %>% summarise(EM = mean(scaled_values, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  
+  labs(
+    x = "Year",
+    y = "PCWD scaled anomalies (mm)",
+    title = paste("Rolling 30yr PCWD scaled anomalies for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+
+```
+For 1850 epoch:
+```{r}
+# Initialize lists to store baselines (median and IQR)
+anom_median <- list()
+anom_iqr <- list()
+
+# Compute baseline median and IQR from the first 30 values of rolling mean
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  
+  anom_median[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, median, na.rm = TRUE)
+  anom_iqr[[region_name]] <- apply(rolling_mean_matrix[1:30, ], 2, IQR, na.rm = TRUE)
+}
+
+# Initialize lists to store robustly scaled anomalies
+ensemble_30anom_robust_1850 <- list()
+
+# Compute robust anomalies
+for (region_name in names(rolling_means_1850)) {
+  rolling_mean_matrix <- rolling_means_1850[[region_name]]
+  num_years <- nrow(rolling_mean_matrix)
+  
+  # Initialize matrix to store anomalies
+  anoms <- matrix(NA, nrow=num_years, ncol=ncol(rolling_mean_matrix))
+  
+  # Compute robustly scaled anomalies using rolling median and IQR
+  for (t in 1:num_years) {
+    anoms[t, ] <- (rolling_mean_matrix[t, ] - anom_median[[region_name]]) / anom_iqr[[region_name]]
+  }
+  
+  # Store results
+  ensemble_30anom_robust_1850[[region_name]] <- anoms
+}
+
+# Compute mean robust anomalies across ensemble members
+mean_30anom_robust_1850 <- list()
+for (region_name in names(ensemble_30anom_robust_1850)) {
+  mean_30anom_robust_1850[[region_name]] <- rowMeans(ensemble_30anom_robust_1850[[region_name]], na.rm = TRUE)
+}
+
+# Convert ensemble data into a long format for plotting individual members
+anoms_long_robust_1850 <- do.call(rbind, lapply(names(ensemble_30anom_robust_1850), function(region) {
+  df <- as.data.frame(ensemble_30anom_robust_1850[[region]])
+  df$time <- seq(1865, 1995)  # Adjust time range accordingly
+  df$region <- region
+  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "scaled_values")
+  return(df_long)
+}))
+
+# Add a continent column
+anoms_long_robust_1850$continent <- NA  # Initialize continent column
+for (continent in names(continent_mapping)) {
+  anoms_long_robust_1850$continent[anoms_long_robust_1850$region %in% continent_mapping[[continent]]] <- continent
+}
+
+
+### plot 
+### Plot for each region
+# Filter for selected continent
+selected_continent <- "Europe"
+anoms_robust_filtered_1850 <- anoms_long_robust_1850 %>% filter(continent == selected_continent)
+
+library(viridis)  # For viridis color palette
+
+# Plot rolling mean time series
+ggplot() +
+  geom_hline(yintercept = 0, color= "darkgrey", linetype="dashed")+
+  # Plot individual ensemble members with distinct colors
+  geom_line(data = anoms_robust_filtered_1850, aes(x = time, y = scaled_values, group = ensemble_member, 
+            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  
+  # Plot mean z-score as a bold black line
+  geom_line(data = anoms_robust_filtered_1850 %>% group_by(time, region) %>% summarise(EM = mean(scaled_values, na.rm = TRUE)),
+            aes(x = time, y = EM), color = "black", linewidth = 1) +
+  
+  labs(
+    x = "Year",
+    y = "PCWD scaled anomalies (mm)",
+    title = paste("Rolling 30yr PCWD scaled anomalies for", selected_continent)
+  ) +
+  
+  # Use Viridis color palette for ensemble members and keep black for mean
+  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
+  
+  # Customize the legend
+  guides(
+    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "pink"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  
+  facet_wrap(~region, scales = "free_y")
+
+
+```
+
+
+
+
+
 ### Gini Index for inequality
 
 - calculate Gini index for both each epoch for every gridcell
@@ -5189,5 +5812,6 @@ ggplot(gini_filtered) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
 
 ```
+
 
 
