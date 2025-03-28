@@ -1,0 +1,523 @@
+---
+title: "PCWD values from ModE-Sim vs ERA5Land output"
+author: "Patricia Helpap"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, echo=FALSE}
+library(readr)
+library(dplyr)
+library(here)
+library(lubridate)
+library(patchwork)
+library(ggplot2)
+library(cwd)
+library(ncdf4)
+library(reshape2)
+library(ggpubr)
+library(maps)
+library(raster)
+library(rnaturalearth)
+library(sf)
+library(rgdal)
+library(sp)
+library(RColorBrewer)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+library(tidyverse)
+library(abind)
+library(patchwork)
+library(gridExtra)
+library(DescTools) #for GINI calculation
+library(ggsci)
+```
+### Check PET and PRECIP data are similar
+
+```{r}
+#read in one ensemble member data from ModE-Sim
+ModE_Sim_rds <- readRDS("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m002_tidy/02_pcwd_1850/ModESim_pcwd_LON_-071.250.rds")
+lon_ModESim <- ModE_Sim_rds$lon[1]
+
+#read in one year of ERA5 regridded data: 
+input_ERA5_raw <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/ERA5Land_regridded/ERA5Land_UTCDaily.tp_pev.1968.nc"
+nc_pev <- nc_open(input_ERA5_raw)
+pev = ncvar_get(nc_pev, varid="tot_pev") #in units of m
+precip = ncvar_get(nc_pev, varid= "tot_tp") # in units of m
+lon = ncvar_get(nc_pev, varid="lon")
+lat = ncvar_get(nc_pev, varid="lat") # --- will contain less latitudes as only contains Land data
+time_ERA5 = ncvar_get(nc_pev, varid="valid_time")
+nc_close(nc_pev)
+
+#from ERA5 data only select the same longitude : ERA5 now has year 1968 and only one longitude
+lon_indices <- which(lon == lon_ModESim)
+pev_ERA5LONfiltered <- pev[lon_indices,,]  ## has NAs where there is no land
+# Remove rows with NA values
+pev_ERA5LONfiltered_no_na <- na.omit(pev_ERA5LONfiltered)
+# Check the structure of the cleaned dataset
+str(pev_ERA5LONfiltered_no_na)
+
+precip_ERA5LONfiltered <- precip[lon_indices,,] ## has NAs where there is no land
+# Remove rows with NA values
+precip_ERA5LONfiltered_no_na <- na.omit(precip_ERA5LONfiltered)
+# Check the structure of the cleaned dataset
+str(precip_ERA5LONfiltered_no_na)
+
+```
+
+
+```{r}
+### restructure ModE-Sim data of rds format to match the ERA5 data
+#from ModESim data only retain year 1968 for pet and precip 
+library(dplyr)
+library(purrr)
+
+# Function to filter each nested df for 1968 and retain only 'pet' and 'precipitation'
+filter_1968_data <- function(data_list) {
+  data_list$df <- data_list$df %>%
+    filter(lubridate::year(date) == 1968) %>%  # Keep only rows from 1968
+    dplyr::select(date, pet, precipitation)  # Retain only relevant columns
+  
+  data_list$inst <- NULL  # Remove the 'inst' list
+  
+  return(data_list)  # Return modified list
+}
+
+# Apply the function to all elements in the tibble
+filtered_tibble <- ModE_Sim_rds %>%
+  mutate(data = purrr::map(data, filter_1968_data))  # Apply to each list in 'data'
+
+# Check for NAs in the pev_ERA5LONfiltered dataset (assuming it's a matrix)
+# Convert matrix to data.frame or tibble for easier manipulation
+pev_ERA5LONfiltered_df <- as.data.frame(pev_ERA5LONfiltered)
+
+# Find the latitudes (rows) with NAs
+na_latitudes <- which(rowSums(is.na(pev_ERA5LONfiltered_df)) > 0)
+
+# Now you have the indices of the latitudes that contain NAs
+# To filter the filtered_tibble based on latitudes without NAs, first extract latitudes from your filtered_tibble
+# Assuming your filtered_tibble contains a "lat" column (or similar), we can do:
+
+# Filter out rows based on the indices in na_latitudes
+filtered_tibble_no_na <- filtered_tibble[-na_latitudes, ]
+
+# Check the structure to ensure latitudes are correctly removed
+str(filtered_tibble_no_na)
+# Display the result to verify the filtering
+filtered_tibble_no_na
+```
+Both the ERA5 pet and precip data (precip_ERA5LONfiltered_no_na and pev_ERA5LONfiltere_no_na) and the ModESim data (filtered_tibble_no_na) contain only data for one longitude, latitudes where there are no nas and only for the year 1968. We can now check the distribution of both
+```{r}
+#melt all data into vectors:
+
+#### MOD E Sim data
+# Extract all precipitation data
+precipitation_data <- filtered_tibble_no_na %>%
+  mutate(precipitation = purrr::map(data, ~ .x$df$precipitation)) %>%
+  pull(precipitation)
+
+# If you want the data as a single vector (combining all the precipitation values)
+all_precipitation_ModESim <- unlist(precipitation_data)
+
+# Extract all pet data
+pet_data <- filtered_tibble_no_na %>%
+  mutate(pet = purrr::map(data, ~ .x$df$pet)) %>%
+  pull(pet)
+
+# If you want the data as a single vector (combining all the pet values)
+all_pet_ModESim <- unlist(pet_data)
+
+### ERA 5 Land data
+#convert into mm
+precip_ERA5LONfiltered_conv <- precip_ERA5LONfiltered_no_na*1000 #from m to mm
+pev_ERA5LONfiltered_conv <- pev_ERA5LONfiltered_no_na*1000*-1
+
+all_precipitation_ERA5Land <- as.vector(precip_ERA5LONfiltered_conv)
+all_pet_ERA5Land <- as.vector(pev_ERA5LONfiltered_conv)
+
+
+##### compare data
+summary(all_pet_ModESim)
+summary(all_pet_ERA5Land)
+summary(all_precipitation_ModESim)
+summary(all_precipitation_ERA5Land)
+
+
+```
+
+plot density curves of the values
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Assuming you have the second dataset, for example:
+# all_precipitation_ERA5Land <- ... (your data)
+# Let's also assume the second dataset is stored in `all_precipitation_other`.
+
+# Combine both datasets into a single data frame for plotting
+combined_data <- tibble(
+  precipitation = c(all_precipitation_ERA5Land, all_precipitation_ModESim),
+  dataset = rep(c("ERA5Land", "ModESim"), c(length(all_precipitation_ERA5Land), length(all_precipitation_ModESim)))
+)
+
+# Plot the density curves
+ggplot(combined_data, aes(x = precipitation, fill = dataset)) +
+  geom_density(alpha = 0.4) +  # alpha controls transparency
+  scale_fill_manual(values = c("blue", "red")) +  # You can customize colors here
+  labs(
+    title = "Density Curves of Precipitation Data (1968, one longitude)",
+    x = "Precipitation [mm/d]",
+    y = "Density",
+    fill = "Dataset"
+  ) +
+  theme_minimal() +  # Use minimal theme
+  theme(
+    legend.position = "top"  # Position the legend at the top
+  )
+
+# Combine both datasets into a single data frame for plotting
+combined_data <- tibble(
+  pet = c(all_pet_ERA5Land, all_pet_ModESim),
+  dataset = rep(c("ERA5Land", "ModESim"), c(length(all_pet_ERA5Land), length(all_pet_ModESim)))
+)
+
+# Plot the density curves
+ggplot(combined_data, aes(x = pet, fill = dataset)) +
+  geom_density(alpha = 0.4) +  # alpha controls transparency
+  scale_fill_manual(values = c("blue", "red")) +  # You can customize colors here
+  labs(
+    title = "Density Curves of PET Data (1968, one longitude)",
+    x = "pet [mm/d]",
+    y = "Density",
+    fill = "Dataset"
+  ) +
+  theme_minimal() +  # Use minimal theme
+  theme(
+    legend.position = "top"  # Position the legend at the top
+  )
+
+```
+
+
+
+
+### ERA5Land data
+
+Read in and select only the overlapping years (1968-2009)
+```{r}
+#lat lon and time info from netcdf files
+##read in data
+input_file_ERA5 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/04_result/PCWD_ANNMAX.nc"
+
+nc_pwcd_ERA5 <- nc_open(input_file_ERA5)
+pcwd_annmax_ERA5 = ncvar_get(nc_pwcd_ERA5, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_ERA5, varid="lon")
+lat = ncvar_get(nc_pwcd_ERA5, varid="lat") # --- will contain less latitudes as only contains Land data
+time_ERA5 = ncvar_get(nc_pwcd_ERA5, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates_ERA5 <- reference_date + time_ERA5
+
+# Filter data to retain only years up to 2009
+years <- as.numeric(format(time_dates_ERA5, "%Y"))
+keep_indices <- which(years <= 2009)
+
+# Subset time and data arrays
+time_dates_ERA5 <- time_dates_ERA5[keep_indices]
+pcwd_annmax_ERA5 <- pcwd_annmax_ERA5[,,keep_indices]  # Assuming time is the 3rd dimension
+
+
+nc_close(nc_pwcd_ERA5)
+
+```
+
+
+
+### ModE-Sim data 
+
+Read in lat, lon and time info: 
+```{r}
+#lat lon and time info from netcdf files
+##read in data
+input_file_1850 <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/04_result_1850/PCWD_ANNMAX.nc"
+
+nc_pwcd_1850 <- nc_open(input_file_1850)
+pcwd_annmax_1850 = ncvar_get(nc_pwcd_1850, varid="pcwd_annmax")
+lon = ncvar_get(nc_pwcd_1850, varid="lon")
+lat = ncvar_get(nc_pwcd_1850, varid="lat") 
+time_1850 = ncvar_get(nc_pwcd_1850, varid="time")
+# Convert to actual dates (days since 2001-01-01)
+reference_date <- as.Date("2001-01-01")
+time_dates_1850 <- reference_date + time_1850
+
+# Filter data to retain only years up to 2009
+years <- as.numeric(format(time_dates_1850, "%Y"))
+keep_indices <- which(years >= 1968)
+
+# Subset time and data arrays
+time_dates_1850 <- time_dates_1850[keep_indices]
+pcwd_annmax_1850 <- pcwd_annmax_1850[,,keep_indices]  # Assuming time is the 3rd dimension
+
+nc_close(nc_pwcd_1850)
+```
+
+aggregate files and select only the overlapping years (1968-2009): 
+```{r}
+#### 1850 set: 
+# Define the base path - have to think of way to seperate sets once there is data!!
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/"
+
+# List all the directories within the base path
+folders <- list.files(path, full.names = TRUE)
+
+# Extract ensemble member identifiers from folder names
+ensemble_members <- basename(folders)
+
+# Identify the target files
+target_files <- file.path(folders, "04_result_1850/PCWD_ANNMAX.nc")
+target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
+
+# Filter ensemble members to match target files
+ensemble_members <- ensemble_members[file.exists(target_files)]
+
+# Initialize a list to store data for each ensemble member
+data_by_ensemble_1850 <- list()
+
+# Extract dimensions from the first file to initialize the array size for consistency
+nc <- nc_open(target_files[1])
+dim_x <- dim(ncvar_get(nc, "pcwd_annmax"))[1]
+dim_y <- dim(ncvar_get(nc, "pcwd_annmax"))[2]
+dim_z <- dim(ncvar_get(nc, "pcwd_annmax"))[3]
+nc_close(nc)
+
+# Convert time variable to actual dates (assuming "days since 2001-01-01")
+reference_date <- as.Date("2001-01-01")
+time_dates <- reference_date + time_1850
+
+# Find indices corresponding to years >= 1968
+years <- as.numeric(format(time_dates, "%Y"))
+keep_indices <- which(years >= 1968)
+
+# Loop through all the target files and filter data
+for (i in seq_along(target_files)) {
+  file <- target_files[i]
+  member <- ensemble_members[i]
+  
+  # Open the NetCDF file
+  nc <- nc_open(file)
+  
+  # Extract the data variable
+  data <- ncvar_get(nc, "pcwd_annmax")  # Adjust "pcwd_annmax" to your variable name
+  
+  # Subset data to retain only years from 1968 onwards
+  data_filtered <- data[,,keep_indices]
+  
+  # Store the filtered data in the list
+  data_by_ensemble_1850[[member]] <- data_filtered
+  
+  # Close the file
+  nc_close(nc)
+}
+
+# Output the structure of the data list
+print(names(data_by_ensemble_1850))  # Check stored ensemble members
+print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the first ensemble member
+
+```
+
+Compare global distribution of data sets
+```{r}
+#Calculate epoch mean of ModESim: 
+ensemble_array <- simplify2array(data_by_ensemble_1850)  # Shape: [192, 96, 42, 20]
+
+# Compute the ensemble mean across the 3rd dimension (time)
+ensemble_means_1850 <- apply(ensemble_array, c(1, 2, 4), mean, na.rm = TRUE)  # Shape: [192, 96, 20]
+dim(ensemble_means_1850)
+
+#Calculate epoch mean for ERA5:
+ensemble_array <- simplify2array(pcwd_annmax_ERA5)  # Shape: [192, 96, 42]
+
+# Compute the ensemble mean across the 3rd dimension (time)
+means_ERA5 <- apply(ensemble_array, c(1, 2), mean, na.rm = TRUE)  # Shape: [192, 96]
+dim(means_ERA5)
+
+```
+```{r}
+library(tidyverse)
+
+# Reshape the ensemble data: it’s a 3D array with dimensions (lon, lat, ensemble)
+ens_df <- as.data.frame.table(ensemble_means_1850, responseName = "value") %>%
+  rename(lon = Var1, lat = Var2, ensemble = Var3) %>%
+  mutate(ensemble = factor(ensemble))
+
+# Flatten the ERA5 means matrix and create a data frame.
+era5_df <- data.frame(value = as.vector(means_ERA5)) %>%
+  mutate(dataset = "ERA5")
+
+# Create the density plot
+ggplot() +
+  # Plot each ensemble member with a different colour
+  geom_density(data = ens_df, aes(x = value, group = ensemble, colour = ensemble), alpha = 0.5) +
+  # Overlay the ERA5 density in a distinct colour and line width
+  #geom_density(data = era5_df, aes(x = value), colour = "black", linewidth = 1.5) +
+  labs(title = "Density Plot Comparison",
+       x = "Value",
+       y = "Density",
+       colour = "Ensemble Member") +
+  theme_minimal()
+```
+
+
+
+```{r}
+#plot ERA5Land data to validate
+# Convert first year's data into a raster object
+r <- raster(t(means_ERA5), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+#r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+# Define custom color bins
+custom_bins <- c(0, 0.1,0.15, 0.2, 0.3, 1, 2)  # Define breaks based on data range
+# Define a custom 13-color palette from deep turquoise to bright pink with earthy tones in between
+# Updated custom color palette with two additional colors
+custom_colors <- c("#004f5a",  # New color: a darker turquoise at the beginning
+                   "#006d75", "#1a9e96", "#55c1ab", "#85c68b", "#d1c54b", "#e8b249")
+
+# Define the numeric labels for the breaks
+break_labels <- c(as.character(scales::label_number(accuracy = 1)(custom_bins[-length(custom_bins)])), "Ocean")
+
+# Define bounding box for Africa
+#bbox <- c(xmin = -30, xmax = 60, ymin = -35, ymax = 30)  # Approximate bounding box for Oceania
+
+
+# Define the ggplot2 object with the gradient scale
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
+  scale_fill_manual(name = "mean PCWD (mm)", values = custom_colors, na.value = "lightgrey", 
+                    labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
+  labs(title = "PCWD in 1850", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  theme(legend.title = element_text(size = 12),  # Adjust legend title size
+        legend.text = element_text(size = 10)) +  # Adjust legend text size
+  guides(fill = guide_legend(title = "PCWD (mm)", reverse = TRUE))  # Adjust legend for better presentation
+
+```
+Compute regional dataset for ERA5Land data: 
+
+```{r}
+library(dplyr)
+library(rJava)
+library(loadeR.java)
+library(transformeR)
+library(loadeR)
+library(visualizeR)
+library(geoprocessoR)
+library(terra)
+library(ncdf4)
+library(rnaturalearth)
+library(sf)
+
+### read in IPCC Region information:
+#Load reference regions and coastlines:
+
+load("/storage/homefs/ph23v078/Reference_regions/IPCC-WGI-reference-regions-v4_R.rda", verbose = TRUE)
+
+#simplify this object by converting it to a SpatialPolygons class object (i.e., only the polygons are retained and their attributes discarded):
+refregions <- as(IPCC_WGI_reference_regions_v4, "SpatialPolygons")
+
+# List of regions to loop over --- excludes ocean basins
+regions <- c("GIC", "NWN", "NEN", "WNA", "CNA", "ENA", "NCA", "SCA", "CAR", "NWS",
+             "NSA", "NES", "SAM", "SWS", "SES", "SSA", "NEU", "WCE", "EEU", "MED",
+             "SAH", "WAF", "CAF", "NEAF", "SEAF", "WSAF", "ESAF", "MDG", "RAR", "WSB",
+             "ESB", "RFE", "WCA", "ECA", "TIB", "EAS", "ARP", "SAS", "SEA", "NAU",
+             "CAU", "EAU", "SAU", "NZ")
+# regions <- c("GIC")
+
+########## for ERA5Land to 1849, set 1 ###########################
+#as before but loop over all regions also, saving everything in an array
+path <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024"
+folders <- list.files(path, full.names = TRUE, pattern = "04_result") #annmax files
+
+# Initialize a list to store results for all regions
+regional_results_ERA5Land <- list()
+
+# Loop over all regions
+for (region in regions) {
+  # Extract the spatial object corresponding to the current region
+  region_object <- refregions[c(region)]
+
+  # Check if the subset is valid
+  if (is.null(region_object)) {
+    warning(paste("Region not found:", region))
+    next
+  }
+
+  # Initialize a list to store spatial averages for each file in the current region
+  spatial_avg_list <- list()
+
+  folder <- file.path(path)
+    # Construct file paths for the two time periods
+  file_ERA5Land <- file.path(folder, "04_result/PCWD_ANNMAX.nc")
+
+      # Load grid data for each time period
+      grid_ERA5Land <- loadGridData(dataset = file_ERA5Land, var = "pcwd_annmax")
+
+      # Set spatial projection
+      grid_ERA5Land <- setGridProj(grid = grid_ERA5Land, proj = proj4string(refregions))
+
+      # Perform spatial overlay
+      grid_region_ERA5Land <- overGrid(grid_ERA5Land, region_object)
+
+      # Extract data arrays
+      data_array_ERA5Land <- grid_region_ERA5Land$Data[]
+
+      # Compute spatial average for each time step
+      spatial_avg <- apply(data_array_ERA5Land, 1, function(slice) {
+        mean(slice, na.rm = TRUE) # Compute mean for the spatial dimensions, ignoring NA
+      })
+
+      # Store the spatial average in the list
+      result_array_region <- spatial_avg
+
+  # Store the result for the current region
+  regional_results_ERA5Land[[region]] <- result_array_region
+}
+#save calculated list
+saveRDS(regional_results_ERA5Land, file="~/cwd_global/data/regionalResults_ERA5Land.RData") #ERA5Land regional averages
+
+
+```
+
+Read in regional ModESim data
+```{r}
+regional_results_ModESim <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
+
+```
+
+
+
+Plots: 
+- could show violin plots for each region, showing the values from ModESim with ERA5 overlayn to see where the match works well / or density curves
+- could also show as scatterplot where data should lie on 1:1 line if it represents well 

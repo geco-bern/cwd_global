@@ -47,6 +47,19 @@ library(gridExtra)
 regional_results_1420 <- readRDS("~/cwd_global/data/regionalResults_1420_1.RData") ## Model set 1
 regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData") ## Model set 1
 
+### Remove m001_tidy for areas CAU, EAU, NAU, NZ, SAU, RFE, EAS, SEA
+# List of regions where the first ensemble member should be removed
+regions_to_modify <- c("CAU", "EAU", "NAU", "NZ", "SAU", "RFE", "EAS", "SEA")
+
+# Loop through each specified region and remove the first column (m001_tidy)
+for (region in regions_to_modify) {
+  regional_results_1420[[region]] <- regional_results_1420[[region]][, -1]
+}
+
+# Check the structure again to verify the first column is removed
+#str(regional_results_1420)
+
+
 ```
 
 Calculate trend for each region: 
@@ -56,8 +69,8 @@ Calculate trend for each region:
 
 # Define parameters
 years <- 1420:(1420 + 430 - 1)  # Year range based on data length
-#window_size <- 31  # Moving window size
-window_size <- 101  # Moving window size
+window_size <- 31  # Moving window size
+# window_size <- 101  # Moving window size
 
 # Initialize a list to store results
 ensemble_trends <- list()
@@ -105,16 +118,16 @@ for (region in names(regional_results_1420)) {
 #      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
 #      xlab = "Year", ylab = "Trend (mm/yr)")
 # 
-saveRDS(ensemble_trends, file="~/cwd_global/data/1420_100yr_trends.RData")  ## 100 year trends
-#saveRDS(ensemble_trends, file="~/cwd_global/data/1420_30yr_trends.RData")  ## 30 year trends
+#saveRDS(ensemble_trends, file="~/cwd_global/data/1420_100yr_trends.RData")  ## 100 year trends
+saveRDS(ensemble_trends, file="~/cwd_global/data/1420_30yr_trends.RData")  ## 30 year trends
 
 #################################### 1850 epoch ############################################
 #running window trend analysis with 30 or 100 year windows - 1850 epoch
 
 # Define parameters
 years <- 1850:(1850 + 160 - 1)  # Year range based on data length
-#window_size <- 31  # Moving window size
-window_size <- 101  # Moving window size
+window_size <- 31  # Moving window size
+#window_size <- 101  # Moving window size
 
 # Initialize a list to store results
 ensemble_trends_1850 <- list()
@@ -163,8 +176,8 @@ for (region in names(regional_results_1850)) {
 #      main = paste("30-Year Moving Trends for", region, "- Member", ensemble),
 #      xlab = "Year", ylab = "Trend (mm/yr)")
 # 
-saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_100yr_trends.RData") 
-#saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_30yr_trends.RData")
+#saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_100yr_trends.RData") 
+saveRDS(ensemble_trends_1850, file="~/cwd_global/data/1850_30yr_trends.RData")
 
 ```
 Calculate signal (ensemble mean) and noise (standard deviation) for each region: 
@@ -173,7 +186,7 @@ Calculate signal (ensemble mean) and noise (standard deviation) for each region:
 ```{r}
 ###################### 1420 epoch ##########################
 #ensemble_trends <- readRDS("~/cwd_global/data/1420_30yr_trends.RData") ### 30 year trends
-ensemble_trends <- readRDS("~/cwd_global/data/1420_100yr_trends.RData") ## 100 year trends
+ensemble_trends <- readRDS("~/cwd_global/data/1420_30yr_trends.RData") ## 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1420 <- list()  # Mean for each region
@@ -196,7 +209,7 @@ for (region_name in names(ensemble_trends)) {
 
 ###################### 1850 epoch ##########################
 #ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_30yr_trends.RData") ### 30 year trends
-ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_100yr_trends.RData") ## 100 year trends
+ensemble_trends_1850 <- readRDS("~/cwd_global/data/1850_30yr_trends.RData") ## 100 year trends
 
 # Initialize lists to store results
 ensemble_means_1850 <- list()  # Mean for each region
@@ -375,6 +388,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink")
@@ -399,6 +413,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "orange")
@@ -423,8 +438,9 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.text = element_text(size = 10, color = "white"),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
@@ -448,6 +464,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "purple")
@@ -473,6 +490,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen")
@@ -497,6 +515,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue")
@@ -522,6 +541,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "yellow")
@@ -551,6 +571,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink")
@@ -575,6 +596,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "orange")
@@ -600,7 +622,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme(
     legend.position = "top",
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
+    strip.text = element_text(size = 10, color= "white"),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
   ) +
   facet_wrap(~region)  # Facet by region with independent y-axis scales
@@ -624,6 +646,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "purple")
@@ -649,6 +672,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen")
@@ -673,6 +697,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue")
@@ -698,6 +723,7 @@ ggplot(snr_filtered, aes(x = time, y = trend)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "yellow")
@@ -730,6 +756,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink")
@@ -753,6 +780,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "orange")
@@ -776,6 +804,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
@@ -800,6 +829,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "purple")
@@ -824,6 +854,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen")
@@ -847,6 +878,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue")
@@ -871,6 +903,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "yellow")
@@ -899,6 +932,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink")
@@ -922,6 +956,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "orange")
@@ -945,6 +980,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
@@ -969,6 +1005,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "purple")
@@ -993,6 +1030,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen")
@@ -1016,6 +1054,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue")
@@ -1040,6 +1079,7 @@ ggplot(snr_filtered, aes(x = time, y = SNR)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "yellow")
@@ -1077,6 +1117,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "pink")
@@ -1100,6 +1141,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "orange")
@@ -1124,6 +1166,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "blue")
@@ -1147,6 +1190,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "purple")
@@ -1170,6 +1214,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightgreen")
@@ -1194,6 +1239,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "lightblue")
@@ -1218,6 +1264,7 @@ ggplot(comb_snr_filtered, aes(x = time_period, y = SNR, fill = time_period)) +
   theme_classic() +
   theme(
     legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
     strip.text = element_text(size = 10),  # Size for facet labels
     strip.background = element_rect(fill = "yellow")
@@ -1335,9 +1382,10 @@ ensemble_members <- basename(folders)
 # Identify the target files
 target_files <- file.path(folders, "04_result_1420/PCWD_ANNMAX.nc")
 target_files <- target_files[file.exists(target_files)]  # Ensure only existing files are included
-
+target_files <- target_files[-1] #remove m001 file
 # Filter ensemble members to match target files
 ensemble_members <- ensemble_members[file.exists(target_files)]
+ensemble_members <- ensemble_members[-1]
 
 # Initialize a list to store data for each ensemble member
 data_by_ensemble_1420 <- list()
@@ -1385,6 +1433,9 @@ dim(ensemble_array_1420)  # Should be [192, 96, 431, 19]
 # This reduces the array to [192, 96, 431]
 ensemble_mean_1420 <- apply(ensemble_array_1420, c(1, 2, 3), mean, na.rm = TRUE)
 
+EM_1420 <- apply(ensemble_mean_1420, c(1, 2), mean, na.rm = TRUE)
+
+
 # 3. Calculate the standard deviation over the 431 years (3rd dimension)
 # This reduces the array to [192, 96] (longitude × latitude)
 std_dev_over_time_1420 <- apply(ensemble_mean_1420, c(1, 2), sd, na.rm = TRUE)
@@ -1400,7 +1451,7 @@ dim(ensemble_array_1850)  # Should be [192, 96, 431, 19]
 # 2. Calculate the mean across all ensemble members (4th dimension)
 # This reduces the array to [192, 96, 431]
 ensemble_mean_1850 <- apply(ensemble_array_1850, c(1, 2, 3), mean, na.rm = TRUE)
-
+EM_1850 <- apply(ensemble_mean_1850, c(1, 2), mean, na.rm = TRUE)
 # 3. Calculate the standard deviation over the 431 years (3rd dimension)
 # This reduces the array to [192, 96] (longitude × latitude)
 std_dev_over_time_1850 <- apply(ensemble_mean_1850, c(1, 2), sd, na.rm = TRUE)
@@ -1412,7 +1463,7 @@ Plot mean values for African regions in certain time periods
 #select year that should be plotted: 
 time_chunk_index <- 1  # Subset of the time dimension
 
-data <- ensemble_mean_1420[, , time_chunk_index]
+data <- EM_1850
 
 #plot
 # Convert first year's data into a raster object
@@ -1453,7 +1504,7 @@ ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = cut(layer, breaks = custom_bins)), na.rm = TRUE) +
   scale_fill_manual(name = "mean PCWD (mm)", values = custom_colors, na.value = "lightgrey", 
                     labels = c(levels(cut(r_df$layer, breaks = custom_bins)),"Ocean")) +  # Label ocean
-  labs(title = "PCWD in 1420", x = "Longitude", y = "Latitude") +
+  labs(title = "PCWD in 1850", x = "Longitude", y = "Latitude") +
   theme_classic() +
   geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
@@ -1821,6 +1872,10 @@ for (ensemble_name in names(data_by_ensemble_1420)) {
 # Initialize an empty list to store results
 trend_results_1850 <- list()
 
+# Define the number of years to include in trend calculation
+last_n_years <- 59  # Modify this if needed
+
+
 # Iterate through each ensemble member
 for (ensemble_name in names(data_by_ensemble_1850)) {
   # Extract the data for the current ensemble member (3D array)
@@ -1830,6 +1885,9 @@ for (ensemble_name in names(data_by_ensemble_1850)) {
   lon_dim <- dim(ensemble_data)[1]
   lat_dim <- dim(ensemble_data)[2]
   time_dim <- dim(ensemble_data)[3]
+  
+  # Determine the time indices for the last 50 years
+  last_time_indices <- max(1, time_dim - last_n_years + 1):time_dim
   
   # Create a data frame for regression: Reshape data into `grid_cell x time`
   reshaped_data <- as.data.frame(
@@ -1845,21 +1903,27 @@ for (ensemble_name in names(data_by_ensemble_1850)) {
       names_to = "time",
       values_to = "value"
     ) %>%
-    mutate(time = as.numeric(time))
+    mutate(time = as.numeric(time)) %>%
+  # Filter only the last 50 years
+    filter(time %in% last_time_indices)
   
-  # Perform linear regression for each grid cell
-  trends <- reshaped_data %>%
-    group_by(grid_id) %>%
-    summarize(
-      trend = coef(lm(value ~ time))[["time"]],  # Extract slope (trend)
-      .groups = "drop"
-    )
+# Perform linear regression for each grid cell and extract slope & p-value
+trends <- reshaped_data %>%
+  group_by(grid_id) %>%
+  summarize(
+    trend = coef(lm(value ~ time))[["time"]],  # Extract slope (trend)
+    p_value = summary(lm(value ~ time))$coefficients["time", "Pr(>|t|)"],  # Extract p-value
+    .groups = "drop"
+  )
   
   # Reshape trend data back into 2D array (lon x lat)
   trend_matrix <- matrix(trends$trend, nrow = lon_dim, ncol = lat_dim)
   
-  # Store the trend matrix in the results list
-  trend_results_1850[[ensemble_name]] <- trend_matrix
+  # Reshape p-value data back into 2D array (lon x lat)
+  p_matrix <- matrix(trends$p_value, nrow = lon_dim, ncol = lat_dim)
+  
+  # Store in results list
+  trend_results_1850[[ensemble_name]] <- list(trend = trend_matrix, p_value = p_matrix)
 }
 
 
@@ -1873,9 +1937,15 @@ mean_trend_1420 <- Reduce("+", trend_results) / length(trend_results)
 
 #range(mean_trend_1420)
 
-# Calculate the mean trend across all ensemble members for each grid cell
-mean_trend_1850 <- Reduce("+", trend_results_1850) / length(trend_results_1850)
-range(mean_trend_1850)
+# Compute the mean trend
+mean_trend_1850 <- Reduce("+", lapply(trend_results_1850, `[[`, "trend")) / length(trend_results_1850)
+
+# Compute the mean p-value
+mean_p_1850 <- Reduce("+", lapply(trend_results_1850, `[[`, "p_value")) / length(trend_results_1850)
+
+# Create a significance mask (TRUE for significant, FALSE otherwise)
+sig_mask <- mean_p_1850 < 0.05
+
 ```
 
 
@@ -1908,7 +1978,7 @@ ggplot() +
   labs(title = "Mean ANNMAX PCWD Trend (1420-1849)", x = "Longitude", y = "Latitude") +
   theme_classic() +
   
-  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.3) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
   
   theme(
@@ -1927,16 +1997,28 @@ r <- raster(t(mean_trend_1850), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=ma
 crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
 r <- flip(r, direction='y')
 
+# Convert significance mask into a raster (same dimensions as trend)
+sig_r <- raster(t(sig_mask), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(sig_r) <- "+proj=longlat +datum=WGS84"
+sig_r <- flip(sig_r, direction='y')
+
 # Retrieve land polygons and set the same CRS as the raster
 land <- ne_countries(scale = "medium", returnclass = "sf")
 land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
 
 # Mask the raster with land polygons to remove ocean values
 r_masked <- mask(r, as(land, "Spatial"))
+sig_masked <- mask(sig_r, as(land, "Spatial"))
 
 # Convert the masked raster to a data frame for ggplot2
 r_df <- as.data.frame(r_masked, xy = TRUE)
 colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+sig_df <- as.data.frame(sig_masked, xy = TRUE)
+colnames(sig_df) <- c("x", "y", "sig")
+
+# Filter non-significant grid cells
+sig_df <- sig_df %>% filter(sig == 0)  # Retain only non-significant areas
 
 # Create the plot
 ggplot() +
@@ -1951,14 +2033,18 @@ ggplot() +
   # Continuous diverging blue-red color scale centered at zero with improved scaling
   scale_fill_distiller(
     palette = "RdBu", direction = -1,
-    limits = c(-7, 7), name = "trends", na.value = "lightgrey", values = scales::rescale(c(-1, -0.1, 0, 0.1, 1))
+    limits = c(-25, 25), name = "trends", na.value = "lightgrey", values = scales::rescale(c(-1, -0.1, 0, 0.1, 1))
   ) +
   
-  labs(title = "Mean ANNMAX PCWD Trend (1850-2009)", x = "Longitude", y = "Latitude") +
+  labs(title = "Mean ANNMAX PCWD Trend (1950-2009)", x = "Longitude", y = "Latitude") +
   theme_classic() +
   
-  geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.3) +
   coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
+  
+  # Overlay non-significant areas with hatching or stippling
+  geom_point(data = sig_df, aes(x = x, y = y), shape = 4, size = 0.5, color = "black", alpha = 0.7) +  # '4' is an 'x' shape
+
   
   theme(
     legend.title = element_text(size = 12), 
