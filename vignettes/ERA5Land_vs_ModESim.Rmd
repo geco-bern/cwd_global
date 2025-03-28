@@ -507,13 +507,18 @@ for (region in regions) {
 #save calculated list
 saveRDS(regional_results_ERA5Land, file="~/cwd_global/data/regionalResults_ERA5Land.RData") #ERA5Land regional averages
 
+### to match ModE-Sim years only include until 2009 (42 years from 1968):
+regional_results_ERA5Land <- lapply(regional_results_ERA5Land, function(x) x[1:42])
+
 
 ```
 
 Read in regional ModESim data
 ```{r}
 regional_results_ModESim <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData")
-
+regional_results_ModESim <- lapply(regional_results_ModESim, function(mat) {
+  mat[(nrow(mat) - 41):nrow(mat), ]  # Extract last 42 rows to match extent of ERA5Land data
+})
 ```
 
 
@@ -521,3 +526,74 @@ regional_results_ModESim <- readRDS("~/cwd_global/data/regionalResults_1850_1.RD
 Plots: 
 - could show violin plots for each region, showing the values from ModESim with ERA5 overlayn to see where the match works well / or density curves
 - could also show as scatterplot where data should lie on 1:1 line if it represents well 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Convert ModESim data to long format
+ModESim_long <- bind_rows(lapply(names(regional_results_ModESim), function(region) {
+  data.frame(
+    Year = rep(1968:2009, times = 20),  # Repeat years for each ensemble member
+    Value = as.vector(regional_results_ModESim[[region]]),  # Flatten matrix
+    Region = region,
+    Source = "ModESim"
+  )
+}))
+
+# Convert ERA5Land data to long format (assuming it's stored in a similar list format)
+ERA5Land_long <- bind_rows(lapply(names(regional_results_ERA5Land), function(region) {
+  data.frame(
+    Year = 1968:2009,
+    Value = regional_results_ERA5Land[[region]],
+    Region = region,
+    Source = "ERA5Land"
+  )
+}))
+
+# Combine both datasets
+combined_data <- bind_rows(ModESim_long, ERA5Land_long)
+
+# Plot the violin plot
+ggplot(combined_data, aes(x = Region, y = Value, fill = Source)) +
+  geom_violin(scale = "width", alpha = 0.7) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  # Rotate x-axis labels
+  labs(title = "Comparison of ModESim and ERA5Land by Region (1968-2009)",
+       y = "PCWD Value [mm]",
+       x = "Region",
+       fill = "Dataset")
+
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggExtra)
+library(MASS)  # For density estimation
+# Merge the datasets by Year and Region
+scatter_data <- inner_join(ModESim_long, ERA5Land_long, by = c("Year", "Region"), suffix = c("_ModESim", "_ERA5Land"))
+
+# Compute 2D Kernel Density Estimation
+dens <- kde2d(scatter_data$Value_ERA5Land, scatter_data$Value_ModESim, n = 100)
+
+# Find the density values for each point in the scatter plot
+scatter_data$density <- dens$z[cbind(
+  findInterval(scatter_data$Value_ERA5Land, dens$x), 
+  findInterval(scatter_data$Value_ModESim, dens$y)
+)]
+
+# Scatter plot with density-based coloring
+ggplot(scatter_data, aes(x = Value_ERA5Land, y = Value_ModESim, color = density)) +
+  geom_point(size = 1.5) +  # Regular points, colored by density
+  geom_abline(slope = 1, intercept = 0, color = "grey42") +
+  scale_color_viridis_c(option = "plasma") +  # Heatmap-like color scheme
+  geom_smooth(method = "lm", color = "red", se = FALSE, linewidth= 0.5) +  # Trend line
+  theme_minimal() +
+  labs(title = "ERA5Land vs. ModESim (1968-2009)",
+       x = expression(PCWD[ERA5Land]),
+       y = expression(PCWD[ModE-Sim]),
+       color = "Density") +
+  theme(legend.position = "right")
+```
+
