@@ -15,6 +15,7 @@ get_cwd_annmax_doy_byLON <- function(
 ){
 
   # read cwd file tidy
+  #in_fname = in_fname[1]
   df <- readr::read_rds(in_fname)
 
   # apply annual maximum function

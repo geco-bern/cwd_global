@@ -17,7 +17,7 @@
 # Example for 1 CPU-nodes:
 # >./apply_cwd_global.R 1 1
 # # When using this script directly from RStudio, not from the shell, specify
-args <- c(1, 1)
+#args <- c(1, 1)
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
@@ -29,6 +29,7 @@ library(multidplyr)
 library(terra)
 library(tidyr)
 library(cwd)
+devtools::load_all("~/cwd/R/cwd.R")
 library(rgeco)
 library(rpmodel)
 library(parallelly)

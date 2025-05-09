@@ -30,12 +30,16 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/02_pcwd_1850"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/05_pcwd_ANNMAX_DOY_1850"
+#indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/02_pcwd_1850"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd/"
+#outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/05_pcwd_ANNMAX_DOY_1850"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/05_pcwd_ANNMAX_DOY"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
-filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
+#filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
+# # 1a) Define filenames of files to process:  -------------------------------
+filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
 
 # if (length(filnams_pcwd) <= 1){
 #   stop("Should find multiple files. Only found " ,length(filnams), ".")
