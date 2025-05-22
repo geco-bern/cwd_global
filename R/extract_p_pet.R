@@ -19,18 +19,15 @@ extract_selected_data <- function(df, selected_years) {
   df |>
     mutate(
       year = lubridate::year(date),   # Extract year
-      month = lubridate::month(date)  # Extract month
     ) |>
     filter(year %in% selected_years) |>  # Keep only selected years
-    group_by(year, month) |>  # Group by year and month
+    group_by(year) |>  # Group by year
     summarise(
-      date = min(date),   # Use the first date of the month as a reference
-      precip = mean(precip, na.rm = TRUE),
-      pet = mean(pet, na.rm = TRUE),
-      deficit = mean(deficit, na.rm = TRUE),
+      tot_precip = sum(precip, na.rm = TRUE),
+      tot_pet = sum(pet, na.rm = TRUE),
+      max_deficit = max(deficit, na.rm = TRUE),
       .groups = "drop"  # Prevents grouping issues
-    ) |>
-    select(date, precip, pet, deficit)  # Keep only relevant columns
+    )
 }
 
 # Main function to process input file
@@ -50,7 +47,7 @@ process_cwd_extract_data <- function(
     ))
 
   # Define output file name
-  path <- file.path(outdir, gsub('.rds', '_EXTRACTED.rds', basename(in_fname)))
+  path <- file.path(outdir, gsub('.rds', '_tot_p_pet.rds', basename(in_fname)))
   message(paste0("Writing file ", path, " ..."))
 
   # Write extracted data to file
@@ -59,4 +56,5 @@ process_cwd_extract_data <- function(
   # No return to save memory
   return(NULL)
 }
+
 

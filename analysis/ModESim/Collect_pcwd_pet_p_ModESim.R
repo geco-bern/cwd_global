@@ -7,13 +7,13 @@ library(lubridate)
 library(rgeco)
 
 # Paths:
-indir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_daily"
-outdir_nc <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_nc"
+indir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_p_pet/m001"
+outdir_nc <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_p_pet/collected_p_pet/m001"
 dir.create(outdir_nc, showWarnings = FALSE, recursive = TRUE)
 
 # List of variables you want to process
-varnames <- c("precip", "pet", "deficit")# We'll create a list of open ncdf4 objects, one per variable.
-filnams <- list.files(indir, pattern = paste0("ModESim_pcwd_(LON_[0-9.+-]*)_EXTRACTED.rds"), full.names = TRUE)
+varnames <- c("tot_precip", "tot_pet", "max_deficit")# We'll create a list of open ncdf4 objects, one per variable.
+filnams <- list.files(indir, pattern = paste0("ModESim_pcwd_(LON_[0-9.+-]*)_tot_p_pet.rds"), full.names = TRUE)
 
 # Function to read and process files for each variable
 process_variable_data <- function(varname) {
@@ -25,31 +25,30 @@ process_variable_data <- function(varname) {
     readr::read_rds(filnam) |> tidyr::unnest(data)
   }) |> bind_rows()
 
-  # # Output to RDS
-  # outfile_rds <- file.path(outdir_nc, paste0(varname, "_EXTRACTED.rds"))
-  # readr::write_rds(df, outfile_rds, compress = "xz")
-
   # 2) Prepare data for writing to NetCDF
-  #varname = "precip"
   prepare_write_nc <- function(df, varname) {
-    df <- df |> dplyr::select(lon, lat, date, all_of(varname)) |> arrange(date, lat, lon)
+    df <- df |> dplyr::select(lon, lat, year, all_of(varname)) |> arrange(year, lat, lon)
 
     arr <- array(
       unlist(df[[varname]]),
       dim = c(
         length(unique(df$lon)),
         length(unique(df$lat)),
-        length(unique(df$date))
+        length(unique(df$year))
       )
     )
 
     vars_list = list(arr)
     names(vars_list) <- varname
 
+    #convert numeric years to Date (Jan 1 of each year)
+    years   <- sort(unique(df$year))
+    dates   <- as.Date(paste0(years, "-01-01"))
+
     obj <- list(
       lon = sort(unique(df$lon)),
       lat = sort(unique(df$lat)),
-      time = lubridate::ymd(paste0(sort(unique(df$date)))),
+      time = dates,
       vars = vars_list
     )
 
@@ -59,7 +58,7 @@ process_variable_data <- function(varname) {
   obj <- prepare_write_nc(df, varname)
 
   # 3) Write NetCDF file
-  outfile_nc <- file.path(outdir_nc, paste0(varname, "_EXTRACTED.nc"))
+  outfile_nc <- file.path(outdir_nc, paste0(varname, "_tot_p_pet.nc"))
 
   # Get meta information on code executed:
   get_repo_info <- function(){
@@ -83,7 +82,7 @@ process_variable_data <- function(varname) {
     make_tdim = TRUE,
     path = outfile_nc,
     units_time = "days since 2001-01-01",
-    att_title = paste("Monthly means for volcanic yeras for ", varname),
+    att_title = paste("Annual totals and max PCWD for volcanic yeras for ", varname),
     att_history = sprintf(
       "Created on: %s, with R scripts from (%s) processing input data from: %s",
       Sys.Date(), get_repo_info(), indir
@@ -100,10 +99,3 @@ for (varname in varnames) {
 
 message("All NetCDF files have been created successfully.")
 
-
-# # ### check file:
-# nc_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_nc/deficit_EXTRACTED.nc"
-# nc <- nc_open(nc_file)
-# prec <- ncvar_get(nc, varid = "deficit")
-# time <- ncvar_get(nc, varid = "time")
-# nc_close(nc)

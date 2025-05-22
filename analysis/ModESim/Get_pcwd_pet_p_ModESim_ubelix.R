@@ -27,12 +27,13 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 library(ncdf4)
+library(cli)
 
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/02_pcwd_1420"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_daily"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m001_tidy/02_pcwd_1420_AbsTrsh"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_p_pet/m001"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -48,52 +49,8 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", 
 source("/storage/homefs/ph23v078/cwd_global/R/extract_p_pet.R")
 
 # 1c) Define volcanic eruption years to be extracted:
-
-#####read in volcanic data used to select years:
-#AOD years 1000 C.E. to 1900 C.E.:
-input_file <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/ModESim_forcings/1420_1/eva_holo2.2_forcing_echam_T63_ir_1000-1900.nc"
-nc_forcings <- nc_open(input_file)
-aod = ncvar_get(nc_forcings, varid="aod")[6,,] # index 6 for 500nm wavelength
-lat = ncvar_get(nc_forcings, varid="lat")
-time_1420 = ncvar_get(nc_forcings, varid="time")
-time_units <- ncatt_get(nc_forcings, "time", "units")  # Check the time units (e.g., "days since 0001-01-01")
-nc_close(nc_forcings)
-
-########### Calculate annual mean values for first epoch years:
 # Define the years of interest
-years_of_interest <- 1420:1849
-
-# Find indices of columns corresponding to the desired years
-selected_indices <- which(time_1420 %in% years_of_interest)
-
-# Subset the matrix to include only those years
-aod_selected <- aod[, selected_indices]
-time_selected <- time_1420[selected_indices]  # Corresponding time values
-
-# Create the corresponding months (repeating each year 12 times)
-months <- rep(1:12, length(time_selected) / 12)  # Assuming 12 months for each year
-
-# Create the "yyyy-mm" format using the year and month
-dates <- paste(time_selected, sprintf("%02d", months), sep = "-")  # sprintf adds leading zero for months < 10
-
-# Now dates is in "yyyy-mm" format
-head(dates)  # Check the first few entries
-
-# Compute the mean over latitudes (first dimension)
-mean_latitude <- apply(aod_selected, 2, mean, na.rm = TRUE)
-
-# Convert to a data frame for easier manipulation
-aod_1420_df <- data.frame(dates = dates, mean_value = mean_latitude)
-aod_1420_df$dates <- lubridate::ym(aod_1420_df$dates)
-selected_aod <- aod_1420_df %>% dplyr::filter(mean_value >= 0.01)
-selected_aod$year <- format(selected_aod$dates, "%Y")
-
-# Get unique years with volcanic eruptions
-eruption_years <- as.numeric(unique(selected_aod$year))
-# Generate a sequence of years for each eruption year (-2 to +2)
-selected_years <- unique(unlist(lapply(eruption_years, function(year) seq(year - 2, year + 2))))
-
-
+selected_years <- c(1420:1449, 1783, 1784, 1815, 1816)
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
@@ -128,10 +85,6 @@ cl <- multidplyr::new_cluster(ncores) |>
 # indices of this chunk
 # 3) Process files --------------------------------------------------------
 
-# Once for pcwd
-
-#in_fname <- in_fname[1]
-
 out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
@@ -141,7 +94,3 @@ out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
       outdir          = outdir,
       selected_years = selected_years))
   ) |> collect()
-
-
-#### test: read in finished rds file
-#check <- readRDS("/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/test_daily/ModESim_pcwd_LON_-001.875_EXTRACTED.rds")

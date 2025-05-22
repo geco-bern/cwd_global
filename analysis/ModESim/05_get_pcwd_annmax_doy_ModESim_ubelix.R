@@ -29,11 +29,10 @@ library(multidplyr)
 
 
 # adjust the paths of the indirectory and outdirectory to
-# where your cwd and pcwd data is
-#indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/02_pcwd_1850"
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd/"
+#indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/02_pcwd_1850"    ## ModESim path
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd/"       ## ERA5Land path
 #outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/05_pcwd_ANNMAX_DOY_1850"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/05_pcwd_ANNMAX_DOY"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/05_pcwd_ANNMAX_DOY_test"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------

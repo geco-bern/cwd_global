@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="PCWD annmax 1420 set"
+#SBATCH --job-name="PCWD annmax ERA5Land"
 #SBATCH --time=01:00:00
 #SBATCH --partition=icpu-stocker # if you have access, this gives you priority
 #SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
@@ -7,7 +7,7 @@
 #SBATCH --mem-per-cpu=16G
 #SBATCH --mail-user=patricia.helpap@students.unibe.ch
 #SBATCH --mail-type=fail               # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
-#SBATCH --chdir=cwd_global/analysis  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+#SBATCH --chdir=cwd_global/analysis/ERA5Land  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 
 echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
@@ -16,6 +16,6 @@ module load R
 
 ## Run a small test R script using parallel workers
 ##Rscript GitHub/fabern/parallelization-tests/01_example_future.R # If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
-Rscript 03_get_pcwd_annmax_ModESim_ubelix.R 1 1   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+Rscript 03_get_pcwd_annmax_ERA5Land_ubelix.R 1 1   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
 
 echo "Finished on: $(date --rfc-3339=seconds)"

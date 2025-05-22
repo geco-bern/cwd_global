@@ -8,18 +8,15 @@
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
+library(tidyr)
+library(lubridate)
+library(purrr)
 
-#GIUB server paths:
-#indir        <- "~/scratch2/m001_tidy/03_pcwd_ANNMAX"
-#outfile_pcwd <- "~/scratch2/m001_tidy/02_5_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
-
-indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/03_pcwd_ANNMAX_1850"
-outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/04_result_1850/PCWD_ANNMAX" # adjust path to where the file should be written to
-
-
+indir       <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m017_tidy/02_1_pcwd_1420"
+outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m017_tidy/02_2_pcwd_result_1420/PCWD_maxlen" # adjust path to where the file should be written to
 
 # 1) Define filenames of files to collect:  -------------------------------
-filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_ANNMAX.rds", full.names = TRUE)
+filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_MAXLEN.rds", full.names = TRUE)
 
 # if (length(filnams_cwd) <= 1){
 #   stop("Should find multiple files. Only found " ,length(filnams_cwd), ".")
@@ -27,7 +24,7 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_ANNMAX
 
 # 3) Process files --------------------------------------------------------
 df_pcwd <- lapply(filnams_pcwd,
-              function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
+                  function(filnam) {readr::read_rds(filnam) |> tidyr::unnest(data)}) |>
   bind_rows()
 
 dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
@@ -43,19 +40,17 @@ library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 prepare_write_nc2 <- function(df_cwd, varname){
   # create object that can be used with write_nc2()
   df_cwd <- df_cwd |>
-    dplyr::select(lon, lat, year, max_deficit) |>
+    dplyr::select(lon, lat, year, max_len) |>
     arrange(year, lat, lon)
 
   arr <- array(
-    unlist(df_cwd$max_deficit),
+    unlist(df_cwd$max_len),
     dim = c(
       length(unique(df_cwd$lon)),
       length(unique(df_cwd$lat)),
       length(unique(df_cwd$year))
     )
   )
-
-  # image(arr[,,1])
 
   # create object for use in rgeco::write_nc2()
   vars_list = list(arr)
@@ -76,7 +71,7 @@ prepare_write_nc2 <- function(df_cwd, varname){
   return(obj)
 }
 
-obj_pcwd <- prepare_write_nc2(df_pcwd, varname="pcwd_annmax")
+obj_pcwd <- prepare_write_nc2(df_pcwd, varname="pcwd_maxlen")
 
 # Get meta information on code executed:
 get_repo_info <- function(){
@@ -98,17 +93,14 @@ get_repo_info()
 
 rgeco::write_nc2(
   obj_pcwd,
-  varnams = "pcwd_annmax",
+  varnams = "pcwd_maxlen",
   make_tdim = TRUE,
   path = paste0(outfile_pcwd, ".nc"),
   units_time = "days since 2001-01-01",
-  att_title      = "Global Potential Cumulative Water Deficit",
+  att_title      = "Global PCWD Maximum Annual Event Lengths",
   att_history    = sprintf(
     "Created on: %s, with R scripts from (%s) processing input data from: %s",
     Sys.Date(), get_repo_info(), indir)
 )
-
-
-
 
 

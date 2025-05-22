@@ -9,21 +9,17 @@ library(dplyr)
 library(map2tidy)
 library(multidplyr)
 
-#GIUB server paths:
-#indir        <- "~/scratch2/m001_tidy/03_pcwd_ANNMAX"
-#outfile_pcwd <- "~/scratch2/m001_tidy/02_5_pcwd_result/PCWD_deficit" # adjust path to where the file should be written to
-
-#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/05_pcwd_ANNMAX_DOY_1420"
-indir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/05_pcwd_ANNMAX_DOY"
+#indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/05_pcwd_ANNMAX_DOY_1420"   ## ModESim path
+indir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/05_pcwd_ANNMAX_DOY"    ## ERA5Land path
 #outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m020_tidy/06_DOY_1420/PCWD_ANNMAX_DOY" # adjust path to where the file should be written to
 outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/06_DOY/PCWD_ANNMAX_DOY"
 
 
 # 1) Define filenames of files to collect:  -------------------------------
-#filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_ANNMAX_DOY.rds", full.names = TRUE)
+#filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*)_ANNMAX_DOY.rds", full.names = TRUE)  ## ModESim file names
 
 # # 1) Define filenames of files to collect:  -------------------------------
-filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*)_ANNMAX_DOY.rds", full.names = TRUE)
+filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*)_ANNMAX_DOY.rds", full.names = TRUE)  ## ERA5Land file names
 
 # if (length(filnams_cwd) <= 1){
 #   stop("Should find multiple files. Only found " ,length(filnams_cwd), ".")
@@ -37,7 +33,7 @@ df_pcwd <- lapply(filnams_pcwd,
 dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
 readr::write_rds(
   df_pcwd,
-  paste0(outfile_pcwd, ".rds"), compress = "xz") # file.path(indir,paste0(fileprefix, "_ANNMAX.rds"))
+  paste0(outfile_pcwd, ".rds"), compress = "xz") # file.path
 
 
 

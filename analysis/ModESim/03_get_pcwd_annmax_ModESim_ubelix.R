@@ -30,8 +30,8 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/02_pcwd_1850"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m014_tidy/03_pcwd_ANNMAX_1850"
+indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m017_tidy/02_pcwd_1420"
+outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m017_tidy/03_pcwd_ANNMAX_1420"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -76,8 +76,6 @@ cl <- multidplyr::new_cluster(ncores) |>
 # distribute computation across the cores, calculating for all longitudinal
 # indices of this chunk
 # 3) Process files --------------------------------------------------------
-
-# Once for pcwd
 out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
