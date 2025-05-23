@@ -71,7 +71,7 @@ time_1420 = ncvar_get(nc_pwcd_1420, varid="time")
 time_dates_1420 <- reference_date + time_1420
 
 # # Print the resulting dates
-print(annmax_doy_1420)
+#print(annmax_doy_1420)
 
 nc_close(nc_pwcd_1420)
 ```
@@ -182,6 +182,29 @@ print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the f
 
 Combine into 4D array and calculate ensemble mean: 
 ```{r}
+data_combined <- list()
+
+# Loop over each ensemble member
+for (i in names(data_by_ensemble_1420)) {
+  # Remove last year from 1420 dataset (assumes 3rd dimension is time)
+  data_1420_trimmed <- data_by_ensemble_1420[[i]][,,1:(dim(data_by_ensemble_1420[[i]])[3] - 1)]
+  
+  # Bind with 1850 data (all years)
+  data_combined[[i]] <- abind::abind(
+    data_1420_trimmed,
+    data_by_ensemble_1850[[i]],
+    along = 3
+  )
+}
+
+mean_ensemble_combined <- array(NA, dim = c(192, 96, 590))
+# Compute the mean over all ensemble members
+ensemble_array <- simplify2array(data_combined)  # Convert list to array
+mean_ensemble_combined <- apply(ensemble_array, c(1,2,3), mean, na.rm = TRUE) #time mean
+mean_over_time_comb <- apply(mean_ensemble_combined, c(1,2), mean)
+
+
+
 # Combine the list into a 4D array
 ensemble_array_1420 <- abind(data_by_ensemble_1420, along = 4)
 
@@ -240,7 +263,7 @@ ggplot() +
   geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
   scale_fill_gradientn(
     name = "DOY", 
-    colors = c("#313695", "#1a9850", "#fee08b", "#d73027"),  # Seasonal transition
+    colors = c("#3E4594", "#3D996B", "#FEE08B", "#D65C3C"),  # Seasonal transition
     limits = c(1, 365), 
     na.value = "lightgrey"
   ) +
@@ -293,7 +316,45 @@ ggplot() +
   guides(fill = guide_colorbar(title = "DOY"))  # Improves legend readability
 
 ```
-Could also look at changes in DOY value: 
+
+```{r}
+##### same plot for 600 years: 
+#plot
+# Convert first year's data into a raster object
+r <- raster(t(mean_over_time_comb), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))
+crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
+r <- flip(r, direction='y')
+
+# Retrieve land polygons and set the same CRS as the raster
+land <- ne_countries(scale = "medium", returnclass = "sf")
+land <- st_transform(land, crs = st_crs(r))  # Ensure CRS alignment
+
+# Mask the raster with land polygons to remove ocean values
+r_masked <- mask(r, as(land, "Spatial"))
+
+# Convert the masked raster to a data frame for ggplot2
+r_df <- as.data.frame(r_masked, xy = TRUE)
+colnames(r_df) <- c("x", "y", "layer")  # Rename columns to match ggplot expectations
+
+ggplot() +
+  geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
+  scale_fill_gradientn(
+    name = "DOY", 
+    colors = c("#3E4594", "#3D996B", "#FEE08B", "#D65C3C"),  # Seasonal transition
+    limits = c(1, 365), 
+    na.value = "grey50"
+  ) +
+  labs(title = "Mean DOY of Annmax PCWD over 600 years", x = "Longitude", y = "Latitude") +
+  theme_classic() +
+  geom_sf(data = land, fill = NA, color = "black", lwd = 0.3) +
+  coord_sf(xlim =	c(-180, 178.125), ylim =	c(-60, 90), expand = FALSE) + #leave out Antarctica
+    theme(legend.title = element_text(size=13), legend.text = element_text(size=13), 
+        axis.text = element_text(size=13), axis.title = element_text(size=12)) +
+  guides(fill = guide_colorbar(title = "DOY"))  # Improves legend readability
+
+```
+
+Changes in DOY value: 
 
 ```{r}
 delta_DOY = mean_over_time_1850 - mean_over_time_1420

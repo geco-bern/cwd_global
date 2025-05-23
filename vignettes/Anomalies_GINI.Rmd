@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Load relevant libraries:
 ```{r libraries, message=FALSE, echo=FALSE}
 library(readr)
 library(dplyr)
@@ -41,12 +42,13 @@ library(DescTools) #for GINI calculation
 library(ggsci)
 ```
 
-### Anomalies wrt anomaly
+# Anomaly analysis of PCWD regional time series
 
-- calculate timeseries of moving anomalies wrt a reference; try 1420-1450 as reference, 30 year window? Use PCWD mean values
-- timeseries for each region including std? 
-- calculate anomalies as in value(t) - mean(1420-1450) and plot
+- calculate timeseries of rolling anomalies wrt a reference: 1420-1450 as reference for epoch 1; 1851-1880 for epoch 2
+- anomalies: value(t) - mean(1420-1450)
 
+
+Load regional aggregated data:
 ```{r}
 #read in aggregated regional data
 # #Load with
@@ -57,13 +59,10 @@ regional_results_1850 <- readRDS("~/cwd_global/data/regionalResults_1850_1.RData
 # List of regions where the first ensemble member should be removed
 regions_to_modify <- c("CAU", "EAU", "NAU", "NZ", "SAU", "RFE", "EAS", "SEA")
 
-# Loop through each specified region and remove the first column (m001_tidy)
+# Loop through each specified region and remove the first column (m001_tidy) - bias over Oceania
 for (region in regions_to_modify) {
   regional_results_1420[[region]] <- regional_results_1420[[region]][, -1]
 }
-
-# Check the structure again to verify the first column is removed
-#str(regional_results_1420)
 
 
 ```
@@ -81,219 +80,9 @@ continent_mapping <- list(
 )
 ```
 
+## Volcanic forcing impact on PCWD annual anomalies
 
-## Check distribution of values for individual ensemble members --> gridcell wise analysis from lines 3970
-```{r}
-# Convert the list to a long format data frame
-regional_df <- map_dfr(names(regional_results_1420), 
-                       ~ tibble(value = as.vector(regional_results_1420[[.x]]),
-                                ensemble = rep(colnames(regional_results_1420[[.x]]), each = nrow(regional_results_1420[[.x]])),
-                                region = .x)) 
-regional_df$continent <- NA  # Initialize continent column
-
-for (continent in names(continent_mapping)) {
-  regional_df$continent[regional_df$region %in% continent_mapping[[continent]]] <- continent
-}
-
-# # Define the ensemble members you want to keep
-# selected_ensembles <- c("m001_tidy", "m010_tidy", "m020_tidy")  # Modify as needed
-# regional_df <- regional_df %>% 
-#   filter(ensemble %in% selected_ensembles)  # Filter selected ensembles
-
-
-selected_continent <- "Europe"
-#"NAU, CAU, NZ, EAU, SAU"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Asia"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Australia"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Africa"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "North America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "South America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Central America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-```
-## Check distribution of values for individual ensemble members - 1850 epoch
-```{r}
-# Convert the list to a long format data frame
-regional_df <- map_dfr(names(regional_results_1850), 
-                       ~ tibble(value = as.vector(regional_results_1850[[.x]]),
-                                ensemble = rep(colnames(regional_results_1850[[.x]]), each = nrow(regional_results_1850[[.x]])),
-                                region = .x)) 
-regional_df$continent <- NA  # Initialize continent column
-
-for (continent in names(continent_mapping)) {
-  regional_df$continent[regional_df$region %in% continent_mapping[[continent]]] <- continent
-}
-
-# # Define the ensemble members you want to keep
-# selected_ensembles <- c("m001_tidy", "m010_tidy", "m020_tidy")  # Modify as needed
-# regional_df <- regional_df %>% 
-#   filter(ensemble %in% selected_ensembles)  # Filter selected ensembles
-
-
-selected_continent <- "Europe"
-#"NAU, CAU, NZ, EAU, SAU"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Asia"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Australia"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Africa"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "North America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "South America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-
-selected_continent <- "Central America"
-filtered <- regional_df %>% filter(continent == selected_continent) 
-
-# Plot the density distributions
-ggplot(filtered, aes(x = value, fill = ensemble, color = ensemble)) +
-  geom_density(alpha = 0.3) +
-  facet_wrap(~region, scales = "free") +
-  theme_minimal() +
-  labs(title = paste("Density of Values by Region and Ensemble Members for", selected_continent),
-       x = "PWCD [mm]", y = "Density") +
-  theme(legend.position = "bottom")
-```
-
-
-
-
+Load volcanic forcing data for ModE-Sim set 1:
 ```{r}
 #read in volcanic forcing data for set 1: 
 #AOD years 1000 C.E. to 1900 C.E.:
@@ -366,7 +155,7 @@ aod_annual_mean_1850 <- aod_annual_mean_1850 %>%
 
 
 ```{r}
-################################converting 1420 -1849 AOD into monthly format for SEA ---> jump to line 1831
+################################converting 1420 -1849 AOD into monthly format
 # Convert year to Date if necessary (since it's currently in 'yyyy-mm' format)
 # Convert the 'year' column to Date using lubridate's ym() function
 aod_1420_df$dates <- lubridate::ym(aod_1420_df$dates)
@@ -374,14 +163,6 @@ aod_1420_df$dates <- lubridate::ym(aod_1420_df$dates)
 # Check the result
 head(aod_1420_df$dates)
 
-# Histogram with overlayed density curve
-ggplot(aod_1420_df, aes(x = mean_value)) +
-  geom_histogram(aes(y = ..density..), bins = 30, fill = "skyblue", color = "black", alpha = 0.6) +
-  geom_density(color = "red", size = 1) +  # Add density curve
-  labs(title = "Histogram with Density Curve", 
-       x = "Mean Value", 
-       y = "Density") +
-  theme_minimal()
 
 # Line plot
 ggplot(aod_1420_df, aes(x = dates, y = mean_value)) +
@@ -396,7 +177,7 @@ ggplot(aod_1420_df, aes(x = dates, y = mean_value)) +
 ```
 
 
-Anomalies for each time step: 
+Calculate PCWD anomalies for each time step: 
 
 ```{r}
 ### calculate anomalies for both epochs based on reference time 1420-1450
@@ -474,7 +255,7 @@ for (region_name in names(regional_results_1850)) {
 
 ```
 
-For simplicity: linear detrending of the data:
+For simplicity: linear detrending of the data to remove warming trends etc:
 
 ```{r}
 # Function to linearly detrend a time series
@@ -1486,10 +1267,10 @@ ggplot(anom_filtered, aes(x = time, y = anomalies, color = "PCWD anomalies")) +
 
 ```
 
+### Spatial PCWD anomalies after volcanic eruptions:
 
-
-Maps showing anomalies (annual) for specific 30-year periods (e.g. volcanic eruptions, trends etc)
-- showing Europe after 1783 eruption (Laki? - caused french revolution)
+Maps showing annual anomalies
+- showing Europe after 1783 eruption (Laki)
 - showing North America 
 - showing Central America
 
@@ -1634,127 +1415,6 @@ print(dim(data_by_ensemble_1850[[1]]))  # Check dimensions of the data for the f
 
 ```
 
-Subtract one ensemble members from the mean of the others to check for outliers in individual ensemble Members
-
-1420 epoch: 
-
-```{r}
-############# as a for loop for 1420 epoch: 
-
-# Load land polygons for masking
-land <- ne_countries(scale = "medium", returnclass = "sf")
-
-# Step 1: Compute temporal mean for each ensemble member
-temporal_means <- map(data_by_ensemble_1420, ~ apply(.x, c(1, 2), mean, na.rm = TRUE))
-
-# Loop through each ensemble member to generate plots
-for (excluded_member in names(temporal_means)) {
-  
-  # Step 2: Compute mean of all ensemble members except the excluded one
-  mean_of_rest <- Reduce("+", temporal_means[names(temporal_means) != excluded_member]) / 
-                  (length(temporal_means) - 1)
-  
-  # Step 3: Compute difference (bias)
-  spatial_bias <- temporal_means[[excluded_member]] - mean_of_rest
-
-  # Convert spatial bias data to a raster
-  r <- raster(t(spatial_bias), xmn = min(lon), xmx = max(lon), ymn = min(lat), ymx = max(lat))
-  crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
-  r <- flip(r, direction = 'y')  # Flip to match coordinate orientation
-
-  # Ensure CRS alignment and mask ocean areas
-  land <- st_transform(land, crs = st_crs(r))
-  r_masked <- mask(r, as(land, "Spatial"))
-
-  # Convert to data frame for ggplot2
-  r_df <- as.data.frame(r, xy = TRUE)
-  colnames(r_df) <- c("x", "y", "layer")
-
-  # Ensure numeric values for plotting
-  r_df$layer <- as.numeric(r_df$layer)
-
-  # Plot using ggplot2
-  p <- ggplot() +
-    geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
-    scale_fill_distiller(name = "PCWD difference [mm]", 
-                         palette = "RdBu",  
-                         values = scales::rescale(c(-2300, -500, 500, 2300)),  
-                         limits = c(-2300, 2300),  
-                         na.value = "lightgrey") +  
-    labs(title = paste("1420 Epoch Difference: Ensemble", excluded_member, "vs. Mean of Others"), 
-         x = "Longitude", y = "Latitude") +
-    theme_classic() +
-    geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
-    coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +  
-    theme(legend.title = element_text(size = 12),
-          legend.text = element_text(size = 10),
-          plot.title = element_text(face = "bold"))
-  
-  # Display the plot (click through manually)
-  print(p)
-}
-```
-
-1850 epoch: 
-
-```{r}
-############# as a for loop for 1850 epoch: 
-
-# Load land polygons for masking
-land <- ne_countries(scale = "medium", returnclass = "sf")
-
-# Step 1: Compute temporal mean for each ensemble member
-temporal_means <- map(data_by_ensemble_1850, ~ apply(.x, c(1, 2), mean, na.rm = TRUE))
-
-# Loop through each ensemble member to generate plots
-for (excluded_member in names(temporal_means)) {
-  
-  # Step 2: Compute mean of all ensemble members except the excluded one
-  mean_of_rest <- Reduce("+", temporal_means[names(temporal_means) != excluded_member]) / 
-                  (length(temporal_means) - 1)
-  
-  # Step 3: Compute difference (bias)
-  spatial_bias <- temporal_means[[excluded_member]] - mean_of_rest
-
-  # Convert spatial bias data to a raster
-  r <- raster(t(spatial_bias), xmn = min(lon), xmx = max(lon), ymn = min(lat), ymx = max(lat))
-  crs(r) <- "+proj=longlat +datum=WGS84"  # Set CRS for raster
-  r <- flip(r, direction = 'y')  # Flip to match coordinate orientation
-
-  # Ensure CRS alignment and mask ocean areas
-  land <- st_transform(land, crs = st_crs(r))
-  r_masked <- mask(r, as(land, "Spatial"))
-
-  # Convert to data frame for ggplot2
-  r_df <- as.data.frame(r, xy = TRUE)
-  colnames(r_df) <- c("x", "y", "layer")
-
-  # Ensure numeric values for plotting
-  r_df$layer <- as.numeric(r_df$layer)
-
-  # Plot using ggplot2
-  p <- ggplot() +
-    geom_raster(data = r_df, aes(x = x, y = y, fill = layer), na.rm = TRUE) +
-    scale_fill_distiller(name = "PCWD difference [mm]", 
-                         palette = "RdBu",  
-                         values = scales::rescale(c(-2300, -500, 500, 2300)),  
-                         limits = c(-2300, 2300),  
-                         na.value = "lightgrey") +  
-    labs(title = paste("1850 Epoch Difference: Ensemble", excluded_member, "vs. Mean of Others"), 
-         x = "Longitude", y = "Latitude") +
-    theme_classic() +
-    geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +
-    coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +  
-    theme(legend.title = element_text(size = 12),
-          legend.text = element_text(size = 10),
-          plot.title = element_text(face = "bold"))
-  
-  # Display the plot (click through manually)
-  print(p)
-}
-```
-
-
 Compute anomalies for each time step:
 ```{r}
 ## Anomaly global grid cell values for 1420 epoch: 
@@ -1835,7 +1495,6 @@ plot maps:
 # Load land data for filling continents
 land <- ne_countries(scale = "medium", returnclass = "sf")
 
-
 ```
 
 Region specifications: 
@@ -1849,7 +1508,7 @@ South America	c(-85, -30)	c(-60, 15)
 Australia	c(110, 180)	c(-50, 0)
 
 ```{r}
-#global z-score map for 1783: 
+#global anomaly map for 1783: 
 # Find the index for the year specified
 year_index <- 1783 - 1420 + 1  #-1420 or 1850 depending on dataset
 plot_data <- anom_array_1420[,,year_index] #specify dataset, 1420 or 1850
@@ -1893,152 +1552,11 @@ ggplot() +
 
 
 ```
-
-## Superimposed epoch analysis for volcanic years
-
-Select AOD > 0.01 for large stratospheric eruptions
-
-```{r}
-# Convert ensemble data into a long format for plotting individual members
-aod_anoms_long_1420 <- do.call(rbind, lapply(names(ens_anoms_1420), function(region) {
-  df <- as.data.frame(ens_anoms_1420[[region]])
-  df$time <- seq(1420, 1849)  # Adjust time range accordingly
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "anomalies")
-  return(df_long)
-}))
-
-# Add a continent column
-aod_anoms_long_1420$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  aod_anoms_long_1420$continent[aod_anoms_long_1420$region %in% continent_mapping[[continent]]] <- continent
-}
-
-selected_aod <- aod_1420_df %>% dplyr::filter(mean_value >= 0.01)
-selected_aod$year <- format(selected_aod$dates, "%Y")
-
-# Get unique years with volcanic eruptions
-eruption_years <- as.numeric(unique(selected_aod$year))
-
-# Filter the anomalies dataframe to include years before, during, and after eruptions
-aod_filtered_anoms <- aod_anoms_long_1420 %>%
-  filter(time %in% c(eruption_years - 1, eruption_years, eruption_years + 1))
-
-# Check the result
-head(aod_filtered_anoms)
-
-```
-
-```{r}
-##prepare for SEA
-
-# Add a column for the relative year with respect to the eruption year (-1 for the year before, 0 for the eruption year, 1 for the year after)
-aod_filtered_anoms <- aod_filtered_anoms %>%
-  mutate(relative_year = case_when(
-    time %in% (eruption_years - 1) ~ -1,
-    time %in% eruption_years ~ 0,
-    time %in% (eruption_years + 1) ~ 1
-  ))
-
-# Filter to only keep the anomalies for the years -1, 0, and 1
-sea_anomalies <- aod_filtered_anoms %>%
-  filter(relative_year %in% c(-1, 0, 1))
-
-# Check the result
-head(sea_anomalies)
-
-# First, calculate the ensemble mean for each region and relative year
-ensemble_mean_df <- sea_anomalies %>%
-  group_by(region, continent, relative_year) %>%
-  summarise(mean_anomaly = mean(anomalies, na.rm = TRUE))
-
-# Check the result
-head(ensemble_mean_df)
-
-### Plot for each region
-# Filter for selected continent
-selected_continent <- "Europe"
-sea_anomalies_fil <- sea_anomalies %>% filter(continent == selected_continent)
-ens_anomalies_fil <- ensemble_mean_df %>% filter(continent == selected_continent)
-
-ggplot() +
-  geom_line(data= sea_anomalies_fil, aes(x = relative_year, y = anomalies, color = ensemble_member, group = ensemble_member),alpha = 0.3) +  # Plot each ensemble member with transparency
-  geom_line(data = ens_anomalies_fil, aes(x = relative_year, y = mean_anomaly), color = "black", linewidth = 1.5) +  # Plot the ensemble mean with a thicker black line
-  facet_wrap(~ region, scales = "free_y") +  # Create a separate plot for each region
-  scale_x_continuous(breaks = c(-1, 0, 1), labels = c("Year Before", "Eruption", "Year After")) +  # Custom x-axis labels
-  labs(title = "Anomalies Before, During, and After Volcanic Eruptions by Region",
-       x = "Relative Year", 
-       y = "Anomaly",
-       color = "Ensemble Member") +
-  theme_minimal() +
-  theme(legend.position = "right")
-
-
-```
-
-```{r}
-# Step 1: Create a dataframe of all eruption years expanded per ensemble_member and region
-eruption_df <- expand.grid(
-  eruption_year = eruption_years,
-  ensemble_member = unique(aod_filtered_anoms$ensemble_member),
-  region = unique(aod_filtered_anoms$region),
-  stringsAsFactors = FALSE
-)
-
-# Step 2: Join eruption_df with your data (add continent info back if needed)
-# We'll add -1, 0, 1 for relative years
-relative_years <- -1:1
-eruption_df_expanded <- eruption_df %>%
-  slice(rep(1:n(), each = length(relative_years))) %>%
-  mutate(relative_year = rep(relative_years, times = nrow(eruption_df)),
-         time = eruption_year + relative_year)
-
-# Step 3: Join this with the anomaly data
-sea_anomalies_aligned <- eruption_df_expanded %>%
-  left_join(aod_filtered_anoms, by = c("time", "ensemble_member", "region"))
-
-# Optional: remove rows with NA anomalies
-sea_anomalies_aligned <- sea_anomalies_aligned %>%
-  filter(!is.na(anomalies)) %>%
-  dplyr::select(-relative_year.y) %>%   # remove the duplicate
-  rename(relative_year = relative_year.x)
-
-# Step 4: Ensemble mean
-ensemble_mean_df <- sea_anomalies_aligned %>%
-  group_by(region, continent, relative_year) %>%
-  summarise(mean_anomaly = mean(anomalies, na.rm = TRUE), .groups = "drop")
-
-```
-
-```{r}
-selected_continent <- "North America"
-sea_anomalies_fil <- sea_anomalies_aligned %>% filter(continent == selected_continent)
-ens_anomalies_fil <- ensemble_mean_df %>% filter(continent == selected_continent)
-
-ggplot() +
-  geom_line(data= sea_anomalies_fil, aes(x = relative_year, y = anomalies, color = ensemble_member, group = interaction(ensemble_member, eruption_year)), alpha = 0.3) +
-  geom_line(data = ens_anomalies_fil, aes(x = relative_year, y = mean_anomaly), color = "black", linewidth = 1.5) +
-  facet_wrap(~ region, scales = "free_y") +
-  scale_x_continuous(breaks = c(-1, 0, 1), labels = c("-1 Year", "Eruption", "+1 Year")) +
-  labs(title = "Superimposed Epoch Analysis for North America",
-       x = "Relative Year", 
-       y = "PCWD anomaly [mm]",
-       color = "Ensemble Member") +
-  theme_minimal() +
-  theme(legend.position = "right")
-```
-
-
-
+## Rolling 30 year anomaly timeseries for both epoch
 
 ### Check method for 30 year anomalies + anomalies for all regions
 
-Standard deviations for z-scores seem to be blowing up z-score results artificially
-- check absolute values first before normalising
-- try normalisation instead of standardization to avoid blown up values outside of the reference period
-
-Calculate rolling means: 
-
+Calculate rolling 30-year means: 
 ```{r}
 # Initialize list to store rolling 30-year means
 rolling_means <- list()
@@ -2065,7 +1583,7 @@ for (region_name in names(regional_results_1420)) {
   rolling_means[[region_name]] <- rolling_mean_matrix
 }
 
-####################### 1850 epoch z-scores
+####################### 1850 epoch anomalies
 # Initialize list to store rolling 30-year means
 rolling_means_1850 <- list()
 
@@ -2092,259 +1610,6 @@ for (region_name in names(regional_results_1850)) {
 }
 ```
 
-```{r}
-### raw 1420 regional data
-raw_1420 <- do.call(rbind,lapply(names(regional_results_1420), function(region) {
-  df <- as.data.frame(regional_results_1420[[region]])
-  df$time <- seq(1420,1849)
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "PCWD")
-  return(df_long)
-}))
-
-# Add a continent column
-raw_1420$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  raw_1420$continent[raw_1420$region %in% continent_mapping[[continent]]] <- continent
-}
-
-# Filter for selected continent
-selected_continent <- "Australia"
-raw_filtered <- raw_1420 %>% filter(continent == selected_continent)
-
-# Plot rolling mean time series
-ggplot() +
-  # Plot individual ensemble members with distinct colors
-  geom_line(data = raw_filtered, aes(x = time, y = PCWD, group = ensemble_member, 
-            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  
-  # # Plot mean z-score as a bold black line
-  # geom_line(data = raw_filtered %>% group_by(time, region) %>% summarise(EM = mean(PCWD, na.rm = TRUE)),
-  #           aes(x = time, y = EM), color = "black", linewidth = 1) +
-  # 
-  labs(
-    x = "Year",
-    y = "PCWD [mm]",
-    title = paste("Rolling 30yr mean PCWD for", selected_continent)
-  ) +
-  
-  # Use Viridis color palette for ensemble members and keep black for mean
-  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
-  
-  # Customize the legend
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
-  ) +
-  
-  theme_classic() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    strip.text = element_text(size = 10, color = "white"),
-    strip.background = element_rect(fill = "#3C3980"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  
-  facet_wrap(~region, scales = "free_y")
-
-
-```
-
-
-```{r}
-# Convert ensemble z-score data into a long format for plotting individual members
-abs_long_1420 <- do.call(rbind, lapply(names(rolling_means), function(region) {
-  df <- as.data.frame(rolling_means[[region]])
-  df$time <- seq(1435, 1835)  # Adjust time range accordingly
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "mean_PCWD")
-  return(df_long)
-}))
-
-# Add a continent column
-abs_long_1420$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  abs_long_1420$continent[abs_long_1420$region %in% continent_mapping[[continent]]] <- continent
-}
-
-### Plot for each region
-# Filter for selected continent
-selected_continent <- "Australia"
-abs_filtered <- abs_long_1420 %>% filter(continent == selected_continent)
-
-# Plot rolling mean time series
-ggplot() +
-  # Plot individual ensemble members as fine grey lines
-  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  
-  # Plot mean z-score as a bold black line
-  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
-            aes(x = time, y = EM, color = "PCWD"), linewidth = 1) +
-  labs(
-    x = "Year",
-    y = "PCWD [mm]",
-    title = paste("rollling 30yr mean PCWD for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD" = "black"),
-    labels = c("Ensemble Members", "PCWD (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_classic() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
-
-
-library(viridis)  # For viridis color palette
-
-# Plot rolling mean time series
-ggplot() +
-  # Plot individual ensemble members with distinct colors
-  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
-            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  
-  # Plot mean z-score as a bold black line
-  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
-            aes(x = time, y = EM), color = "black", linewidth = 1) +
-  
-  labs(
-    x = "Year",
-    y = "PCWD [mm]",
-    title = paste("Rolling 30yr mean PCWD for", selected_continent)
-  ) +
-  
-  # Use Viridis color palette for ensemble members and keep black for mean
-  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
-  
-  # Customize the legend
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
-  ) +
-  
-  theme_classic() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    strip.text = element_text(size = 10),
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  
-  facet_wrap(~region, scales = "free_y")
-
-
-```
-
-```{r}
-# Convert ensemble z-score data into a long format for plotting individual members
-abs_long_1850 <- do.call(rbind, lapply(names(rolling_means_1850), function(region) {
-  df <- as.data.frame(rolling_means_1850[[region]])
-  df$time <- seq(1865, 1995)  # Adjust time range accordingly
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "mean_PCWD")
-  return(df_long)
-}))
-
-# Add a continent column
-abs_long_1850$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  abs_long_1850$continent[abs_long_1850$region %in% continent_mapping[[continent]]] <- continent
-}
-
-### Plot for each region
-# Filter for selected continent
-selected_continent <- "Australia"
-abs_filtered <- abs_long_1850 %>% filter(continent == selected_continent)
-
-# Plot rolling mean time series
-ggplot() +
-  # Plot individual ensemble members as fine grey lines
-  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  
-  # Plot mean z-score as a bold black line
-  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
-            aes(x = time, y = EM, color = "PCWD"), linewidth = 1) +
-  labs(
-    x = "Year",
-    y = "PCWD [mm]",
-    title = paste("Rolling 30yr mean PCWD for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD" = "black"),
-    labels = c("Ensemble Members", "PCWD (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_classic() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region, scales = "free_y")  # Facet by region with independent y-axis scales
-
-
-library(viridis)  # For viridis color palette
-
-# Plot rolling mean time series
-ggplot() +
-  # Plot individual ensemble members with distinct colors
-  geom_line(data = abs_filtered, aes(x = time, y = mean_PCWD, group = ensemble_member, 
-            color = as.factor(ensemble_member)), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  
-  # Plot mean z-score as a bold black line
-  geom_line(data = abs_filtered %>% group_by(time, region) %>% summarise(EM = mean(mean_PCWD, na.rm = TRUE)),
-            aes(x = time, y = EM), color = "black", linewidth = 1) +
-  
-  labs(
-    x = "Year",
-    y = "PCWD [mm]",
-    title = paste("Rolling 30yr mean PCWD for", selected_continent)
-  ) +
-  
-  # Use Viridis color palette for ensemble members and keep black for mean
-  scale_color_viridis_d(option = "turbo", begin = 0.1, end = 0.9) +
-  
-  # Customize the legend
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(alpha = 1, linewidth = 1))  # Improve legend readability
-  ) +
-  
-  theme_classic() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    strip.text = element_text(size = 10),
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  
-  facet_wrap(~region, scales = "free_y")
-
-
-```
 
 #### Calculate anomalies of 30yr running mean and plot
 
@@ -2413,9 +1678,8 @@ for (continent in names(continent_mapping)) {
 ```
 
 
+Plot for each region, showing ensemble mean anomalies and individual ensemble members:
 ```{r}
-
-### plot 
 ### Plot for each region
 # Filter for selected continent
 selected_continent <- "Europe"
@@ -2915,6 +2179,7 @@ ggplot() +
 ```
 
 For 1420 period also: 
+Calculate anomalies:
 ```{r}
 # Initialize lists to store baselines
 anom_baseline <- list()
@@ -2929,7 +2194,7 @@ for (region_name in names(rolling_means)) {
 # Initialize lists to store anomalies
 ensemble_30anom_1420 <- list()
 
-# Compute z-scores
+# Compute anomalies
 for (region_name in names(rolling_means)) {
   rolling_mean_matrix <- rolling_means[[region_name]]
   num_years <- nrow(rolling_mean_matrix)
@@ -2980,6 +2245,7 @@ for (continent in names(continent_mapping)) {
 
 ```
 
+Plot region wise:
 ```{r}
 ### plot 
 ### Plot for each region
@@ -3481,12 +2747,12 @@ ggplot() +
 ```
 
 
+## Gini Index for inequality
 
-
-### Gini Index for inequality
+### Gini Maps
 
 - calculate Gini index for both each epoch for every gridcell
-- plot as map to show variability/ measure of inequality or unequalness
+- Map variability/ measure of inequality or unequalness
 - low number (close to 0 rather than 1) implies low inequality i.e. over time PCWD values stable for that gridcell
 - Gini index is more sensitive to changes in the middle of income distribution and less sensitive to changes at the top and the bottom of income distribution (Atkinson, 1970)
 
@@ -3797,108 +3063,6 @@ ggplot() +
 
 ```
 
-
-```{r}
-
-# Define output directory for saving images
-output_dir <- "~/cwd_global/vignettes/GINI_maps/"
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
-# Loop through each time step and generate a plot
-for (time_label in names(gini_list)) {
-  
-  # Extract the Gini values for the current time step
-  gini_values_window <- gini_list[[time_label]]$gini_values
-  r <- raster(t(gini_values_window), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))  
-  crs(r) <- "+proj=longlat +datum=WGS84" # Set CRS for raster
-  r <- flip(r, direction='y') #Flip the raster to correct orientation
-  #Retrieve land polygons and set the same CRS as the raster
-  land <- ne_countries(scale = "medium", returnclass = "sf")
-  land <- st_transform(land, crs=st_crs(r)) #Ensure CRS alignment
-  #Mask the raster with land polygons to remove ocean values
-  r_masked <- mask(r, as(land, "Spatial"))
-  #Convert the masked raster to a dataframe for ggplot
-  r_df <- as.data.frame(r_masked, xy = TRUE)
-  colnames(r_df) <- c("x", "y", "Gini")
-  
-  # Extract the time window information
-  start_year <- gini_list[[time_label]]$time
-  end_year <- start_year + window_size - 1
-
-  p <- ggplot() +
-    geom_raster(data = r_df, aes(x = x, y = y, fill = Gini), na.rm = TRUE) +
-    scale_fill_viridis_c(option = "rocket", trans = "sqrt", direction=-1, limits = c(0, 0.4), name = "Gini Index") +
-    # scale_fill_bs5("#E5973B", limits = c(0, 0.4)) +  
-    labs(title = paste0("GINI Index Evolution (EM): ", start_year, " - ", end_year), x = "Longitude", y = "Latitude") +
-    theme_classic() +
-    geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +  # Country borders
-    coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
-    theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10))
-  
-  # Save plot as PNG
-  output_file <- file.path(output_dir, paste0("GINI_", start_year, "_", end_year, ".png"))
-  ggsave(output_file, plot = p, width = 10, height = 5, dpi = 300)
-  
-  print(paste("Saved:", output_file))  # Log progress
-}
-
-print("All plots saved successfully!")
-  
-  
-```
-
-
-1420 epoch: 
-
-```{r}
-
-# Define output directory for saving images
-output_dir <- "~/cwd_global/vignettes/GINI_maps/"
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
-# Loop through each time step and generate a plot
-for (time_label in names(gini_list_1420)) {
-  
-  # Extract the Gini values for the current time step
-  gini_values_window <- gini_list_1420[[time_label]]$gini_values
-  r <- raster(t(gini_values_window), xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat))  
-  crs(r) <- "+proj=longlat +datum=WGS84" # Set CRS for raster
-  r <- flip(r, direction='y') #Flip the raster to correct orientation
-  #Retrieve land polygons and set the same CRS as the raster
-  land <- ne_countries(scale = "medium", returnclass = "sf")
-  land <- st_transform(land, crs=st_crs(r)) #Ensure CRS alignment
-  #Mask the raster with land polygons to remove ocean values
-  r_masked <- mask(r, as(land, "Spatial"))
-  #Convert the masked raster to a dataframe for ggplot
-  r_df <- as.data.frame(r_masked, xy = TRUE)
-  colnames(r_df) <- c("x", "y", "Gini")
-  
-  # Extract the time window information
-  start_year <- gini_list_1420[[time_label]]$time
-  end_year <- start_year + window_size - 1
-
-  p <- ggplot() +
-    geom_raster(data = r_df, aes(x = x, y = y, fill = Gini), na.rm = TRUE) +
-    scale_fill_viridis_c(option = "rocket", trans = "sqrt", direction=-1, limits = c(0, 0.4), name = "Gini Index") +
-    # scale_fill_bs5("#E5973B", limits = c(0, 0.4)) +  
-    labs(title = paste0("GINI Index Evolution (EM): ", start_year, " - ", end_year), x = "Longitude", y = "Latitude") +
-    theme_classic() +
-    geom_sf(data = land, fill = NA, color = "black", lwd = 0.5) +  # Country borders
-    coord_sf(xlim = range(lon), ylim = range(lat), expand = FALSE) +
-    theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10))
-  
-  # Save plot as PNG
-  output_file <- file.path(output_dir, paste0("GINI_", start_year, "_", end_year, ".png"))
-  ggsave(output_file, plot = p, width = 10, height = 5, dpi = 300)
-  
-  print(paste("Saved:", output_file))  # Log progress
-}
-
-print("All plots saved successfully!")
-  
-  
-```
-
 ### Gini timeseries
 
 Create and plot Gini timeseries with 30-year moving window for each region: 
@@ -3997,99 +3161,6 @@ for (region_name in names(regional_gini_1850)) {
   # Compute the mean Gini coefficient across ensemble members for each time step
   mean_gini_1850[[region_name]] <- rowMeans(regional_gini_1850[[region_name]], na.rm = TRUE)
 }
-
-######################### Pooled values across EMs ###################################
-# nyears <- 30   # bin width
-# 
-# # Initialize a list to store results for all regions
-# regional_gini_1420 <- list()
-# 
-# # Loop through each region in regional_results
-# for (region in names(regional_results_1420)) { #swap european_regions for regional_results for all regions
-#   # Extract the result array for the current region
-#   result_array_region <- regional_results_1420[[region]]
-# 
-#   # initialise
-#   gini_window <- rep(NA, nrow(result_array_region) - nyears + 1)
-# 
-#   for (window_start in 1:(nrow(result_array_region) - nyears + 1)){
-# 
-#     # Extract data for the current window
-#     window_data <- result_array_region[window_start:(window_start + nyears - 1), ]
-#   
-#     # Flatten the matrix into a single vector
-#     window_data <- as.vector(window_data)
-# 
-# 	  gini_window[window_start] <- Gini(window_data, na.rm = TRUE) #calc gini here!
-# 
-#   }
-#   # Create a dataframe for the current region
-#   time_info <- seq(from = as.numeric(1420), to = as.numeric(1849))  # Replace with actual time if available
-#   region_df <- data.frame(
-#     time = time_info[15:415],
-#     GINI = gini_window,
-#     region = region
-#   )
-#     # Store the region's dataframe in the results list
-#   regional_gini_1420[[region]] <- region_df
-# }
-# 
-# # Combine all region results into a single dataframe
-# combined_gini_1420 <- do.call(rbind, regional_gini_1420)
-# # Add a continent column to the SNR data frame
-# combined_gini_1420$continent <- NA  # Initialize continent column
-# 
-# for (continent in names(continent_mapping)) {
-#   combined_gini_1420$continent[combined_gini_1420$region %in% continent_mapping[[continent]]] <- continent
-# }
-# 
-# 
-# ##### 1850 epoch #####
-# 
-# nyears <- 30   # bin width
-# 
-# # Initialize a list to store results for all regions
-# regional_gini_1850 <- list()
-# 
-# # Loop through each region in regional_results
-# for (region in names(regional_results_1850)) { #swap european_regions for regional_results for all regions
-#   # Extract the result array for the current region
-#   result_array_region <- regional_results_1850[[region]]
-# 
-#   # initialise
-#   gini_window <- rep(NA, nrow(result_array_region) - nyears + 1)
-# 
-#   for (window_start in 1:(nrow(result_array_region) - nyears + 1)){
-# 
-#     # Extract data for the current window
-#     window_data <- result_array_region[window_start:(window_start + nyears - 1), ]
-#   
-#     # Flatten the matrix into a single vector
-#     window_data <- as.vector(window_data)
-# 
-# 	  # determine return period of cwd_ref based on new fit (How much more/less probably is an event that corresponded to an X-yearly event in the reference period?)
-# 	  gini_window[window_start] <- Gini(window_data, na.rm = TRUE) #calc gini here!
-# 
-#   }
-#   # Create a dataframe for the current region
-#   time_info <- seq(from = as.numeric(1850), to = as.numeric(2009))  # Replace with actual time if available
-#   region_df <- data.frame(
-#     time = time_info[15:145],
-#     GINI = gini_window,
-#     region = region
-#   )
-#     # Store the region's dataframe in the results list
-#   regional_gini_1850[[region]] <- region_df
-# }
-# 
-# # Combine all region results into a single dataframe
-# combined_gini_1850 <- do.call(rbind, regional_gini_1850)
-# # Add a continent column to the SNR data frame
-# combined_gini_1850$continent <- NA  # Initialize continent column
-# 
-# for (continent in names(continent_mapping)) {
-#   combined_gini_1850$continent[combined_gini_1850$region %in% continent_mapping[[continent]]] <- continent
-# }
 
 ```
 
@@ -4197,568 +3268,6 @@ ggplot(df_gini, aes(x = year, y = gini_value, color = continent, group = region)
        y = "Gini Index",
        color = "Region") +
   theme(legend.position = "none", axis.text = element_text(size=12), axis.title = element_text(size = 12))
-
-```
-
-
-Plot 1420 timeseries for Gini: 
-
-```{r}
-# Convert ensemble z-score data into a long format for plotting individual members
-gini_long_1420 <- do.call(rbind, lapply(names(regional_gini_1420), function(region) {
-  df <- as.data.frame(regional_gini_1420[[region]])
-  df$time <- seq(1435, 1834)  # Adjust time range accordingly
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "gini")
-  return(df_long)
-}))
-
-# Add a continent column
-gini_long_1420$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  gini_long_1420$continent[gini_long_1420$region %in% continent_mapping[[continent]]] <- continent
-}
-
-####################################### EUROPE #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Europe"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### ASIA #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Asia"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#E5973B"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Australia #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Australia"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
-    strip.background = element_rect(fill = "#3C3980"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Africa #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Africa"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#91C7B1"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### North America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "North America"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#236A3F"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Central America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Central America"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#B33951"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Southern America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "South America"
-gini_filtered <- gini_long_1420 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#E3D081"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-```
-
-
-Plot timeseries for 1850 epoch: 
-
-```{r}
-# Convert ensemble z-score data into a long format for plotting individual members
-gini_long_1850 <- do.call(rbind, lapply(names(regional_gini_1850), function(region) {
-  df <- as.data.frame(regional_gini_1850[[region]])
-  df$time <- seq(1865, 1994)  # Adjust time range accordingly
-  df$region <- region
-  df_long <- pivot_longer(df, cols = -c(time, region), names_to = "ensemble_member", values_to = "gini")
-  return(df_long)
-}))
-
-# Add a continent column
-gini_long_1850$continent <- NA  # Initialize continent column
-for (continent in names(continent_mapping)) {
-  gini_long_1850$continent[gini_long_1850$region %in% continent_mapping[[continent]]] <- continent
-}
-
-####################################### EUROPE #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Europe"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    legend.title = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#F5B0CB"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### ASIA #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Asia"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#E5973B"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Australia #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Australia"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10, colour="white"),  # Size for facet labels
-    strip.background = element_rect(fill = "#3C3980"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Africa #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Africa"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#91C7B1"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### North America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "North America"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#236A3F"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Central America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "Central America"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#B33951"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
-
-####################################### Southern America #####################################
-# Filter data for the selected continent (e.g., Europe)
-selected_continent <- "South America"
-gini_filtered <- gini_long_1850 %>% filter(continent == selected_continent)
-
-# Plot anom time series
-ggplot(gini_filtered) +
-  geom_line(aes(x = time, y = gini, group = ensemble_member, 
-            color = "Ensemble Members"), alpha = 0.5, linewidth = 0.3, show.legend = TRUE) +
-  # Plot mean gini as a bold black line
-  geom_line(data = gini_filtered %>% group_by(time, region) %>% summarise(mean_gini = mean(gini, na.rm = TRUE)),
-            aes(x = time, y = mean_gini, color = "PCWD Gini"), linewidth = 1) +
-  #geom_smooth(method = "loess", color = "blue", se = FALSE, span=0.5, linewidth=0.5) +  # Add LOESS trend line  
-  labs(
-    x = "Year",
-    y = "Gini Index (unitless)",
-    title = paste("30 year moving GINI for", selected_continent)
-  ) +
-  # Manual color scale for legend
-  scale_color_manual(
-    values = c("Ensemble Members" = "grey60", "PCWD Gini" = "black"),
-    labels = c("Ensemble Members", "PCWD Gini (Mean)")
-  ) +
-  # Customize the legend to avoid the grey background around lines (using override.aes)
-  guides(
-    color = guide_legend(title = "Legend", override.aes = list(fill = NA, shape = NA))  # Remove background for color lines
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5, face = "bold"),  # Center the title
-    strip.text = element_text(size = 10),  # Size for facet labels
-    strip.background = element_rect(fill = "#E3D081"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~region)  # Facet by region with independent y-axis scales
 
 ```
 
