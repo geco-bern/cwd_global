@@ -27,7 +27,7 @@ cmip6_compute_cwd_pcwd_byLON <- function(
   print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
-  source(paste0(here::here(), "/R/get_cwd_withSnow_and_reset.R"))
+  source(paste0(here::here(), "/R/CMIP6/get_cwd_withSnow_and_reset.R"))
 
   # read from files that contain tidy data for a single longitudinal band
   # read evapotranspiration file tidy

@@ -20,7 +20,7 @@ ERA5Land_compute_pcwd_byLON <- function(
   print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
-  source("/storage/homefs/ph23v078/cwd_global/R/get_cwd_withSnow_and_reset_ERA5Land.R")
+  source("/storage/homefs/ph23v078/cwd_global/R/ERA5Land/get_cwd_withSnow_and_reset_ERA5Land.R")
 
   # read from files that contain tidy data for a single longitudinal band
   # read precipitation file tidy

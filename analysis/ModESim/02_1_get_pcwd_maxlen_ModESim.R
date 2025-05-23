@@ -43,7 +43,7 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", 
 # }
 
 # 1b) Define function to apply to each location:  -------------------------------
-source("/storage/homefs/ph23v078/cwd_global/R/get_cwd_maxlen_byLON.R")
+source("/storage/homefs/ph23v078/cwd_global/R/ModE-Sim/get_cwd_maxlen_byLON.R")
 
 
 # 2) Setup parallelization ------------------------------------------------

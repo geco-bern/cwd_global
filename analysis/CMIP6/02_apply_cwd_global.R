@@ -31,7 +31,7 @@ library(cwd)
 library(rpmodel)
 
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source(paste0(here::here(), "/R/cmip6_compute_cwd_pcwd_byLON.R"))
+source(paste0(here::here(), "/R/CMIP6/cmip6_compute_cwd_pcwd_byLON.R"))
 
 indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
 outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"

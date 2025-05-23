@@ -46,7 +46,7 @@ filnams_pcwd <- list.files(indir, pattern = "ModESim_pcwd_(LON_[0-9.+-]*).rds", 
 # }
 
 # 1b) Define function to apply to each location:  -------------------------------
-source("/storage/homefs/ph23v078/cwd_global/R/extract_p_pet.R")
+source("/storage/homefs/ph23v078/cwd_global/R/ModE-Sim/extract_p_pet.R")
 
 # 1c) Define volcanic eruption years to be extracted:
 # Define the years of interest

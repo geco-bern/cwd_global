@@ -23,7 +23,7 @@ ModESim_compute_pcwd_byLON <- function(
   print(paste0(Sys.time(), ", LON: ", LON_string))
 
   # load functions that will be applied to time series
-  source("/storage/homefs/ph23v078/cwd_global/R/get_cwd_withSnow_and_reset_ModESim.R")
+  source("/storage/homefs/ph23v078/cwd_global/R/ModE-Sim/get_cwd_withSnow_and_reset_ModESim.R")
 
   # read from files that contain tidy data for a single longitudinal band
   # read surface Pressure file tidy

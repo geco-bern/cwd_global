@@ -7,7 +7,7 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
   require(tidyr)
   require(cwd)
   devtools::load_all("~/cwd/R/cwd.R")
-  devtools::load_all("~/cwd/R/ERA5_simulate_snow.R")
+  devtools::load_all("~/cwd_global/R/ERA5Land/ERA5_simulate_snow.R")
   library(rpmodel)    # Need to reload library on each computation core. When using require() instead of library() inside of `multiplyr` get error message:
                       #   Error in .External(list(name = "CppMethod__invoke_notvoid", address = <pointer: (nil)>,  :
                       #   NULL value passed as symbol address

@@ -33,7 +33,7 @@ library(rpmodel)
 
 setwd("~/cwd_global")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source("~/cwd_global/R/ModESim_compute_pcwd_byLON.R")
+source("~/cwd_global/R/ModE-Sim/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
 indir  <- "~/scratch2/tidy/"

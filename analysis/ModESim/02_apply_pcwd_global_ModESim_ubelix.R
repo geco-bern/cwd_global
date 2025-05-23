@@ -35,7 +35,7 @@ library(parallelly)
 
 setwd("/storage")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source("/storage/homefs/ph23v078/cwd_global/R/ModESim_compute_pcwd_byLON.R")
+source("/storage/homefs/ph23v078/cwd_global/R/ModE-Sim/ModESim_compute_pcwd_byLON.R")
 #paste0(here::here(),
 
 indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ModESim/m030_tidy"
