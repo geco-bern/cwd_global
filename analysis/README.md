@@ -24,4 +24,6 @@
 
     `~/data/cmip6-ng/tidy/cwd/<fileprefix>_cum_ANNMAX.rds` and `~/data/cmip6-ng/tidy/cwd/evspsbl_cum_ANNMAX.nc`
 
-    
+The full workflow including pre-processing of data for ModE-Sim and ERA5-Land data is shown here: 
+
+[Workflow_PCWD.pdf](https://github.com/user-attachments/files/20454999/Workflow_PCWD.pdf)
