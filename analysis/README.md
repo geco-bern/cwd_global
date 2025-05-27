@@ -1,4 +1,4 @@
-# cwd_global: Apply CWD algorithm to global files
+![image](https://github.com/user-attachments/assets/1b1525be-403a-4bfd-9e74-7a97f96bd247)# cwd_global: Apply CWD algorithm to global files
 
 *Author: Benjamin Stocker*
 
@@ -24,6 +24,10 @@
 
     `~/data/cmip6-ng/tidy/cwd/<fileprefix>_cum_ANNMAX.rds` and `~/data/cmip6-ng/tidy/cwd/evspsbl_cum_ANNMAX.nc`
 
+### ModE-Sim and ERA5-Land data
+
 The full workflow including pre-processing of data for ModE-Sim and ERA5-Land data is shown here: 
 
-[Workflow_PCWD.pdf](https://github.com/user-attachments/files/20454999/Workflow_PCWD.pdf)
+![image](https://github.com/user-attachments/assets/062a8469-950a-44fd-a1c4-9345515a6ec1)
+
+
