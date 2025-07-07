@@ -19,8 +19,9 @@
 # # When using this script directly from RStudio, not from the shell, specify
 args <- c(1, 1)
 
-# to receive arguments to script from the shell
+# #to receive arguments to script from the shell
 # args = commandArgs(trailingOnly=TRUE)
+# stopifnot(length(args)==2)
 
 library(dplyr)
 library(map2tidy)
@@ -30,18 +31,20 @@ library(tidyr)
 library(cwd)
 library(rpmodel)
 
+setwd("~/cwd_global")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source(paste0(here::here(), "/R/cmip6_compute_cwd_pcwd_byLON.R"))
+source("~/cwd_global/R/ModE-Sim/ModESim_compute_pcwd_byLON.R")
+#paste0(here::here(),
 
-indir  <- "/data_2/scratch/fbernhard/CMIP6/tidy/"
-outdir <- "/data_2/scratch/fbernhard/CMIP6/tidy/02_cwd"
+indir  <- "~/scratch2/tidy/"
+outdir <- "~/scratch2/tidy/02_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 # outfile_pattern <- "CWD_result_[LONSTRING]_ANNMAX.rds" # must contain [LONSTRING]
 
-filnams <- list.files(file.path(indir, "01_pr"),  # use precip folder as example
+filnams <- list.files(file.path(indir, "1420_01_m001_precip"),  # use precip folder as example
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
@@ -74,7 +77,7 @@ cl <- multidplyr::new_cluster(ncores) |>
   multidplyr::cluster_assign(
     indir                              = indir,
     outdir                             = outdir,
-    cmip6_compute_cwd_pcwd_byLON = cmip6_compute_cwd_pcwd_byLON   # make the function known for each core
+    ModESim_compute_pcwd_byLON = ModESim_compute_pcwd_byLON   # make the function known for each core
     )
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -83,14 +86,13 @@ cl <- multidplyr::new_cluster(ncores) |>
 # 3) Process files --------------------------------------------------------
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
-  select(-in_fname) |>
-  multidplyr::partition(cl) |>    # comment this partitioning for development
+  dplyr::select(-in_fname) |>
+  # multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
-    ~cmip6_compute_cwd_pcwd_byLON(
+    ~ModESim_compute_pcwd_byLON(
       .,
       indir           = indir,
       outdir          = outdir))
     ) |> collect()
-
 

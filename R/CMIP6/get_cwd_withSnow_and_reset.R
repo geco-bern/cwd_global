@@ -6,8 +6,8 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   require(tidyr)
   require(cwd)
   library(rpmodel)    # Need to reload library on each computation core. When using require() instead of library() inside of `multiplyr` get error message:
-                      #   Error in .External(list(name = "CppMethod__invoke_notvoid", address = <pointer: (nil)>,  :
-                      #   NULL value passed as symbol address
+  #   Error in .External(list(name = "CppMethod__invoke_notvoid", address = <pointer: (nil)>,  :
+  #   NULL value passed as symbol address
 
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
@@ -44,11 +44,11 @@ get_cwd_withSnow_and_reset <- function(vars_df){
   # cwd
   ## calculate cumulative water deficit
   out_cwd <- cwd::cwd(vars_df,
-                 varname_wbal = "wbal",
-                 varname_date = "time",
-                 thresh_terminate = 0.0,
-                 thresh_drop = 0.0,
-                 doy_reset= day_of_year)
+                      varname_wbal = "wbal",
+                      varname_date = "time",
+                      thresh_terminate = 0.0,
+                      thresh_drop = 0.0,
+                      doy_reset= day_of_year)
 
   out_cwd$inst <- out_cwd$inst |>
     filter(len >= 20)
