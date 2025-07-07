@@ -1,5 +1,4 @@
-![image](https://github.com/user-attachments/assets/1b1525be-403a-4bfd-9e74-7a97f96bd247)# cwd_global: Apply CWD algorithm to global files
-
+# Analysis workflow for different climate / reanalysis inputs
 *Author: Benjamin Stocker*
 
 ## Workflow (CMIP6)
