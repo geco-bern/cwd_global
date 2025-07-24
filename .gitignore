@@ -25,7 +25,10 @@ data/*.RData
 data/*.csv
 data/*.rds
 
-# produced figures 
+#produced figures
+figures/
+
+# produced figures
 manuscript/*.pdf
 
 # produced vignettes
