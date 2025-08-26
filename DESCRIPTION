@@ -1,7 +1,7 @@
 Package: cwdglobal
 Type: Package
 Title: Parallel computation of the CWD algorithm for global applications
-Version: 1.0
+Version: 1.0.0.9000
 Authors@R: c(
             person(
               family = "Benjamin",
