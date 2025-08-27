@@ -20,6 +20,17 @@
 # RStudio files
 .Rproj.user/
 
+# produced data
+data/*.RData
+data/*.csv
+data/*.rds
+
+#produced figures
+figures/
+
+# produced figures
+manuscript/*.pdf
+
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf

@@ -1,1 +1,0 @@
-This vignettes folder contains R Markdown files that contain code used in the analysis of the MSc thesis "Droughts throughout the last millennium - analysing PCWD from ModE-Sim output" by Patricia Helpap, 2025. 
