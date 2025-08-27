@@ -45,7 +45,7 @@
         <a class="external-link hidden-md hidden-lg" href="https://geco-group.org/">
           <img src="https://raw.githubusercontent.com/computationales/GECO_template/main/geco_logo_white_small.png" id="hexlogo" alt="GECO"></a>
         <a class="navbar-brand" href="index.html">
-           <i>cwdglobal <small>v1.0</small></i>
+           <i>cwdglobal <small>v1.0.0.9000</small></i>
         </a>
       </div>
     </div>
@@ -78,25 +78,14 @@
 </h1></div>
 <p><em>Author: Benjamin Stocker</em></p>
 <div class="section level2">
-<h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
+<h2 id="purpose">Purpose<a class="anchor" aria-label="anchor" href="#purpose"></a>
 </h2>
-<ol style="list-style-type: decimal">
-<li><p><code>analysis/make_tidy_cmip6.R</code>: Make original global files tidy. Save as nested data frames, where each row is one grid cell and time series is nested in the column <code>data</code>. Separate files are written for each longitudinal band. Writes files: <code>evspsbl/evspsbl_mon_CESM2_ssp585_r1i1p1f1_native_LON_[+-XXX.XXX].rds</code> into folder defined as <code>outdir</code>.</p></li>
-<li>
-<p><code>analysis/apply_cwd_global.R</code>: Script for parallel applying the CWD algorithm (or anything else that operates on full time series) separately for on gridcell. Distributes by longitudinal band. Reading files written in previous step and writing files (in the example): <code>cwd/CWD_result_LON_[+-XXX.XXX].rds</code> into folder defined as <code>outdir</code>.</p>
-<p><code>src/apply_cwd_global.sh</code>: Bash script that calls <code>apply_cwd_global.R</code> , to be used as an alternative and containing submission statement for HPC.</p>
-<p>Note: This step creates data at the original temporal resolution. Data is not collected at this stage to avoid memory limitation.</p>
-</li>
-<li>
-<p><code>analysis/get_cwd_annmax.R</code>: Script for parallel applying function for determining annual maximum. Reading files written in previous step and writing files (in the example):</p>
-<p><code>cwd_annmax/CWD_result_LON_[+-XXX.XXX]_ANNMAX.rds</code></p>
-</li>
-<li>
-<p><code>collect_cwd_annmax.R</code>: Script for collecting annual time series of each gridcell and writing the global annual data into a NetCDF file. Since annual maximum is much smaller data and can now be handled by reading all into memory. This uses the function <code>write_nc2()</code> from the package {rgeco}. Install it from <a href="https://github.com/geco-bern/rgeco" class="external-link">here</a>. Writes single file containing global data with annual resolution as NetCDF:</p>
-<p><code>/data_2/scratch/fbernhard/CMIP6ng_CESM2_ssp585/cmip6-ng/tidy/cwd_annmax_global.nc</code></p>
-</li>
-</ol>
-<p>Writes file containing global data with annual resolution: <strong>Note</strong>: Adjust paths and file name prefixes for your own case in scripts (located in subdirectory <code>analysis/</code>)</p>
+<p>This repository calculates (potential) cumulative water deficit (CWD) for global climate model outputs / reanalysis outputs.</p>
+</div>
+<div class="section level2">
+<h2 id="workflows-for-cmip6-or-era5land-and-mode-sim-or-">Workflows (for CMIP6, or ERA5Land and ModE-Sim, or …)<a class="anchor" aria-label="anchor" href="#workflows-for-cmip6-or-era5land-and-mode-sim-or-"></a>
+</h2>
+<p>see analysis/README.md</p>
 </div>
 </div>
   </div>
@@ -128,7 +117,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Stocker Benjamin <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-5070-8109" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a> </li>
+<li>Stocker Benjamin <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-5070-8109" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 
