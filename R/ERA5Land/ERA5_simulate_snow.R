@@ -78,3 +78,4 @@ ERA5_simulate_snow <- function(df, varnam_temp, varnam_prec, varnam_snow){
   return(df)
 
 }
+
