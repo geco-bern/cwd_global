@@ -1,0 +1,39 @@
+#! /usr/bin/bash -l
+#SBATCH --job-name="ERA5Land_orig_res_map2tidy_and_pcwd"
+#SBATCH --time=6-00:00:00
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
+#SBATCH --cpus-per-task=180      # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
+#SBATCH --mem-per-cpu=6G
+#SBATCH --mail-user=fabian.bernhard@unibe.ch
+#SBATCH --mail-type=fail            # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
+#SBATCH --chdir=../cwd_global/analysis/ERA5Land-fullRes  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+
+echo "Started on: $(date --rfc-3339=seconds)"
+echo "Hostname: $(hostname)"
+echo "Working directory: $PWD"   # Is most likely the HOME directory. Allows to check in the log.
+
+module load UDUNITS/2.2.28-GCCcore-13.3.0
+module load netCDF
+module load R
+
+## Run the R script
+
+
+## Run the R script
+## If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
+## Rscript GitHub/fabern/parallelization-tests/01_example_future.R
+## If you provide a chdir argument to SLURM, provide the relative path
+Rscript 01_make_tidy_ERA5Land.R   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+
+# Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R  # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+
+# TODO: rewrite the above
+
+# run src/CDO/ERA5Land-fullRes/calc_netrad.sh
+# run analysis/ERA5Land-fullRes/01_make_tidy_ERA5Land.R
+# run analysis/ERA5Land-fullRes/02_apply_pcwd_global_ERA5Land_ubelix.R
+
+
+echo "Finished on: $(date --rfc-3339=seconds)"
