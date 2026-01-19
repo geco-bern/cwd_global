@@ -22,10 +22,11 @@ args <- c(1, 1)
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
 remotes::install_github("geco-bern/cwd")
 remotes::install_github("geco-bern/rgeco")
 remotes::install_github("geco-bern/rpmodel")
-install.packages("rprojroot")
 
 library(dplyr)
 library(map2tidy)
@@ -39,21 +40,19 @@ library(rpmodel)
 library(parallelly)
 # devtools::load_all("~/cwd")
 
-setwd("/storage")
 # source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/ERA5Land-fullRes_compute_pcwd_byLON.R")
-source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R")
-source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/ERA5_simulate_snow_fullRes.R")
-#paste0(here::here(),
+source(here::here("R/ERA5Land-fullRes/ERA5Land_compute_pcwd_byLON.R"))
+source(here::here("R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R"))
+source(here::here("R/ERA5Land-fullRes/ERA5_simulate_snow.R"))
 
-indir  <- "/storage/scratch/giub_geco/yelmejjaouy/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy"
-outdir <- "/storage/scratch/giub_geco/yelmejjaouy/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/02_pcwd"
+indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024/"
+outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/02_pcwd" # TODO: check this
 dir.create(outdir, showWarnings = FALSE)
 
 # 1a) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 
-filnams <- list.files(file.path(indir, "total_prec"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "tot_tp"),  # use precip folder as example; change year
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
@@ -70,10 +69,10 @@ vec_index <- map2tidy::get_index_by_chunk(
 )
 
 # 2b) Parallelize job across cores on a single node
+# ncores <- 1 # start small
+# ncores <- 180
 ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
-ncores <- 24
 
-ncores <- 1 # start small
 cl <- multidplyr::new_cluster(ncores)
 cl
 
@@ -119,12 +118,13 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "rpmodel",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    indir                              = indir,
-    outdir                             = outdir,
-    ERA5Land_fullRes_compute_pcwd_byLON = ERA5Land_fullRes_compute_pcwd_byLON   # make the function known for each core
+    indir                       = indir,
+    outdir                      = outdir,
+    ERA5Land_compute_pcwd_byLON = ERA5Land_compute_pcwd_byLON   # make the function known for each core
   )
-ERA5Land_fullRes_compute_pcwd_byLON(filnams[1], indir, outdir)
-
+# FOR DEVELOPMENT:
+# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[1]))
+# ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
 
 
 # distribute computation across the cores, calculating for all longitudinal
@@ -147,7 +147,7 @@ out <- tibble(in_fname = filnams[vec_index]) |>
   multidplyr::partition(cl) |>    # comment this partitioning for development
   dplyr::mutate(out = purrr::map(
     LON_string,
-    ~ERA5Land_fullRes_compute_pcwd_byLON(
+    ~ERA5Land_compute_pcwd_byLON(
       .,
       indir           = indir,
       outdir          = outdir))

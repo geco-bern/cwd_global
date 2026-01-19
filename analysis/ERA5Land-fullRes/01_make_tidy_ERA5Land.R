@@ -4,20 +4,24 @@
 
 Sys.getpid()
 
-# devtools::install_github("geco-bern/map2tidy")
-# remotes::install_github("geco-bern/map2tidy", ref = "fix-lon-hardcoded")
+# options(repos = c(CRAN = "https://cloud.r-project.org"))
+# install.packages(c("map2tidy", "dpyr", "stringr", "purrr", "ncdf4"))
+# install.packages(c("tidyr"))
+# install.packages(c("ncdf4"))
+# install.packages(c("readr"))
 devtools::install_github("geco-bern/map2tidy@v2.1.4")
+
 library(map2tidy)
 library(dplyr)
 library(stringr)
-library(tidyr)
+# library(tidyr)
 library(purrr)
 library(ncdf4)
 # list demo file path
 
 # adjust path to where your ERA5Land data is located
 path_ERA5Land <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy"
+outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024"
 dir.create(outdir, recursive = T)
 
 # ncores <- 180
@@ -25,16 +29,16 @@ ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # num
 
 
 # Precipitation - daily resolution --------------------------------------------------
-#select tot_tp files for only 2018, 2019, and 2020
+#select tot_tp files for all available years
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_tp\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  pattern = ".*tot_tp\\.[0-9]{4}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
 # Convert to tidy
-res_pr <- map2tidy:::map2tidy(
+res_tot_tp <- map2tidy:::map2tidy(
   nclist = filnam,
   varnam = "tot_tp",
   lonnam = "longitude",
@@ -42,25 +46,25 @@ res_pr <- map2tidy:::map2tidy(
   timenam = "valid_time",
   do_chunks = TRUE,
   na.rm = FALSE,  #ERA5Land only contains land gridcells; keep NAs for spatial integrity
-  outdir = file.path(outdir, "total_prec"),
-  fileprefix = "ERA5Land_UTCDaily_tottp",
+  outdir = file.path(outdir, "tot_tp"),
+  fileprefix = "ERA5Land_UTCDaily_tot_tp",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
-# Check if any unsuccessful:
-stopifnot(nrow(res_pr |> unnest(data) |> filter(!grepl("Written", data))) == 0)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_tp |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
 
 # Temperature - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*mean_t2m\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  pattern = ".*mean_t2m\\.[0-9]{4}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
 # Convert to tidy
-res_t2m <- map2tidy:::map2tidy(
+res_mean_t2m <- map2tidy:::map2tidy(
   nclist = filnam,
   varnam = "mean_t2m",
   lonnam = "longitude",
@@ -68,25 +72,25 @@ res_t2m <- map2tidy:::map2tidy(
   timenam = "valid_time",
   do_chunks = TRUE,
   na.rm = FALSE,
-  outdir = file.path(outdir, "t2m"),
-  fileprefix = "ERA5Land_UTCDaily_t2m",
+  outdir = file.path(outdir, "mean_t2m"),
+  fileprefix = "ERA5Land_UTCDaily_mean_t2m",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
-# Check if any unsuccessful:
-stopifnot(nrow(res_t2m |> unnest(data) |> filter(!grepl("Written", data))) == 0)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_mean_t2m |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
 
 # Potential evapotranspiration - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_pev\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  pattern = ".*tot_pev\\.[0-9]{4}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
 # Convert to tidy
-res_pev <- map2tidy:::map2tidy(
+res_tot_pev <- map2tidy:::map2tidy(
   nclist = filnam,
   varnam = "tot_pev",
   lonnam = "longitude",
@@ -94,25 +98,26 @@ res_pev <- map2tidy:::map2tidy(
   timenam = "valid_time",
   do_chunks = TRUE,
   na.rm = FALSE,
-  outdir = file.path(outdir, "tot_pet"),
-  fileprefix = "ERA5Land_UTCDaily_totpev",
+  outdir = file.path(outdir, "tot_pev"),
+  fileprefix = "ERA5Land_UTCDaily_tot_pev",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_pev |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
 
 
 # Surface Pressure - daily resolution -------------------------------
 # Only list files that start with "monthly_" and end with ".nc"
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*mean_sp\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  pattern = ".*mean_sp\\.[0-9]{4}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
 # Convert to tidy
-res_pev <- map2tidy:::map2tidy(
+res_mean_sp <- map2tidy:::map2tidy(
   nclist = filnam,
   varnam = "mean_sp",
   lonnam = "longitude",
@@ -121,18 +126,19 @@ res_pev <- map2tidy:::map2tidy(
   do_chunks = TRUE,
   na.rm = FALSE,
   outdir = file.path(outdir, "mean_sp"),
-  fileprefix = "ERA5Land_UTCDaily_sp",
+  fileprefix = "ERA5Land_UTCDaily_mean_sp",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
-# Check if any unsuccessful:
-stopifnot(nrow(res_pev |> unnest(data) |> filter(!grepl("Written", data))) == 0)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_mean_sp |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
 
 # Computed Netradiation - daily resolution -------------------------------
+# TODO: remove this part (and script src/CDO/ERA5Land-fullRes/calc_netrad.sh) and treat str and ssr inside of ERA5Land_compute_pcwd_byLON()
 filnam <- list.files(
-  path_ERA5Land,
-  pattern = ".*\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/00_temp_netrad",
+  pattern = ".*netrad\\.[0-9]{4}\\.nc$",
   full.names = TRUE)
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
@@ -148,22 +154,21 @@ res_netrad <- map2tidy:::map2tidy(
   outdir = file.path(outdir, "netrad"),
   fileprefix = "ERA5Land_UTCDaily_netrad",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
-# Check if any unsuccessful:
-stopifnot(nrow(res_netrad |> unnest(data) |> filter(!grepl("Written", data))) == 0)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_netrad |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
 
-# Surface solar radiation downwards (ssrd) - daily resolution -------------------------------
+# Surface solar radiation downwards (ssrd) - daily resolution -------------------------------  # NOTE: this is unused since we need net radiation
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_ssrd\\.(2018|2019|2020)\\.nc$",   # TODO: change here to include all years
+  pattern = ".*tot_ssrd\\.[0-9]{4}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
 tidync::tidync(filnam[[1]])
 # Convert to tidy
-res_ssrd <- map2tidy:::map2tidy(
+res_tot_ssrd <- map2tidy:::map2tidy(
   nclist = filnam,
   varnam = "tot_ssrd",
   lonnam = "longitude",
@@ -171,11 +176,61 @@ res_ssrd <- map2tidy:::map2tidy(
   timenam = "valid_time",
   do_chunks = TRUE,
   na.rm = FALSE,
-  outdir = file.path(outdir, "ssrd"),
-  fileprefix = "ERA5Land_UTCDaily_ssrd",
+  outdir = file.path(outdir, "tot_ssrd"),
+  fileprefix = "ERA5Land_UTCDaily_tot_ssrd",
   ncores = ncores,
-  overwrite = FALSE,
-  filter_lon_between_degrees = c(0,2) # TODO: remove this
+  overwrite = FALSE
 )
-# Check if any unsuccessful:
-stopifnot(nrow(res_ssrd |> unnest(data) |> filter(!grepl("Written", data))) == 0)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_ssrd |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
+# Surface net solar radiation (ssr) - daily resolution -------------------------------
+filnam <- list.files(
+  path_ERA5Land,
+  pattern = ".*tot_ssr\\.[0-9]{4}\\.nc$",
+  full.names = TRUE
+)
+# check files and naming of dimensions etc...
+tidync::tidync(filnam[[1]])
+# Convert to tidy
+res_tot_ssr <- map2tidy:::map2tidy(
+  nclist = filnam,
+  varnam = "tot_ssr",
+  lonnam = "longitude",
+  latnam = "latitude",
+  timenam = "valid_time",
+  do_chunks = TRUE,
+  na.rm = FALSE,
+  outdir = file.path(outdir, "tot_ssr"),
+  fileprefix = "ERA5Land_UTCDaily_tot_ssr",
+  ncores = ncores,
+  overwrite = FALSE
+)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_ssr |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
+
+# Surface net thermal radiation (str) - daily resolution -------------------------------
+filnam <- list.files(
+  path_ERA5Land,
+  pattern = ".*tot_str\\.[0-9]{4}\\.nc$",
+  full.names = TRUE
+)
+# check files and naming of dimensions etc...
+tidync::tidync(filnam[[1]])
+# Convert to tidy
+res_tot_str <- map2tidy:::map2tidy(
+  nclist = filnam,
+  varnam = "tot_str",
+  lonnam = "longitude",
+  latnam = "latitude",
+  timenam = "valid_time",
+  do_chunks = TRUE,
+  na.rm = FALSE,
+  outdir = file.path(outdir, "tot_str"),
+  fileprefix = "ERA5Land_UTCDaily_tot_str",
+  ncores = ncores,
+  overwrite = FALSE
+)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_str |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)

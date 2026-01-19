@@ -18,7 +18,10 @@ module load UDUNITS/2.2.28-GCCcore-13.3.0
 module load netCDF
 module load R
 
-## Run the R script
+## Run a preparatory script
+## bash ../../src/CDO/ERA5Land-fullRes/calc_netrad.sh 
+## NOTE: outcommented, since this was done manually prior to this batch script with:
+## ssh ubelix; cd GitHub/geco-bern/cwd_global/; sbatch src/CDO/ERA5Land-fullRes/calc_netrad.sh
 
 
 ## Run the R script
@@ -27,13 +30,9 @@ module load R
 ## If you provide a chdir argument to SLURM, provide the relative path
 Rscript 01_make_tidy_ERA5Land.R   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
 
+## This was then followed by manual copying of results from temporary scratch to capacity storage:
+## ssh ubelix; tmux; rsync --dry-run --human-readable -i --info=progress2 -av --no-perms --no-owner --no-group /storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024
+
 # Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R  # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
-
-# TODO: rewrite the above
-
-# run src/CDO/ERA5Land-fullRes/calc_netrad.sh
-# run analysis/ERA5Land-fullRes/01_make_tidy_ERA5Land.R
-# run analysis/ERA5Land-fullRes/02_apply_pcwd_global_ERA5Land_ubelix.R
-
 
 echo "Finished on: $(date --rfc-3339=seconds)"
