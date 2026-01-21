@@ -73,38 +73,33 @@ vec_index <- map2tidy::get_index_by_chunk(
 # ncores <- 180
 ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
 
-cl <- multidplyr::new_cluster(ncores)
-cl
-
-multidplyr::cluster_library(cl, c(
-  "map2tidy", "dplyr", "purrr", "tidyr", "readr", "here", "rpmodel", "magrittr", "cwd"
-))
-
-multidplyr::cluster_assign(
-  cl,
-  ERA5Land_fullRes_compute_pcwd_byLON = ERA5Land_fullRes_compute_pcwd_byLON
-)
+# cl <- multidplyr::new_cluster(ncores)
+# cl
+#
+# multidplyr::cluster_library(cl, c(
+#   "map2tidy", "dplyr", "purrr", "tidyr", "readr", "here", "rpmodel", "magrittr", "cwd"
+# ))
+#
+# multidplyr::cluster_assign(
+#   cl,
+#   ERA5Land_compute_pcwd_byLON = ERA5Land_compute_pcwd_byLON
+# )
 # ERA5Land_fullRes_compute_pcwd_byLON(filnams[1], indir, outdir)
- get_cwd_withSnow_and_reset_ERA5Land <- get_cwd_withSnow_and_reset_ERA5Land_fullRes
+# ERA5Land_compute_pcwd_byLON(filnams[1], indir, outdir)
+# FOR DEVELOPMENT:
+# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[1]))
+# ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
 
-ERA5_simulate_snow <- ERA5_simulate_snow_fullRes
 # 1. Load cwd package first
-devtools::load_all("~/cwd")  # if needed
+# devtools::load_all("~/cwd")  # if needed
 
 # 2. Source ERA5 simulate snow first
-source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/ERA5_simulate_snow.R")
+# source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/ERA5_simulate_snow.R")
 
 # 3. Then source the wrapper that uses it
-source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R")
+# source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R")
 # Load cwd package
-library(cwd)
-
-
-ERA5Land_fullRes_compute_pcwd_byLON("LON_+000.000", indir, outdir)
-
-
-
-
+# library(cwd)
 
 cl <- multidplyr::new_cluster(ncores) |>
   # set up the cluster, sending required objects to each core
