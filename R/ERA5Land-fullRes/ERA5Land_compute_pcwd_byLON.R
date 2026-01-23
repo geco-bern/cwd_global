@@ -171,7 +171,7 @@ ERA5Land_compute_pcwd_byLON <- function(
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
   message(paste0("Writing file ", path_pcwd, " ..."))
-  readr::write_rds(out_pcwd, path_pcwd)
+  readr::write_rds(out_pcwd, path_pcwd, compress = "xz")
 
   # don't return data - it's written to file
   return(NULL)
