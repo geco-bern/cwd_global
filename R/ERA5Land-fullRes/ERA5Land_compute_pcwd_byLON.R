@@ -156,13 +156,17 @@ ERA5Land_compute_pcwd_byLON <- function(
   out_pcwd <- df_pcwd |>
     dplyr::select(lon, lat, date, precip, tsurf, pet) |> # Use POTENTIAL ET as ET estimate
 
-    # group data by grid cells and wrap time series for each grid cell into a new
-    # column
+    # wrap time series for each grid cell (lon,lat combination) into a new column 'data'
     tidyr::nest(data = c(date, precip, tsurf, pet)) |>
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    ###slice(1:2)|> # uncomment for development/debugging
+    ###slice(1:2)|> # uncomment for development/debugging   # 5secs for 1 pixel (75 years),
+                                                            # 40secs for 10 pixel
+                                                            # ==> then about 2h for 1800 pixel in 1 LON
+                                                            # (in reality about 45 mins (due to ocean ?))
+                                                            # (Note: this would amount to: 3600*0.75/24 = 112.5 days for single core).
+                                                            # (      memory footprint was about 32GB per core)
     mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset_ERA5Land(.), .progress = TRUE))
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter

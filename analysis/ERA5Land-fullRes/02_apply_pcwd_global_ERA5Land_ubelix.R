@@ -6,7 +6,7 @@
 
 # Note that these arguments can be used to distribute over multiple nodes.
 # Distribution over CPU cores of a single node is handled by multidplyr
-# and argument ncores in the script.
+# and argument ncores inside of this script.
 
 # Example for 4 CPU-nodes:
 # >./apply_cwd_global.R 1 4
@@ -17,46 +17,50 @@
 # Example for 1 CPU-nodes:
 # >./apply_cwd_global.R 1 1
 # # When using this script directly from RStudio, not from the shell, specify
-args <- c(1, 1)
+# args <- c(1, 180)
+# args <- c(1, 1)
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
+# install.packages(c("map2tidy", "dplyr", "stringr", "purrr", "ncdf4"))
+# install.packages(c("lubridate"))
+# install.packages(c("tidyr"))
+# install.packages(c("ncdf4"))
+# install.packages(c("readr"))
 remotes::install_github("geco-bern/cwd")
-remotes::install_github("geco-bern/rgeco")
-remotes::install_github("geco-bern/rpmodel")
 
+library(lubridate)
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
 library(terra)
 library(tidyr)
-library(cwd)
-# devtools::load_all("~/cwd/R/cwd.R")
-library(rgeco)
-library(rpmodel)
+library(cwd)       # 1. Load cwd package first
 library(parallelly)
-# devtools::load_all("~/cwd")
 
-# source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source(here::here("R/ERA5Land-fullRes/ERA5Land_compute_pcwd_byLON.R"))
-source(here::here("R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R"))
-source(here::here("R/ERA5Land-fullRes/ERA5_simulate_snow.R"))
+# Working directory (see main.sh): /storage/homefs/fb24k097/GitHub/geco-bern/cwd_global/analysis/ERA5Land-fullRes
+source("../../R/ERA5Land-fullRes/ERA5Land_compute_pcwd_byLON.R")         # 4. And another wrapper that loads the tidied RDS files
+source("../../R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R") # 3. Then source the wrapper that uses it
+source("../../R/ERA5Land-fullRes/ERA5Land_simulate_snow.R")              # 2. Source ERA5 simulate snow first
 
 indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024/"
-outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/02_pcwd" # TODO: check this
+# indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/01_daily_tidy1950-2024/" # TODO: switch to this
+outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/02_daily_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
-# 1a) Define filenames of files to process:  -------------------------------
+
+# 1) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 
-filnams <- list.files(file.path(indir, "tot_tp"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "tot_tp"),  # use tot_tp folder to get all LON
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
 }
+
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
@@ -73,34 +77,6 @@ vec_index <- map2tidy::get_index_by_chunk(
 # ncores <- 180
 ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
 
-# cl <- multidplyr::new_cluster(ncores)
-# cl
-#
-# multidplyr::cluster_library(cl, c(
-#   "map2tidy", "dplyr", "purrr", "tidyr", "readr", "here", "rpmodel", "magrittr", "cwd"
-# ))
-#
-# multidplyr::cluster_assign(
-#   cl,
-#   ERA5Land_compute_pcwd_byLON = ERA5Land_compute_pcwd_byLON
-# )
-# ERA5Land_fullRes_compute_pcwd_byLON(filnams[1], indir, outdir)
-# ERA5Land_compute_pcwd_byLON(filnams[1], indir, outdir)
-# FOR DEVELOPMENT:
-# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[1]))
-# ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
-
-# 1. Load cwd package first
-# devtools::load_all("~/cwd")  # if needed
-
-# 2. Source ERA5 simulate snow first
-# source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/ERA5_simulate_snow.R")
-
-# 3. Then source the wrapper that uses it
-# source("/storage/homefs/ye23g660/Era5_pcwd/cwd_global/R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R")
-# Load cwd package
-# library(cwd)
-
 cl <- multidplyr::new_cluster(ncores) |>
   # set up the cluster, sending required objects to each core
   multidplyr::cluster_library(c("map2tidy",
@@ -108,22 +84,22 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "purrr",
                                 "tidyr",
                                 "readr",
-                                "here",
+                                "lubridate",
                                 "cwd",
                                 "rpmodel",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    indir                       = indir,
-    outdir                      = outdir,
-    ERA5Land_compute_pcwd_byLON = ERA5Land_compute_pcwd_byLON   # make the function known for each core
+    indir                               = indir,
+    outdir                              = outdir,
+    ERA5Land_compute_pcwd_byLON         = ERA5Land_compute_pcwd_byLON,        # make the function known for each core
+    get_cwd_withSnow_and_reset_ERA5Land = get_cwd_withSnow_and_reset_ERA5Land # make the function known for each core
   )
 # FOR DEVELOPMENT:
-# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[1]))
+# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[2]))
+# debug(get_cwd_withSnow_and_reset_ERA5Land)
+# debug(ERA5Land_compute_pcwd_byLON)
 # ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
 
-
-# distribute computation across the cores, calculating for all longitudinal
-# indices of this chunk
 
 # 3) Process files --------------------------------------------------------
 

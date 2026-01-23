@@ -5,7 +5,7 @@
 Sys.getpid()
 
 # options(repos = c(CRAN = "https://cloud.r-project.org"))
-# install.packages(c("map2tidy", "dpyr", "stringr", "purrr", "ncdf4"))
+# install.packages(c("map2tidy", "dplyr", "stringr", "purrr", "ncdf4"))
 # install.packages(c("tidyr"))
 # install.packages(c("ncdf4"))
 # install.packages(c("readr"))

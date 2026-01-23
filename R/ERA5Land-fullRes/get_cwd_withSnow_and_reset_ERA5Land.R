@@ -35,7 +35,7 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
       cwd::simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tsurf")
 
     vars_df <- vars_df |>
-      mutate(wbal = liquid_to_soil - pet) ## don't simulate snow and melt here so liquid_to_soil = precip here
+      mutate(wbal = liquid_to_soil - pet)
 
     # cwd
     ## calculate cumulative water deficit
@@ -54,4 +54,6 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
   # - data frame for time series and all variables
   # - data frame with instances
   return(out_cwd)
+  # browser()
+  # ggplot(out_cwd$df |> filter(date > "2020-01-01"), aes(x=date,y=deficit)) + geom_line()
 }
