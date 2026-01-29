@@ -46,8 +46,8 @@ source("../../R/ERA5Land-fullRes/ERA5Land_compute_pcwd_byLON.R")         # 4. An
 source("../../R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R") # 3. Then source the wrapper that uses it
 source("../../R/ERA5Land-fullRes/ERA5Land_simulate_snow.R")              # 2. Source ERA5 simulate snow first
 
-indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024/"
-# indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/01_daily_tidy1950-2024/" # TODO: switch to this
+indir  <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024/" # TODO: outcomment and remove this line
+# indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_tidy_dailyUTC_v3/tidy1950-2024/" # TODO: switch to this
 outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/02_daily_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
@@ -102,7 +102,7 @@ cl <- multidplyr::new_cluster(ncores) |>
 
 
 # 3) Process files --------------------------------------------------------
-
+#    If some are missing from the 3600 simply rerun this again manually. It should filter out already processed files.
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
 
