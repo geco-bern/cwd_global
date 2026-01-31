@@ -124,3 +124,4 @@ out <- tibble(in_fname = filnams[vec_index]) |>
       outdir          = outdir))
   ) |> collect()
 
+print(out)

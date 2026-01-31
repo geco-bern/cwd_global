@@ -4,7 +4,7 @@ ERA5Land_compute_pcwd_byLON <- function(
     LON_string,
     indir,
     outdir){
-
+  tryCatch({
   #############################################
   # Define hardcoded paths and hardcoded options: change year and set number to adapt for other sets
   indir_prec      <- file.path(indir, "tot_tp")
@@ -17,6 +17,19 @@ ERA5Land_compute_pcwd_byLON <- function(
   # prepare output names
   path_pcwd <- file.path(outdir, paste0("ERA5Land_pcwd", "_", LON_string, ".rds"))
   #############################################
+  verbose_read_rds <- function(path) {
+    tryCatch(
+      readr::read_rds(path),
+      error = function(e) {
+        msg <- sprintf("Failed to read RDS file at '%s': %s",
+                  normalizePath(path, mustWork = FALSE),
+                  e$message)
+        warning(msg)
+        stop(msg,call. = FALSE)
+      }
+    )
+  }
+  #############################################
 
 
   print(paste0(Sys.time(), ", LON: ", LON_string))
@@ -25,32 +38,32 @@ ERA5Land_compute_pcwd_byLON <- function(
   # read precipitation file tidy
   filnam <- file.path(indir_prec, paste0("ERA5Land_UTCDaily_tot_tp_",
                                          LON_string,".rds"))
-  df_precip <- readr::read_rds(filnam)
+  df_precip <- verbose_read_rds(filnam)
 
   # # read potential evaporation file tidy
   # filnam <- file.path(indir_pev, paste0("ERA5Land_UTCDaily_totpev_",
   #                                       LON_string,".rds"))
   #
-  # df_pev <- readr::read_rds(filnam)
+  # df_pev <- verbose_read_rds(filnam)
 
   # read temperature file tidy
   filnam <- file.path(indir_tas, paste0("ERA5Land_UTCDaily_mean_t2m_",
                                          LON_string,".rds"))
-  df_tsurf  <- readr::read_rds(filnam)
+  df_tsurf  <- verbose_read_rds(filnam)
 
   # read surface Pressure file tidy
   filnam <- file.path(indir_patm, paste0("ERA5Land_UTCDaily_mean_sp_",
                                          LON_string,".rds"))
-  df_patm <- readr::read_rds(filnam)
+  df_patm <- verbose_read_rds(filnam)
 
   # read net radiation file tidy
   # filnam <- file.path(indir_netrad, paste0("ERA5Land_UTCDaily_netrad_",
   #                                          LON_string,".rds"))
-  # df_net_radiation <- readr::read_rds(filnam)
+  # df_net_radiation <- verbose_read_rds(filnam)
 
   # read net radiation (shortwave 'ssr' and thermal 'str') file tidy
-  df_ssr <- readr::read_rds(file.path(indir_ssr, paste0("ERA5Land_UTCDaily_tot_ssr_", LON_string,".rds")))
-  df_str <- readr::read_rds(file.path(indir_str, paste0("ERA5Land_UTCDaily_tot_str_", LON_string,".rds")))
+  df_ssr <- verbose_read_rds(file.path(indir_ssr, paste0("ERA5Land_UTCDaily_tot_ssr_", LON_string,".rds")))
+  df_str <- verbose_read_rds(file.path(indir_str, paste0("ERA5Land_UTCDaily_tot_str_", LON_string,".rds")))
 
   # unnest all the data frames
   # df_net_radiation  <- df_net_radiation |> tidyr::unnest(data)
@@ -175,5 +188,6 @@ ERA5Land_compute_pcwd_byLON <- function(
 
   # don't return data - it's written to file
   return(NULL)
+  },error = function(e) {return(e$message)}) # error handling of tryCatch
 }
 
