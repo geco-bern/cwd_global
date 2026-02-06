@@ -21,12 +21,6 @@ module load GDAL/3.10.0-foss-2024a    # needed for 02_apply_pcwd...
 module load netCDF
 module load R
 
-## Run a preparatory script
-## bash ../../src/CDO/ERA5Land-fullRes/calc_netrad.sh 
-## NOTE: outcommented, since this was done manually prior to this batch script with:
-## ssh ubelix; cd GitHub/geco-bern/cwd_global/; sbatch src/CDO/ERA5Land-fullRes/calc_netrad.sh
-
-
 ## Run the R scripts
 ## If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
 ## Rscript GitHub/fabern/parallelization-tests/01_example_future.R
