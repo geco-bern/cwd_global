@@ -1,6 +1,25 @@
 #!/usr/bin/env Rscript
 
-# script is called without any arguments
+### NOTE: status 2026-02-23: unsuccessful running of thsi script.
+###       resulted in error messages (see. e.g slurm-45089938_2017.out):
+###       
+###       Error in `vec_rbind()`:
+###       ! Negative `n` in `compact_rep()`.
+###       ℹ In file 'utils.c' at line 897.
+###       ℹ This is an internal error that was detected in the vctrs package.
+###         Please report it at <https://github.com/r-lib/vctrs/issues> with a reprex (<https://tidyverse.org/help/>) and the full backtrace.
+###       Backtrace:
+###           ▆
+###        1. ├─dplyr::bind_rows(...)
+###        2. │ └─vctrs::vec_rbind(!!!dots, .names_to = .id, .error_call = current_env())
+###        3. └─rlang:::stop_internal_c_lib(...)
+###        4.   └─rlang::abort(message, call = call, .internal = TRUE, .frame = frame)
+###       Execution halted
+###       Finished on: 2026-02-09 06:45:38+01:00
+###       
+###       FB: This error appeared after ~30h when running for 1 year.
+###       FB: Note that it might be linked that *.rds files were incomplete (around 10 were missing when this script was run)
+
 # script is called with one arguments for parallelization:
 # 1. year to extract
 
@@ -30,16 +49,16 @@ library(multidplyr)
 indir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd"
 outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd/03_daily_pcwd_YYYY.nc" # adjust path to where the file should be written to
 
-# 3600 LON slices (for 1 year) use (`seff $jobid`) xGB memory  runtime X.Xmin  output NetCDF: XMB
-# 3600 LON slices (for 1 year) predicted           xGB memory  runtime 38h    output NetCDF: 9500MB
+# 3600 LON slices (for 1 year) use (`seff 45089938_2021`) 83GB memory  runtime 39h    output NetCDF: XMB
+# 3600 LON slices (for 1 year) use (`seff 45089938_2024`) xGB memory  runtime XXh    output NetCDF: XMB
+# 3600 LON slices (for 1 year) predicted                  xGB memory  runtime 38h    output NetCDF: 9500MB
 
 # 128 LON slices (for 1 year) use (`seff 45047351_1956`) 20GB memory  runtime 96min  output NetCDF: 320MB
 # 128 LON slices (for 1 year) predicted                 192GB memory  runtime 80min  output NetCDF: 336MB
 
-# 16 LON slices (for 1 year) use (`seff 45047413_2022`) 13GB memory  runtime 11min  output NetCDF: 41MB # this is to see if by manually triggering gc() memory usage is further reduced
-# 16 LON slices (for 1 year) use (`seff 45047380_2021`) 16GB memory  runtime 10min  output NetCDF: 41MB # ok good news that memory is not linear
-# 16 LON slices (for 1 year) predicted                  24GB memory  runtime 10min  output NetCDF: 42MB
-
+# 16 LON slices (for 1 year) use (`seff 45047413_2022`)  13GB memory  runtime 11min  output NetCDF: 41MB # this is to see if by manually triggering gc() memory usage is further reduced
+# 16 LON slices (for 1 year) use (`seff 45047380_2021`)  16GB memory  runtime 10min  output NetCDF: 41MB # ok good news that memory is not linear
+# 16 LON slices (for 1 year) predicted                   24GB memory  runtime 10min  output NetCDF: 42MB
 
 # 8 LON slices (for 1 year) use (`seff $jobid`) 12.2GB memory runtime 5min   output NetCDF: 21MB
 # 4 LON slices (for 1 year) use (`seff $jobid`) 9.11GB memory runtime 3min   output NetCDF: 11MB
