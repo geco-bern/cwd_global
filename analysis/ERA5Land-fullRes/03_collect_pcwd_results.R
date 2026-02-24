@@ -35,7 +35,6 @@ stopifnot(length(args)==1)
 
 curr_year <- as.integer(args[1])
 
-
 # options(repos = c(CRAN = "https://cloud.r-project.org"))
 # install.packages(c("map2tidy", "dplyr", "stringr", "purrr", "ncdf4"))
 # install.packages(c("gtable", "farver", "RColorBrewer")) # TODO: These trigger errors if missing when library(rgeco)
@@ -50,36 +49,34 @@ library(abind)
 indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd"
 outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_netcdf/data_derived_03_daily_pcwd_YYYY_r-generated.nc" # adjust path to where the file should be written to
 
-# 3600 LON slices (for 1 year) use (`seff xxxxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
-# 1000 LON slices (for 1 year) use (`seff xxxxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 3600 LON slices (for 1 year) use (`seff 46215322_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 1000 LON slices (for 1 year) use (`seff 46215310_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 100  LON slices (for 1 year) use (`seff 46214913_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 10   LON slices (for 1 year) use (`seff 46213417_1962`) 13GB memory  runtime 6min    output NetCDF: 26MB
 
 
 
-# 3600 LON slices (for 1 year) use (`seff 45089938_2021`) 83GB memory  runtime 39h    output NetCDF: XMB
-# 3600 LON slices (for 1 year) use (`seff 45089938_2024`) xGB memory  runtime XXh    output NetCDF: XMB
-# 3600 LON slices (for 1 year) predicted                  xGB memory  runtime 38h    output NetCDF: 9500MB
+      # TODO: REMOVE     # 3600 LON slices (for 1 year) use (`seff 45089938_2021`) 83GB memory  runtime 39h    output NetCDF: XMB
+      # TODO: REMOVE     # 3600 LON slices (for 1 year) use (`seff 45089938_2024`) xGB memory  runtime XXh    output NetCDF: XMB
+      # TODO: REMOVE     # 3600 LON slices (for 1 year) predicted                  xGB memory  runtime 38h    output NetCDF: 9500MB
 
-# 128 LON slices (for 1 year) use (`seff 45047351_1956`) 20GB memory  runtime 96min  output NetCDF: 320MB
-# 128 LON slices (for 1 year) predicted                 192GB memory  runtime 80min  output NetCDF: 336MB
+      # TODO: REMOVE     # 128 LON slices (for 1 year) use (`seff 45047351_1956`) 20GB memory  runtime 96min  output NetCDF: 320MB
+      # TODO: REMOVE     # 128 LON slices (for 1 year) predicted                 192GB memory  runtime 80min  output NetCDF: 336MB
 
-# 16 LON slices (for 1 year) use (`seff 45047413_2022`)  13GB memory  runtime 11min  output NetCDF: 41MB # this is to see if by manually triggering gc() memory usage is further reduced
-# 16 LON slices (for 1 year) use (`seff 45047380_2021`)  16GB memory  runtime 10min  output NetCDF: 41MB # ok good news that memory is not linear
-# 16 LON slices (for 1 year) predicted                   24GB memory  runtime 10min  output NetCDF: 42MB
+      # TODO: REMOVE     # 16 LON slices (for 1 year) use (`seff 45047413_2022`)  13GB memory  runtime 11min  output NetCDF: 41MB # this is to see if by manually triggering gc() memory usage is further reduced
+      # TODO: REMOVE     # 16 LON slices (for 1 year) use (`seff 45047380_2021`)  16GB memory  runtime 10min  output NetCDF: 41MB # ok good news that memory is not linear
+      # TODO: REMOVE     # 16 LON slices (for 1 year) predicted                   24GB memory  runtime 10min  output NetCDF: 42MB
 
-# 8 LON slices (for 1 year) use (`seff $jobid`) 12.2GB memory runtime 5min   output NetCDF: 21MB
-# 4 LON slices (for 1 year) use (`seff $jobid`) 9.11GB memory runtime 3min   output NetCDF: 11MB
-# 3 LON slices (for 1 year) use (`seff $jobid`) 7.21GB memory runtime 2min   output NetCDF: 7.6MB
-# 2 LON slices (for 1 year) use (`seff $jobid`) 6GB memory    runtime 1.3min output NetCDF: 5MB
+      # TODO: REMOVE     # 8 LON slices (for 1 year) use (`seff $jobid`) 12.2GB memory runtime 5min   output NetCDF: 21MB
+      # TODO: REMOVE     # 4 LON slices (for 1 year) use (`seff $jobid`) 9.11GB memory runtime 3min   output NetCDF: 11MB
+      # TODO: REMOVE     # 3 LON slices (for 1 year) use (`seff $jobid`) 7.21GB memory runtime 2min   output NetCDF: 7.6MB
+      # TODO: REMOVE     # 2 LON slices (for 1 year) use (`seff $jobid`) 6GB memory    runtime 1.3min output NetCDF: 5MB
 
 
 dir.create(dirname(outfile_pcwd), showWarnings = FALSE)
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
-
-filnams_pcwd <- filnams_pcwd[1:100] # TODO remove
 
 # 1b) Make a simple plot of area around Bern:  -------------------------------
 
