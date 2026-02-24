@@ -3,7 +3,8 @@
 ERA5Land_compute_pcwd_byLON <- function(
     LON_string,
     indir,
-    outdir){
+    outdir,
+    reduce_rds_size = FALSE){ # NOTE: If reduce_rds_size then rds file content is reduced (and years are split depending on variant)
   tryCatch({
   #############################################
   # Define hardcoded paths and hardcoded options: change year and set number to adapt for other sets
@@ -174,17 +175,30 @@ ERA5Land_compute_pcwd_byLON <- function(
 
     # apply the custom function on the time series data frame separately for
     # each grid cell.
-    ###slice(1:2)|> # uncomment for development/debugging   # 5secs for 1 pixel (75 years),
-                                                            # 40secs for 10 pixel
-                                                            # ==> then about 2h for 1800 pixel in 1 LON
-                                                            # (in reality about 45 mins (due to ocean ?))
-                                                            # (Note: this would amount to: 3600*0.75/24 = 112.5 days for single core).
-                                                            # (      memory footprint was about 32GB per core)
     mutate(data = purrr::map(data, ~get_cwd_withSnow_and_reset_ERA5Land(.), .progress = TRUE))
 
   # write (complemented) data to cwd- and pcwd-files with meaningful name and index counter
-  message(paste0("Writing file ", path_pcwd, " ..."))
-  readr::write_rds(out_pcwd, path_pcwd, compress = "xz")
+  message(paste0("Writing file(s) ", path_pcwd, " ..."))
+  if (!reduce_rds_size) {
+    readr::write_rds(out_pcwd, path_pcwd, compress = "xz")
+  } else {
+    out_pcwd |>
+      # pcwd generated nested lists with elements 'inst' and 'df'. We only use df
+      tidyr::unnest_wider(data) |> select(-inst) |> select(lon, lat, df) |>
+      tidyr::unnest(df) |>
+      select(lon, lat, date, pcwd_mm = deficit) |>
+      dplyr::mutate(year = lubridate::year(date)) |>
+      # variant 1:
+      readr::write_rds(paste0(path_pcwd,"allyears_onlypcwd_mm.rds"), compress = "xz")
+      # variant 2: additionally split by year
+      # group_by(year) |> group_split() |>
+      # purrr::map(function(df_peryear) {
+      #   readr::write_rds(
+      #     df_peryear,
+      #     paste0(path_pcwd, "_", first(df_peryear$year), ".rds"),
+      #     compress = "xz")
+      #   })
+  }
 
   # don't return data - it's written to file
   return(NULL)

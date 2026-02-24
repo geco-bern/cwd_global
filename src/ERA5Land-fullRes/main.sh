@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="ERA5Land_pcwd_40Gx4coresx90nodes_compressed"
+#SBATCH --job-name="ERA5Land_pcwd_40Gx4coresx200jobs"
 #SBATCH --time=6-00:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
-#SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
-#SBATCH --array=1-1           # specifies the slurm array job with the number of tasks
+#SBATCH --ntasks=1             # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
+#SBATCH --array=1-200          # specifies the slurm array job with the number of tasks
 #SBATCH --cpus-per-task=4      # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
 #SBATCH --mem-per-cpu=40G
 #SBATCH --mail-user=fabian.bernhard@unibe.ch

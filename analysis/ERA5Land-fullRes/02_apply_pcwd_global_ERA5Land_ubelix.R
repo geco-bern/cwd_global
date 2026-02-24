@@ -120,7 +120,8 @@ out <- tibble(in_fname = filnams[vec_index]) |>
     ~ERA5Land_compute_pcwd_byLON(
       .,
       indir           = indir,
-      outdir          = outdir))
+      outdir          = outdir, 
+      reduce_rds_size = TRUE))
   ) |> collect()
 
 print(out)
