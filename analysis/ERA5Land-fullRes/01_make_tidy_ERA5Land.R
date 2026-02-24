@@ -20,8 +20,23 @@ library(ncdf4)
 # list demo file path
 
 # adjust path to where your ERA5Land data is located
-path_ERA5Land <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024"
+path_ERA5Land <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+    # What would be available:
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.5G May 24  2025 ERA5Land_UTCDaily.tot_tp.2024.nc
+    # -rw-rw----  1 fb24k097 cs_occr_geco 2.2G May 24  2025 ERA5Land_UTCDaily.tot_str.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.tot_ssrd.2024.nc
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_ssr.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_pev.2024.nc
+    # -rw-rw----  1 fb24k097 cs_occr_geco 2.3G May 24  2025 ERA5Land_UTCDaily.mean_wind10.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_sp.2024.nc
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_d2m.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_t2m.2024.nc
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.4G May 24  2025 ERA5Land_UTCDaily.min_t2m.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.4G May 24  2025 ERA5Land_UTCDaily.max_t2m.2024.nc # unused here
+
+
+outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024"
+#outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024"
 dir.create(outdir, recursive = T)
 
 # ncores <- 180

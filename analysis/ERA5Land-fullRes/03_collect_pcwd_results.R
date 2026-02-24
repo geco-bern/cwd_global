@@ -2,7 +2,7 @@
 
 ### NOTE: status 2026-02-23: unsuccessful running of thsi script.
 ###       resulted in error messages (see. e.g slurm-45089938_2017.out):
-###       
+###
 ###       Error in `vec_rbind()`:
 ###       ! Negative `n` in `compact_rep()`.
 ###       ℹ In file 'utils.c' at line 897.
@@ -16,7 +16,7 @@
 ###        4.   └─rlang::abort(message, call = call, .internal = TRUE, .frame = frame)
 ###       Execution halted
 ###       Finished on: 2026-02-09 06:45:38+01:00
-###       
+###
 ###       FB: This error appeared after ~30h when running for 1 year.
 ###       FB: Note that it might be linked that *.rds files were incomplete (around 10 were missing when this script was run)
 
@@ -24,7 +24,7 @@
 # 1. year to extract
 
 # Example:
-# >./collect_pcwd_restults.R 2024
+# >./collect_pcwd_results.R 2024
 
 # # When using this script directly from RStudio, not from the shell, specify
 # args <- 2022
@@ -45,9 +45,17 @@ library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
+library(abind)
 
-indir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd"
-outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd/03_daily_pcwd_YYYY.nc" # adjust path to where the file should be written to
+indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd"
+outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_netcdf/data_derived_03_daily_pcwd_YYYY_r-generated.nc" # adjust path to where the file should be written to
+
+# 3600 LON slices (for 1 year) use (`seff xxxxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 1000 LON slices (for 1 year) use (`seff xxxxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 100  LON slices (for 1 year) use (`seff 46214913_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 10   LON slices (for 1 year) use (`seff 46213417_1962`) 13GB memory  runtime 6min    output NetCDF: 26MB
+
+
 
 # 3600 LON slices (for 1 year) use (`seff 45089938_2021`) 83GB memory  runtime 39h    output NetCDF: XMB
 # 3600 LON slices (for 1 year) use (`seff 45089938_2024`) xGB memory  runtime XXh    output NetCDF: XMB
@@ -70,6 +78,8 @@ dir.create(dirname(outfile_pcwd), showWarnings = FALSE)
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
+
+filnams_pcwd <- filnams_pcwd[1:100] # TODO remove
 
 # 1b) Make a simple plot of area around Bern:  -------------------------------
 
@@ -113,17 +123,15 @@ filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds",
 
 
 # 2) Process 1st file  (Bern file) --------------------------------------------------------
-# readRDS(filnams_pcwd[1])
-
 # For development: Use Bern coordinates 46.947687535597794, 7.441952632324079
-# basename(filnams_pcwd)
 # basename(filnams_pcwd[75])
-
-# rds_name <- filnams_pcwd[75]
-# curr_year <- args
-subset_pcwd_for_year <- function(rds_name, curr_year_arg){
+subset_pcwd_for_year_to_nested_dataframe <- function(rds_name, curr_year_arg){
+  start <- Sys.time()
   full_tidy_slice <- readRDS(rds_name)
+  print(sprintf("%10.0f secs: to read      %s", Sys.time() - start, rds_name))
+  flush.console()
 
+  start <- Sys.time()
   out <- full_tidy_slice |>
     # dplyr::filter(lat > 46, lat < 47) |> # slice(1) |>    # TODO: for development we also subset lat to be between 46 and 47 North
     # pcwd generated nested lists with elements 'inst' and 'df'. We only use df
@@ -132,7 +140,11 @@ subset_pcwd_for_year <- function(rds_name, curr_year_arg){
     # subset year
     dplyr::mutate(year = lubridate::year(date)) |>
     dplyr::filter(year == !!curr_year_arg) |>
-    select(lon, lat, date, pcwd_mm = deficit)
+    select(lon, lat, date, pcwd_mm = deficit)  |>
+    tidyr::nest(year_timeseries = c(date, pcwd_mm)) |>
+    tidyr::nest(lat_cubes = c(lat, year_timeseries))
+  print(sprintf("%10.0f secs: to process 1 %s", Sys.time() - start, rds_name))
+  flush.console()
 
   # explicitly drop large intermediates and trigger GC to reduce RAM usage
   rm(full_tidy_slice)
@@ -141,69 +153,61 @@ subset_pcwd_for_year <- function(rds_name, curr_year_arg){
   out
 }
 
-# 3) Process files --------------------------------------------------------
-df_pcwd <- lapply(
-  filnams_pcwd, # filnams_pcwd[75:(75+16-1)],   # TODO: remove this subsetting: and simply use filnams_pcwd
-  function(filnam) subset_pcwd_for_year(filnam, curr_year_arg = curr_year)
-  ) |>
-  bind_rows()
+## 3) Process files --------------------------------------------------------
+nested_df_pcwd <- lapply(filnams_pcwd,
+  function(filnam) subset_pcwd_for_year_to_nested_dataframe(filnam, curr_year_arg = curr_year)
+  ) |> bind_rows()
 
-# 4) Output to global NetCDF file ---------------------------------
-# df_cwd <- df_pcwd
-# varname <- "pcwd_mm"
-prepare_write_nc2 <- function(df_cwd, varname){
-  # create object that can be used with write_nc2()
-  df_cwd <- df_cwd |>
-    dplyr::select(lon, lat, date, pcwd_mm) |>
-    arrange(date, lat, lon)
+## 4) Output to global NetCDF file ---------------------------------
+##    This is required as NetCDF is a gridded format.
+##    We need to reshape the 2D data.frame as N-D gridded array.
+##    NOTE: this assumes that the tidy data are available on a regular grid.
+##    NOTE: this does assume that the tidy data are ordered.
+##
+make_netcdf_gridded_array <- function(df_nested, varname){
 
-  arr <- array(
-    unlist(df_cwd$pcwd_mm),
-    dim = c(
-      length(unique(df_cwd$lon)),
-      length(unique(df_cwd$lat)),
-      length(unique(df_cwd$date))
-    )
-  )
-  # image(arr[,,1])
+  start <- Sys.time()
+  # Get coordinates of regular grid (assumes regular grid)
+  lons = df_nested$lon
+  lat  = df_nested$lat_cubes[[1]]$lat                       # NOTE: use 1st element assume all following have same lat (regular grid)
+  dates= df_nested$lat_cubes[[1]]$year_timeseries[[1]]$date # NOTE: use 1st element assume all following have same lat (regular grid)
+
+  # Make 3D - array
+  arr <- df_nested |>
+    dplyr::select(-lon) |> tidyr::unnest(lat_cubes) |>
+    dplyr::select(-lat) |> tidyr::unnest(year_timeseries) |>
+    dplyr::select(-date) |> magrittr::extract2("pcwd_mm") |>
+    # bring into array form
+    array(dim      = c(length(lons), length(lat), length(dates)),
+          dimnames = list("lon"=lons, "lat"=lat,  "date"=dates))
+
+  # Now arrange a slice vertically with row=lat, col=lon, nmat=date (North-East-Date)
+  arr_NE_date <- aperm(arr, c(2,1,3))
 
   # create object for use in rgeco::write_nc2()
-  vars_list = list(arr)
-  names(vars_list) <- varname
-
   obj <- list(
-    lon = sort(unique(df_cwd$lon)),
-    lat = sort(unique(df_cwd$lat)),
-    time = sort(unique(df_cwd$date)),
-    vars = vars_list
+    lon  = lons,
+    lat  = lat,
+    time = dates,
+    vars = setNames(list( c(arr_NE_date) ),
+                    varname)
   )
+
+  print(sprintf("%10.0f secs: to regrid array: %s", Sys.time() - start, varname))
+  flush.console()
 
   return(obj)
 }
 
-obj_pcwd <- prepare_write_nc2(df_pcwd, varname="pcwd_mm")
+obj_pcwd <- make_netcdf_gridded_array(nested_df_pcwd, varname="pcwd_mm")
+# str(obj_pcwd)
 
-# Get meta information on code executed:
-get_repo_info <- function(){
-  gitrepo_url  <- system("git remote get-url origin", intern=TRUE)
-  gitrepo_hash <- system("git rev-parse --short HEAD", intern=TRUE)
-  gitrepo_status <-
-    ifelse(system("git status --porcelain | wc -l", intern = TRUE) == "0",
-           "",  #-clean-repository
-           "-dirty-repository")
-  gitrepo_id <- paste0(
-    gsub(".git$", "", gsub(".*github.com:","github.com/", gitrepo_url)),
-    "@", gitrepo_hash, gitrepo_status)
 
-  return(gitrepo_id)
-}
-# get_repo_info()
 
 # Write NetCDF file:
-
 log_str <- sprintf(
-    "Created on: %s, with R scripts from (%s) processing input data from: %s",
-    Sys.Date(), get_repo_info(), indir)
+    "Created on: %s, processing input data from: %s",
+    Sys.Date(), indir)
 
 rgeco::write_nc2(
   obj_pcwd,
@@ -214,3 +218,7 @@ rgeco::write_nc2(
   att_title   = "Potential Cumulative Water Deficit for ERA5Land data",
   att_history = log_str
 )
+
+# Check output:
+# tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
+
