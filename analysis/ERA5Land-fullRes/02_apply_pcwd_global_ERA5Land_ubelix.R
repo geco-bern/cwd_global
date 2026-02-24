@@ -47,7 +47,7 @@ source("../../R/ERA5Land-fullRes/get_cwd_withSnow_and_reset_ERA5Land.R") # 3. Th
 source("../../R/ERA5Land-fullRes/ERA5Land_simulate_snow.R")              # 2. Source ERA5 simulate snow first
 
 indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/"
-outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/02_daily_pcwd_v2"
+outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd_v2-doy-reset"
 dir.create(outdir, showWarnings = FALSE)
 
 
@@ -95,8 +95,8 @@ cl <- multidplyr::new_cluster(ncores) |>
   )
 # FOR DEVELOPMENT:
 # LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[2]))
-# debug(get_cwd_withSnow_and_reset_ERA5Land)
-# debug(ERA5Land_compute_pcwd_byLON)
+# # debug(get_cwd_withSnow_and_reset_ERA5Land)
+# # debug(ERA5Land_compute_pcwd_byLON)
 # ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
 
 
@@ -124,3 +124,6 @@ out <- tibble(in_fname = filnams[vec_index]) |>
   ) |> collect()
 
 print(out)
+
+print(out |> unnest(out) |> filter(grepl("Failed", out)))
+

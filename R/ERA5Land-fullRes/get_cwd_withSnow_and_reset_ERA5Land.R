@@ -2,7 +2,7 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
   # vars_df must contain columns: time, pr, evspsbl, tas
 
   # cwd reset
-  ## average monthly P-ET over the first 30 years of the time series
+  ## average monthly P-ET over the whole time series
   reset_df <- vars_df |>
     mutate(date = lubridate::ymd(date)) |>
     mutate(month = lubridate::month(date))|>
@@ -42,11 +42,11 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
     out_cwd <- cwd::cwd(vars_df,
                         varname_wbal = "wbal",
                         varname_date = "date",
-                        ##choose between absolute or relative cwd threshold:
+                        ##choose between absolute or relative cwd threshold or doy_reset:
                         #thresh_terminate = 0.0,
-                        thresh_terminate_absolute = 10,
-                        thresh_drop = 0.0
-                        #doy_reset= day_of_year
+                        #thresh_terminate_absolute = NA,
+                        thresh_drop = 0.0,    # set to 0 as we do not want remove days after deficit release
+                        doy_reset= day_of_year
     )
   }
 
