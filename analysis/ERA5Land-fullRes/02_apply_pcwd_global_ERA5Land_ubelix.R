@@ -9,13 +9,13 @@
 # and argument ncores inside of this script.
 
 # Example for 4 CPU-nodes:
-# >./apply_cwd_global.R 1 4
-# >./apply_cwd_global.R 2 4
-# >./apply_cwd_global.R 3 4
-# >./apply_cwd_global.R 4 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 1 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 2 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 3 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 4 4
 
 # Example for 1 CPU-nodes:
-# >./apply_cwd_global.R 1 1
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 1 1
 # # When using this script directly from RStudio, not from the shell, specify
 # args <- c(1, 180)
 # args <- c(1, 1)
@@ -23,6 +23,9 @@
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
+print(sprintf("%s: Starting 02_apply_pcwd_global_ERA5Land_ubelix.R with arguments: %s", 
+              Sys.time(), 
+              paste0(args, collapse = " ")))
 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 # install.packages(c("map2tidy", "dplyr", "stringr", "purrr", "ncdf4"))
