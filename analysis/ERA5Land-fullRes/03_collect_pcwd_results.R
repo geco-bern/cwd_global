@@ -25,15 +25,15 @@ library(map2tidy)
 library(multidplyr)
 library(abind)
 
-indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd"
-outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_netcdf/data_derived_03_daily_pcwd_YYYY_r-generated.nc" # adjust path to where the file should be written to
+indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd_v2-doy-reset/"
+outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v2-doy_YYYY_r-generated.nc" # adjust path to where the file should be written to
 
-# 3600 LON slices (for 1 year) use (`seff xxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
+# 3600 LON slices (for 1 year) use (`seff 46219620_2022`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 1000 LON slices (for 1 year) use (`seff xxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 100  LON slices (for 1 year) use (`seff 46214913_1962 and other try xxxxxx_1962`) 14GB memory  runtime 57min    output NetCDF: XXMB
 # 10   LON slices (for 1 year) use (`seff 46213417_1962`) 13GB memory  runtime  6min    output NetCDF: 26MB
 
-dir.create(dirname(outfile_pcwd), showWarnings = FALSE)
+dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
@@ -43,29 +43,42 @@ filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds",
 # basename(filnams_pcwd[75])
 # rds_name <- filnams_pcwd[75]
 subset_pcwd_for_year_to_nested_dataframe <- function(rds_name, curr_year_arg){
+  print(sprintf("%s: Start to read      %s", Sys.time(), rds_name))
   start <- Sys.time()
   full_tidy_slice <- readRDS(rds_name)
   print(sprintf("%10.0f secs: to read      %s", Sys.time() - start, rds_name))
   flush.console()
 
   start <- Sys.time()
+  # old version: that was itself still nested and contained both outputs of pcwd:out <- full_tidy_slice |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  # dplyr::filter(lat > 46, lat < 47) |> # slice(1) |>    # TODO: for development we also subset lat to be between 46 and 47 North
+  # old version: that was itself still nested and contained both outputs of pcwd:  # pcwd generated nested lists with elements 'inst' and 'df'. We only use df
+  # old version: that was itself still nested and contained both outputs of pcwd:  tidyr::unnest_wider(data) |> select(-inst) |> select(lon, lat, df) |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  tidyr::unnest(df) |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  # subset year
+  # old version: that was itself still nested and contained both outputs of pcwd:  dplyr::mutate(year = lubridate::year(date)) |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  dplyr::filter(year == !!curr_year_arg) |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  select(lon, lat, date, pcwd_mm = deficit)  |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  tidyr::nest(year_timeseries = c(date, pcwd_mm)) |>
+  # old version: that was itself still nested and contained both outputs of pcwd:  tidyr::nest(lat_cubes = c(lat, year_timeseries))
   out <- full_tidy_slice |>
-    # dplyr::filter(lat > 46, lat < 47) |> # slice(1) |>    # TODO: for development we also subset lat to be between 46 and 47 North
-    # pcwd generated nested lists with elements 'inst' and 'df'. We only use df
-    tidyr::unnest_wider(data) |> select(-inst) |> select(lon, lat, df) |>
-    tidyr::unnest(df) |>
     # subset year
-    dplyr::mutate(year = lubridate::year(date)) |>
     dplyr::filter(year == !!curr_year_arg) |>
-    select(lon, lat, date, pcwd_mm = deficit)  |>
+    # format for reshaping
+    select(lon, lat, date, pcwd_mm) |>
+    dplyr::arrange(lon,lat,date) |> # just for safety, should already be ordered
     tidyr::nest(year_timeseries = c(date, pcwd_mm)) |>
     tidyr::nest(lat_cubes = c(lat, year_timeseries))
-  print(sprintf("%10.0f secs: to process 1 %s", Sys.time() - start, rds_name))
-  flush.console()
+
+  print(nrow(out))
+  tdiff <- Sys.time() - start
+  print(sprintf("%10.0f secs: to process 1 %s", tdiff, rds_name))
 
   # explicitly drop large intermediates and trigger GC to reduce RAM usage
   rm(full_tidy_slice)
   gc(FALSE)
+
+  flush.console()
 
   out
 }
@@ -138,4 +151,10 @@ rgeco::write_nc2(
 
 # Check output:
 # tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
-
+# df_check <- tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
+# library(ggplot2)
+# df_check |>
+#   tidync::hyper_filter(lat = index == 900 + 470, lon = index %in% c(2,3)) |>
+#   tidync::hyper_tibble(drop=FALSE, na.rm = FALSE) |>
+#   mutate(time = lubridate::as_date(time)) |>
+#   ggplot(aes(x=time, y=pcwd_mm, color = lon)) + geom_line()
