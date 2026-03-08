@@ -41,7 +41,7 @@ library(map2tidy)
 library(multidplyr)
 library(terra)
 library(tidyr)
-library(cwd)       # 1. Load cwd package first
+library(cwd)       # using cwd: v2.0 or newer       # 1. Load cwd package first
 library(parallelly)
 
 # Working directory (see main.sh): /storage/homefs/fb24k097/GitHub/geco-bern/cwd_global/analysis/ERA5Land-fullRes
