@@ -44,8 +44,8 @@ dir.create(outdir, recursive = T)
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.5G May 24  2025 ERA5Land_UTCDaily.tot_tp.2024.nc
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_sp.2024.nc
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_t2m.2024.nc
-    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.tot_ssrd.2024.nc # unused here
-    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_pev.2024.nc # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.tot_ssrd.2024.nc  # unused here
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_pev.2024.nc   # unused here
     # -rw-rw----  1 fb24k097 cs_occr_geco 2.3G May 24  2025 ERA5Land_UTCDaily.mean_wind10.2024.nc # unused here
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_d2m.2024.nc # unused here
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.4G May 24  2025 ERA5Land_UTCDaily.min_t2m.2024.nc # unused here
@@ -183,3 +183,55 @@ res_mean_t2m <- map2tidy:::map2tidy(
 )
 # Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
 # stopifnot(nrow(res_tot_str |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
+
+# Potential evaporation (pev) - daily resolution -------------------------------
+filnam <- list.files(
+  path_ERA5Land,
+  pattern = ".*tot_pev\\.[0-9]{4}\\.nc$",
+  full.names = TRUE
+)
+# check files and naming of dimensions etc...
+tidync::tidync(filnam[[1]])
+# Convert to tidy
+res_tot_pev <- map2tidy:::map2tidy(
+  nclist = filnam,
+  varnam = "tot_pev",
+  lonnam = "longitude",
+  latnam = "latitude",
+  timenam = "valid_time",
+  do_chunks = TRUE,
+  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  outdir = file.path(outdir, "tot_pev"),
+  fileprefix = "ERA5Land_UTCDaily_tot_pev",
+  ncores = ncores,
+  overwrite = FALSE
+)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_ssrd |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+
+
+# Surface solar radiation downward (ssrd) - daily resolution -------------------------------
+filnam <- list.files(
+  path_ERA5Land,
+  pattern = ".*tot_ssrd\\.[0-9]{4}\\.nc$",
+  full.names = TRUE
+)
+# check files and naming of dimensions etc...
+tidync::tidync(filnam[[1]])
+# Convert to tidy
+res_tot_ssrd <- map2tidy:::map2tidy(
+  nclist = filnam,
+  varnam = "tot_ssrd",
+  lonnam = "longitude",
+  latnam = "latitude",
+  timenam = "valid_time",
+  do_chunks = TRUE,
+  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  outdir = file.path(outdir, "tot_ssrd"),
+  fileprefix = "ERA5Land_UTCDaily_tot_ssrd",
+  ncores = ncores,
+  overwrite = FALSE
+)
+# Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+# stopifnot(nrow(res_tot_ssrd |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
