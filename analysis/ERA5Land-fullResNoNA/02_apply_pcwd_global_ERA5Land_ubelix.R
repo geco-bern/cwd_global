@@ -106,9 +106,14 @@ out <- tibble(in_fname = filnams[vec_index]) |>
   # Define the corresponding output filename based on how your output files are named
   # Assuming output files follow the same LON_string format with .rds extension
   mutate(out_fname = file.path(outdir, paste0("ERA5Land_pcwd_",LON_string, ".rds"))) |>
+  mutate(out_fname = file.path(outdir, paste0("ERA5Land_pcwd_",LON_string, ".rdsallyears_onlypcwd_mm.rds"))) |> # actually to correspond to variant 1 from ERA5Land_compute_pcwd_byLON.R
+
 
   # Filter out files that already have corresponding output files
-  filter(!file.exists(out_fname)) |>
+  filter(!file.exists(out_fname)) %>% {
+    print(sprintf("%s: Starting pcwd computation for %d LONs:",Sys.time(),nrow(.)));
+          cat(paste0(.$LON_string,collapse="\n")); cat("\n")
+          .} |>
   # Remove unnecessary columns if needed
   dplyr::select(-in_fname, -out_fname) |>
 
