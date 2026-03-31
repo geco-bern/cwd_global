@@ -4,7 +4,7 @@
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --ntasks=1                # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
-#SBATCH --array=1996-1996         # specifies the slurm array job with the number of tasks
+#SBATCH --array=1985-1985         # specifies the slurm array job with the number of tasks
 #SBATCH --cpus-per-task=8         # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
 #SBATCH --mem-per-cpu=50G
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
@@ -48,12 +48,12 @@ echo $SLURM_ARRAY_TASK_ID
 # Move (ONLY 1 year of) data to local files building a small test set:
 mkdir -p "/scratch/local/input_${SLURM_ARRAY_TASK_ID}.parquet/year=${SLURM_ARRAY_TASK_ID}"
 cp -r \
-    /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_rsynced.parquet/year=${SLURM_ARRAY_TASK_ID}/LON_str=LON_%2B* \
+    /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_rsynced.parquet/year=${SLURM_ARRAY_TASK_ID}/LON_str=LON_%2B0* \
     /scratch/local/input_${SLURM_ARRAY_TASK_ID}.parquet/year=${SLURM_ARRAY_TASK_ID}
 # NOTE for development: 2B00* could be used to reduce the number of Longitudes included
 
 ## Run the python script
-python 04_collect_parquet_to_NetCDF.py --year $SLURM_ARRAY_TASK_ID --parquet_path /scratch/local/input_${SLURM_ARRAY_TASK_ID}.parquet --out_nc /scratch/local/output_${SLURM_ARRAY_TASK_ID}.nc4
+python 04alt_collect_parquet_to_NetCDF.py --year $SLURM_ARRAY_TASK_ID --parquet_path /scratch/local/input_${SLURM_ARRAY_TASK_ID}.parquet --out_nc /scratch/local/output_${SLURM_ARRAY_TASK_ID}.nc4
 
 ## Move results to capacity storage
 rsync /scratch/local/output_${SLURM_ARRAY_TASK_ID}.nc4 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_04_daily_pcwd_${SLURM_ARRAY_TASK_ID}.nc4

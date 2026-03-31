@@ -3,7 +3,7 @@
 # 1. year to extract
 
 # Example:
-# > Rscript 03_collect_pcwd_results.R 2024
+# > Rscript 03b_collect_pcwd_results_v1.R 2019
 
 # # When using this script directly from RStudio, not from the shell, specify
 # args <- 2022
@@ -23,8 +23,8 @@ library(rgeco)  # get it from https://github.com/geco-bern/rgeco
 library(dplyr)
 library(map2tidy)
 
-indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd_v2-doy-reset/"
-outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v2-doy_YYYY_r-generated.nc" # adjust path to where the file should be written to
+indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd/"
+outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd_v1/data_derived_03_daily_pcwd_v1_YYYY.nc" # adjust path to where the file should be written to
 
 # 3600 LON slices (for 1 year) use (`seff 46219620_2022`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 1000 LON slices (for 1 year) use (`seff xxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
@@ -35,6 +35,7 @@ dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
 
 # 1) Define filenames of files to collect:  -------------------------------
 filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds", full.names = TRUE)
+filnams_pcwd <- filnams_pcwd[740:750] # 
 
 # 2) Function to Process one file --------------------------------------------------------
 # For development: Use Bern coordinates 46.947687535597794, 7.441952632324079
@@ -84,39 +85,9 @@ subset_pcwd_for_year_to_nested_dataframe <- function(rds_name, curr_year_arg){
 }
 
 ## 3) Process files --------------------------------------------------------
-if (TRUE){
-  nested_df_pcwd <- lapply(filnams_pcwd,
-    function(filnam) subset_pcwd_for_year_to_nested_dataframe(filnam, curr_year_arg = curr_year)
-    ) |> bind_rows() # lapply() in R preserves input order
-} else {
-
-                # df_unnested = tidyr::tibble(      lon  = seq(0,360,by=0.1)) |>
-                #   dplyr::cross_join(tidyr::tibble(lat  = seq(-70,90,by=0.1))) |> # cropping the lowest 20 degrees makes vector short enough for R
-                #   dplyr::cross_join(tidyr::tibble(date = seq.Date(from = as.Date("2021-01-01"), to = as.Date("2021-12-31"), by = "1 day"))) |>
-                #   dplyr::mutate(pcwd_mm = runif(dplyr::n()))
-                    # Error in `vec_rep_each()`:
-                    # ! Long vectors are not yet supported. Requested output size must be less than 2147483647.
-                    # Run `rlang::last_trace()` to see where the error occurred.
-                # base_df <- tidyr::tibble(      lon  = seq(0,360,by=0.1)) |>
-                #   dplyr::cross_join(tidyr::tibble(lat  = seq(-90,90,by=0.1)))
-                # df_unnested = lapply(seq.Date(from = as.Date("2021-01-01"), to = as.Date("2021-12-31"), by = "1 day"), function(dat){
-                #   base_df |> dplyr::mutate(date = dat, pcwd_mm = runif(dplyr::n()))
-                # }) |> dplyr::bind_rows()
-                    #   Error in `vec_rbind()`:
-                    # ! Negative `n` in `compact_rep()`.
-                    # ℹ In file utils.c at line 897.
-                    # ℹ Install the winch package to get additional debugging info the next time you get this error.
-                    # ℹ This is an internal error that was detected in the vctrs package.
-
-    nested_df_pcwd_fake = tidyr::tibble(lon  = seq(0,360,by=0.1)) |>
-      dplyr::cross_join(tidyr::tibble(  lat  = seq(-70,90,by=0.1))) |> # cropping the lowest 20 degrees makes vector short enough for R
-      dplyr::cross_join(tidyr::tibble(  date = seq.Date(from = as.Date("2021-01-01"), to = as.Date("2021-12-31"), by = "1 day"))) |>
-      dplyr::mutate(pcwd_mm = runif(dplyr::n())) |>
-      tidyr::nest(year_timeseries = c(date, pcwd_mm)) |>
-      tidyr::nest(lat_cubes = c(lat, year_timeseries))
-}
-
-
+nested_df_pcwd <- lapply(filnams_pcwd,
+  function(filnam) subset_pcwd_for_year_to_nested_dataframe(filnam, curr_year_arg = curr_year)
+  ) |> bind_rows() # lapply() in R preserves input order
 
 ## 4) Output to global NetCDF file ---------------------------------
 ##    This is required as NetCDF is a gridded format.

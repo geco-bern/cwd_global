@@ -131,3 +131,77 @@ print(out)
 
 print(out |> unnest(out) |> filter(grepl("Failed", out)))
 
+
+
+
+
+
+
+
+## RERUN SOME MISSING FILES MANUALLY:
+
+# # options(repos = c(CRAN = "https://cloud.r-project.org"))
+# # install.packages(c("map2tidy", "dplyr", "stringr", "purrr", "ncdf4"))
+# # install.packages(c("tidyr"))
+# # install.packages(c("ncdf4"))
+# # install.packages(c("readr"))
+# devtools::install_github("geco-bern/map2tidy@v2.1.4")
+#
+# library(map2tidy)
+# library(dplyr)
+# library(stringr)
+# library(purrr)
+# library(ncdf4)
+# # list demo file path
+# path_ERA5Land <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+# outdir <- "/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024_rerun"
+# dir.create(outdir, recursive = T)
+#
+# # ncores <- 180
+# ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
+# # Surface Pressure - daily resolution -------------------------------
+# # Only list files that start with "monthly_" and end with ".nc"
+# filnam <- list.files(
+#   path_ERA5Land,
+#   pattern = ".*mean_sp\\.[0-9]{4}\\.nc$",
+#   full.names = TRUE
+# )
+# # check files and naming of dimensions etc...
+# tidync::tidync(filnam[[1]])
+# # Convert to tidy
+# # coord_to_rerun <- c(272.000,275.000,275.500,276.000,287.300,289.200,282.600,285.800,291.100,295.700)
+# # coord_to_rerun <- c(295.700)
+# for (curr_coord in coord_to_rerun){
+#   print(curr_coord)
+#   res_mean_sp <- map2tidy:::map2tidy(
+#     nclist = filnam,
+#     varnam = "mean_sp",
+#     lonnam = "longitude",
+#     latnam = "latitude",
+#     timenam = "valid_time",
+#     do_chunks = TRUE,
+#     na.rm = FALSE,
+#     outdir = file.path(outdir, "mean_sp"),
+#     fileprefix = "ERA5Land_UTCDaily_mean_sp",
+#     ncores = ncores,
+#     overwrite = FALSE, filter_lon_between_degrees = curr_coord + c(-0.05, 0.05)
+#   )
+#   # Check if any unsuccessful (outcommented since this can error if overwrite = FALSE and previous present):
+#   # stopifnot(nrow(res_mean_sp |> unnest(data) |> filter(!grepl("(Written)|(File exists)", data))) == 0)
+# }
+#
+#
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+272.000.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+275.000.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+275.500.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+276.000.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+287.300.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+289.200.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+282.600.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+285.800.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+291.100.rds")
+# # readRDS("/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy_dailyUTC_v3/tidy1950-2024/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+295.700.rds")
+#
+# readRDS("/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024_rerun/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+291.100.rds")
+# readRDS("/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024_rerun/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+295.700_testfile.rds")
+# readRDS("/storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024_rerun/mean_sp/ERA5Land_UTCDaily_mean_sp_LON_+295.700.rds")
