@@ -39,7 +39,7 @@ outdir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-saba
 dir.create(outdir, recursive = T)
 
     # What would be available at the input path:
-    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_ssr.2024.nc 
+    # -rw-rw----  1 fb24k097 cs_occr_geco 1.9G May 24  2025 ERA5Land_UTCDaily.tot_ssr.2024.nc
     # -rw-rw----  1 fb24k097 cs_occr_geco 2.2G May 24  2025 ERA5Land_UTCDaily.tot_str.2024.nc
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.5G May 24  2025 ERA5Land_UTCDaily.tot_tp.2024.nc
     # -rw-rw----  1 fb24k097 cs_occr_geco 1.8G May 24  2025 ERA5Land_UTCDaily.mean_sp.2024.nc
@@ -71,7 +71,7 @@ res_tot_ssr <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "tot_ssr"),
   fileprefix = "ERA5Land_UTCDaily_tot_ssr",
   ncores = ncores,
@@ -97,7 +97,7 @@ res_tot_str <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "tot_str"),
   fileprefix = "ERA5Land_UTCDaily_tot_str",
   ncores = ncores,
@@ -123,7 +123,7 @@ res_tot_tp <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "tot_tp"),
   fileprefix = "ERA5Land_UTCDaily_tot_tp",
   ncores = ncores,
@@ -149,7 +149,7 @@ res_mean_sp <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "mean_sp"),
   fileprefix = "ERA5Land_UTCDaily_mean_sp",
   ncores = ncores,
@@ -175,7 +175,7 @@ res_mean_t2m <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "mean_t2m"),
   fileprefix = "ERA5Land_UTCDaily_mean_t2m",
   ncores = ncores,
@@ -201,7 +201,7 @@ res_tot_pev <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "tot_pev"),
   fileprefix = "ERA5Land_UTCDaily_tot_pev",
   ncores = ncores,
@@ -227,7 +227,7 @@ res_tot_ssrd <- map2tidy:::map2tidy(
   latnam = "latitude",
   timenam = "valid_time",
   do_chunks = TRUE,
-  na.rm = TRUE,  #remove NAs for efficiency. For spatial integrity, creating NetCDF requires manual grid specification
+  na.rm = TRUE,  #remove NAs for efficiency. If removed, creating NetCDF requires manual grid specification for spatial integrity.
   outdir = file.path(outdir, "tot_ssrd"),
   fileprefix = "ERA5Land_UTCDaily_tot_ssrd",
   ncores = ncores,

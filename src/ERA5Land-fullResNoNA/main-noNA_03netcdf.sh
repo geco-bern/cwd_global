@@ -4,7 +4,7 @@
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
-#SBATCH --array=1990-1999%4      # specifies the slurm array job with the number of tasks
+#SBATCH --array=1954-2024%8      # specifies the slurm array job with the number of tasks
 #SBATCH --cpus-per-task=8        # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
 #SBATCH --mem-per-cpu=15G           # First jobs showed it takes about 66GB, we thus request NCPU x 15GB = 120GB
 #SBATCH --mail-user=fabian.bernhard@unibe.ch

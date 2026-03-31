@@ -9,7 +9,6 @@
 #SBATCH --mem-per-cpu=30G           # First jobs showed it takes about 77GB, we thus request NCPU x 30GB = 120GB
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
 #SBATCH --mail-type=fail,begin,end            # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
-#SBATCH --dependency=afterok:8977
 #SBATCH --chdir=../cwd_global/analysis/ERA5Land-fullResNoNA  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 
 echo "Started on: $(date --rfc-3339=seconds)"

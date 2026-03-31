@@ -15,6 +15,7 @@ stopifnot(length(args)==1)
 curr_year <- as.integer(args[1])
 
 # When reloading re-install packages from renv.lock by doing:
+# options('renv.config.pak.enabled' = TRUE)
 renv::restore()
 
 library(rgeco)
@@ -164,20 +165,17 @@ rgeco_write_nc2(    # NOTE: this supports arrays with more than 2^31 - 1 element
 )
 
 # Check output:
-# df_check <- tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
+# options("bitmapType" = "cairo")
+# library(tidync)
 # library(ggplot2)
-# df_check |>
-#   tidync::hyper_filter(lat = lat >= 46.9 & lat <= 47.2,
-#                        lon = lon >= 7.4 & lon <= 7.9) |>
-#   tidync::hyper_tibble(drop=FALSE, na.rm = TRUE) |>
-#   dplyr::mutate(time = lubridate::as_date(time),
-#                 latlon = sprintf("%+06.1fN, %+06.1fE", as.numeric(lat), as.numeric(lon))) |>
-#   ggplot(aes(x=time, y=pcwd_mm, color = latlon)) + geom_line()
-#
-# df_check |>
+# #df_check <- tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
+# #df_check <- tidync::tidync("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd.narm_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v2-doy_1954_r-generated.nc")
+# # library(ggplot2)
+# df <- df_check |>
 #   tidync::hyper_filter(lat = lat >= 46.9 & lat <= 47.2,
 #                        lon = lon >= 7.4 & lon <= 7.9) |>
 #   tidync::hyper_tibble(drop=FALSE, na.rm = FALSE) |>
 #   dplyr::mutate(time = lubridate::as_date(time),
-#                 latlon = sprintf("%+06.1fN, %+06.1fE", as.numeric(lat), as.numeric(lon))) |>
-#   ggplot(aes(x=time, y=pcwd_mm, color = latlon)) + geom_line()
+#                 latlon = sprintf("%+06.1fN, %+06.1fE", as.numeric(lat), as.numeric(lon)))
+# df
+# ggplot(df, aes(x=time, y=pcwd_mm, color = latlon)) + geom_line()
