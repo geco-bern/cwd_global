@@ -15,13 +15,13 @@ echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"   # Is most likely the HOME directory. Allows to check in the log.
 
-module load CMake/3.29.3-GCCcore-13.3.0
-module load UDUNITS/2.2.28-GCCcore-13.3.0
-module load PROJ/9.4.1-GCCcore-13.3.0 # needed for 02_apply_pcwd...
-module load GDAL/3.10.0-foss-2024a    # needed for 02_apply_pcwd...
-module load GEOS/3.12.2-GCC-13.3.0
-module load netCDF
-module load R
+module load CMake/3.31.3-GCCcore-14.2.0
+module load UDUNITS/2.2.28-GCCcore-14.2.0
+module load PROJ/9.6.2-GCCcore-14.2.0 # needed for 02_apply_pcwd...
+module load GDAL/3.11.1-foss-2025a    # needed for 02_apply_pcwd...
+module load GEOS/3.13.1-GCC-14.2.0
+module load netCDF/4.9.3-gompi-2025a
+module load R/4.5.1-gfbf-2025a
 
 ## Run the R scripts
 # Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 1 1  # call with command line arguments 1 1, using only multi-core but no multi-node parallelization
