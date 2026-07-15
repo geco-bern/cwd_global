@@ -29,7 +29,7 @@ library(multidplyr)
 library(terra)
 library(tidyr)
 library(cwd)
-devtools::load_all("~/cwd/R/cwd.R")
+devtools::load_all("~/cwd/R/cwd.R") # using cwd: v2.0
 library(rgeco)
 library(rpmodel)
 library(parallelly)

@@ -24,23 +24,23 @@ ERA5Land_compute_pcwd_byLON <- function(
 
   # read from files that contain tidy data for a single longitudinal band
   # read precipitation file tidy
-  filnam <- file.path(indir_prec, paste0("ERA5Land_UTCDaily_tottp_",
+  filnam <- file.path(indir_prec, paste0("ERA5Land_UTCDaily_tot_tp_",
                                          LON_string,".rds"))
   df_prec <- readr::read_rds(filnam)
 
   # # read potential evaporation file tidy
-  # filnam <- file.path(indir_pev, paste0("ERA5Land_UTCDaily_totpev_",
+  # filnam <- file.path(indir_pev, paste0("ERA5Land_UTCDaily_tot_pev_",
   #                                       LON_string,".rds"))
   #
   # df_pev <- readr::read_rds(filnam)
 
   # read precipitation file tidy
-  filnam <- file.path(indir_tas, paste0("ERA5Land_UTCDaily_t2m_",
+  filnam <- file.path(indir_tas, paste0("ERA5Land_UTCDaily_mean_t2m_",
                                          LON_string,".rds"))
   df_tas <- readr::read_rds(filnam)
 
   # read surface Pressure file tidy
-  filnam <- file.path(indir_patm, paste0("ERA5Land_UTCDaily_sp_",
+  filnam <- file.path(indir_patm, paste0("ERA5Land_UTCDaily_mean_sp_",
                                          LON_string,".rds"))
   df_patm <- readr::read_rds(filnam)
 

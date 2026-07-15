@@ -34,7 +34,7 @@ res_pr <- map2tidy:::map2tidy(
   do_chunks = TRUE,
   na.rm = FALSE,  #ERA5Land only contains land gridcells; keep NAs for spatial integrity
   outdir = output_dir,
-  fileprefix = "ERA5Land_UTCDaily_tottp",
+  fileprefix = "ERA5Land_UTCDaily_tot_tp",
   ncores = 1,
   overwrite = FALSE
 )
@@ -59,7 +59,7 @@ res_t2m <- map2tidy:::map2tidy(
   do_chunks = TRUE,
   na.rm = FALSE,
   outdir = output_dir,
-  fileprefix = "ERA5Land_UTCDaily_t2m",
+  fileprefix = "ERA5Land_UTCDaily_mean_t2m",
   ncores = 1,
   overwrite = FALSE
 )
@@ -87,7 +87,7 @@ res_sp <- map2tidy:::map2tidy(
   do_chunks = TRUE,
   na.rm = FALSE,
   outdir = output_dir,
-  fileprefix = "ERA5Land_UTCDaily_sp",
+  fileprefix = "ERA5Land_UTCDaily_mean_sp",
   ncores = 1,
   overwrite = FALSE
 )
