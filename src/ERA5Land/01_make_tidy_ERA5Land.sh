@@ -11,8 +11,6 @@
 #SBATCH --output=slurm-%x_%j.out                 # --output relative to working directory (takes into account --chdir)
 #SBATCH --chdir=../cwd_global/analysis/ERA5Land  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 
-#SBATCH --dependency=afterok:12040944
-
 # INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land/01_make_tidy_ERA5Land.sh
 
 echo "Started on: $(date --rfc-3339=seconds)"

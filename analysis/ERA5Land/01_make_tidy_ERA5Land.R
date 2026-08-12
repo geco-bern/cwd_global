@@ -16,17 +16,22 @@ library(tidyr)
 library(purrr)
 library(ncdf4)
 
-# list demo file path
-# adjust path to where your ERA5Land data is located
-path_ERA5Land <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/ERA5Land_regridded" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/tidy"
+# # list demo file path
+# # adjust path to where your ERA5Land data is located
+# # path_ERA5Land <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/ERA5Land_regridded"
+
+# cons uses conservative regridding for tp and t2m
+path_ERA5Land      <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024/ERA5Land_regridded"      #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+path_ERA5Land_cons <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024_cons/ERA5Land_regridded" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_1950-2026/tidy"
 
 # Precipitation - daily resolution --------------------------------------------------
-varnam <- "Daily_tp_pev"
+#varnam <- "Daily_tp_pev" # TODO: from previous version
+varnam <- "Daily_tp"
 filnam <- list.files(
-  paste0(path_ERA5Land, "/", varnam),
+  paste0(path_ERA5Land_cons, "/", varnam),
   pattern = ".nc", full.names = TRUE)
-output_dir <- file.path(outdir, "total_prec")
+output_dir <- file.path(outdir, "tot_tp")
 
 # Convert to tidy
 res_pr <- map2tidy:::map2tidy(
@@ -49,9 +54,9 @@ stopifnot(nrow(res_pr |> unnest(data) |> filter(!grepl("Written", data))) == 0)
 # Temperature - daily resolution -------------------------------
 varnam <- "Daily_t2m"
 filnam <- list.files(
-  paste0(path_ERA5Land, "/", varnam),
+  paste0(path_ERA5Land_cons, "/", varnam),
   pattern = ".nc", full.names = TRUE)
-output_dir <- file.path(outdir, "t2m")
+output_dir <- file.path(outdir, "mean_t2m")
 
 # Convert to tidy
 res_t2m <- map2tidy:::map2tidy(
@@ -105,6 +110,10 @@ filnam <- list.files(
   paste0(path_ERA5Land, "/", varnam),
   pattern = ".nc", full.names = TRUE)
 output_dir <- file.path(outdir, "netrad")
+
+# mean_sp,
+# NOTE: preprocessing transformed tot_ssr and tot_str into netrad,
+#       took monthly mean and transformed the units
 
 # Convert to tidy
 res_netrad <- map2tidy:::map2tidy(
