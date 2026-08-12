@@ -4,8 +4,12 @@
 
 Sys.getpid()
 
+library(renv)
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually
+options(renv.config.pak.enabled = FALSE)
+renv::restore(prompt = FALSE)
+
 library(map2tidy)
-devtools::load_all("~/map2tidy/R/map2tidy.R")
 library(dplyr)
 library(stringr)
 library(tidyr)
