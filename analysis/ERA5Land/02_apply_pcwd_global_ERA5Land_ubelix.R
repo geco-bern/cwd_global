@@ -54,9 +54,6 @@ source("../../R/ERA5Land/ERA5_simulate_snow.R")
 #indir  <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024/ERA5Land_regridded/" # not stored in archive_projects
 indir  <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/tidy"
 outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/02_daily_pcwd"
-
-#indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024/"
-#outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset"
 dir.create(outdir, showWarnings = FALSE)
 
 
@@ -97,7 +94,7 @@ cl <- multidplyr::new_cluster(ncores) |>
   multidplyr::cluster_assign(
     indir                               = indir,
     outdir                              = outdir,
-    ERA5Land_simulate_snow              = ERA5Land_simulate_snow,                 # make the function known for each core
+    ERA5Land_simulate_snow              = ERA5Land_simulate_snow,             # make the function known for each core
     ERA5Land_compute_pcwd_byLON         = ERA5Land_compute_pcwd_byLON,        # make the function known for each core
     get_cwd_withSnow_and_reset_ERA5Land = get_cwd_withSnow_and_reset_ERA5Land # make the function known for each core
   )
