@@ -35,7 +35,8 @@ The full workflow including pre-processing of data for ModE-Sim and ERA5-Land da
 ![image](https://github.com/user-attachments/assets/062a8469-950a-44fd-a1c4-9345515a6ec1)
 
 Note that the above workflow (from Patricia's thesis) works with regridded ERA5-Land data sets.
-The workflow has been applied again on the full data set with original spatial resolution.
+It has been updated to data up to 2025-2026 in August 2026, by running the scripts `00_CDO_regrid_ERA5Land.sh`,`01_make_tidy_ERA5Land.sh`,`02_apply_pcwd_global_ERA5Land.sh`,`03_annmax_pcwd_global_ERA5Land.sh`,`04_collect_pcwd_results_ERA5Land.sh`.
+The workflow has also been applied again on the full data set with original spatial resolution.
 This was done with the scripts `analysis/ERA5Land-fullRes/01_make_tidy_ERA5Land.R` and `analysis/ERA5Land-fullRes/02_apply_pcwd_global_ERA5Land_ubelix.R`.
 Or with the scripts `analysis/ERA5Land-fullResNoNA/01_make_tidy_ERA5Land.R` and `analysis/ERA5Land-fullResNoNA/02_apply_pcwd_global_ERA5Land_ubelix.R`.
 Easiest is to run it on UBELIX by submitting the bash script `analysis/ERA5Land-fullRes/main.sh`. This can be done with `ssh ubelix; cd ~/GitHub/geco-bern/cwd_global/; sbatch src/ERA5Land-fullRes/main.sh`. Or `sbatch src/ERA5Land-fullResNoNA/main-noNA_01tidy.sh`

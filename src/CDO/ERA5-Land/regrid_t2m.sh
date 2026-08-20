@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Define input and output directories
-INPUT_DIR="/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/test"
-OUTPUT_DIR="/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/ERA5Land_regridded/Daily_t2m"
+#INPUT_DIR="/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/test/" # first run
+INPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily" # second run
+OUTPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_regridded_1.875deg/Daily_t2m"
 
 # Ensure the output directory exists
 mkdir -p "$OUTPUT_DIR"
@@ -21,7 +22,7 @@ yvals     = -88.572169, -86.722531, -84.861970, -82.998942, -81.134977, -79.2705
 EOF
 
 # Loop through only t2m NetCDF files in the input directory
-for file in "$INPUT_DIR"/ERA5Land_UTCDaily.mean_t2m.*.nc; do
+for file in "$INPUT_DIR"/*and_UTCDaily.mean_t2m.*.nc; do  # TODO or possibly: era5-land__UTCDaily or ERA5Land_UTCDaily
     # Check if the file actually exists (handles the case where no match is found)
     [ -e "$file" ] || continue
 

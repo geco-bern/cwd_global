@@ -18,7 +18,7 @@
 #'
 #' @export
 #'
-ERA5_simulate_snow <- function(df, varnam_temp, varnam_prec, varnam_snow){
+ERA5Land_simulate_snow <- function(vars_df, varnam_temp, varnam_prec, varnam_snow){
 
   df <- vars_df |>
     mutate(precipitation = ifelse(tsurf < 0, 0, precip),

@@ -6,47 +6,64 @@
 
 # Note that these arguments can be used to distribute over multiple nodes.
 # Distribution over CPU cores of a single node is handled by multidplyr
-# and argument ncores in the script.
+# and argument ncores inside of this script.
 
 # Example for 4 CPU-nodes:
-# >./apply_cwd_global.R 1 4
-# >./apply_cwd_global.R 2 4
-# >./apply_cwd_global.R 3 4
-# >./apply_cwd_global.R 4 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 1 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 2 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 3 4
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 4 4
 
 # Example for 1 CPU-nodes:
-# >./apply_cwd_global.R 1 1
+# > Rscript 02_apply_pcwd_global_ERA5Land_ubelix.R 1 1
 # # When using this script directly from RStudio, not from the shell, specify
+# args <- c(1, 180)
 #args <- c(1, 1)
 
 # to receive arguments to script from the shell
 args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
+print(sprintf("%s: Starting 02_apply_pcwd_global_ERA5Land_ubelix.R with arguments: %s",
+              Sys.time(),
+              paste0(args, collapse = " ")))
 
+# When reloading re-install packages from renv.lock by doing:
+library(renv)
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually sometimes
+renv::project()
+options(renv.config.pak.enabled = FALSE)
+renv::restore(prompt = FALSE)
+
+
+library(lubridate)
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
-library(terra)
 library(tidyr)
-library(cwd)
-devtools::load_all("~/cwd/R/cwd.R") # using cwd: v2.0
-library(rgeco)
-library(rpmodel)
+library(cwd)       # using cwd: v2.0 or newer       # 1. Load cwd package first
 library(parallelly)
 
-setwd("/storage")
-# source(paste0(here::here(), "/R/apply_fct_to_each_file.R"))
-source("/storage/homefs/ph23v078/cwd_global/R/ERA5Land/ERA5Land_compute_pcwd_byLON.R")
-#paste0(here::here(),
+# Working directory (see main.sh): /storage/homefs/fb24k097/GitHub/geco-bern/cwd_global/analysis/ERA5Land-fullRes
+source("../../R/ERA5Land/ERA5Land_compute_pcwd_byLON.R")
+source("../../R/ERA5Land/get_cwd_withSnow_and_reset_ERA5Land.R")
+source("../../R/ERA5Land/ERA5_simulate_snow.R")
 
-indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/tidy"
-outdir <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd"
+
+
+#indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/tidy"
+#indir  <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024/ERA5Land_regridded/" # not stored in archive_projects
+indir  <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/tidy"
+outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/02_daily_pcwd"
+
+#indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024/"
+#outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset"
 dir.create(outdir, showWarnings = FALSE)
 
-# 1a) Define filenames of files to process:  -------------------------------
+
+# 1) Define filenames of files to process:  -------------------------------
 infile_pattern  <- "*.rds"
 
-filnams <- list.files(file.path(indir, "total_prec"),  # use precip folder as example; change year
+filnams <- list.files(file.path(indir, "tot_tp"),  # use tot_tp folder to get all LON
                       pattern = infile_pattern, full.names = TRUE)
 if (length(filnams) <= 1){
   stop("Should find multiple files. Only found " ,length(filnams), ".")
@@ -63,6 +80,8 @@ vec_index <- map2tidy::get_index_by_chunk(
 )
 
 # 2b) Parallelize job across cores on a single node
+# ncores <- 1 # start small
+# ncores <- 180
 ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
 
 cl <- multidplyr::new_cluster(ncores) |>
@@ -72,30 +91,38 @@ cl <- multidplyr::new_cluster(ncores) |>
                                 "purrr",
                                 "tidyr",
                                 "readr",
-                                "here",
+                                "lubridate",
                                 "cwd",
-                                "rpmodel",
                                 "magrittr")) |>
   multidplyr::cluster_assign(
-    indir                              = indir,
-    outdir                             = outdir,
-    ERA5Land_compute_pcwd_byLON = ERA5Land_compute_pcwd_byLON   # make the function known for each core
+    indir                               = indir,
+    outdir                              = outdir,
+    ERA5Land_simulate_snow              = ERA5Land_simulate_snow,                 # make the function known for each core
+    ERA5Land_compute_pcwd_byLON         = ERA5Land_compute_pcwd_byLON,        # make the function known for each core
+    get_cwd_withSnow_and_reset_ERA5Land = get_cwd_withSnow_and_reset_ERA5Land # make the function known for each core
   )
-
-# distribute computation across the cores, calculating for all longitudinal
-# indices of this chunk
+# FOR DEVELOPMENT:
+# LON_string <- gsub(".rds","", gsub("^.*(LON_)", "\\1", filnams[1]))
+# # debug(get_cwd_withSnow_and_reset_ERA5Land)
+# # debug(ERA5Land_compute_pcwd_byLON)
+# ERA5Land_compute_pcwd_byLON(LON_string, indir, outdir)
 
 # 3) Process files --------------------------------------------------------
-
+#    If some are missing from the 3600 simply rerun this again manually. It should filter out already processed files.
 out <- tibble(in_fname = filnams[vec_index]) |>
   mutate(LON_string = gsub("^.*?(LON_[0-9.+-]*).rds$", "\\1", basename(in_fname))) |>
 
   # Define the corresponding output filename based on how your output files are named
   # Assuming output files follow the same LON_string format with .rds extension
   mutate(out_fname = file.path(outdir, paste0("ERA5Land_pcwd_",LON_string, ".rds"))) |>
+  mutate(out_fname = file.path(outdir, paste0("ERA5Land_pcwd_",LON_string, ".rdsallyears_onlypcwd_mm.rds"))) |> # actually to correspond to variant 1 from ERA5Land_compute_pcwd_byLON.R
+
 
   # Filter out files that already have corresponding output files
-  filter(!file.exists(out_fname)) |>
+  filter(!file.exists(out_fname)) %>% {
+    print(sprintf("%s: Starting pcwd computation for %d LONs:",Sys.time(),nrow(.)));
+          cat(paste0(.$LON_string,collapse="\n")); cat("\n")
+          .} |>
   # Remove unnecessary columns if needed
   dplyr::select(-in_fname, -out_fname) |>
 
@@ -108,4 +135,6 @@ out <- tibble(in_fname = filnams[vec_index]) |>
       outdir          = outdir))
   ) |> collect()
 
+print(out)
 
+print(out |> unnest(out) |> filter(grepl("Failed", out)))

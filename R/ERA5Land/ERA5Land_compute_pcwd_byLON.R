@@ -7,24 +7,25 @@ ERA5Land_compute_pcwd_byLON <- function(
 
   #############################################
   # Define hardcoded paths and hardcoded options: change year and set number to adapt for other sets
-  indir_prec      <- file.path(indir, "total_prec")
-  #indir_pev    <- file.path(indir, "total_pet")
+  indir_prec      <- file.path(indir, "tot_tp")
   indir_patm      <- file.path(indir, "mean_sp")
-  indir_tas       <- file.path(indir, "t2m")
+  indir_tas       <- file.path(indir, "mean_t2m")
   indir_netrad    <- file.path(indir, "netrad")
-  # prepare output names
+
+  # from first run: indir_prec      <- file.path(indir, "total_prec")
+  # from first run: indir_patm      <- file.path(indir, "mean_sp")
+  # from first run: indir_tas       <- file.path(indir, "t2m")
+  # from first run: indir_netrad    <- file.path(indir, "netrad")
+
+  # # prepare output names
   path_pcwd <- file.path(outdir, paste0("ERA5Land_pcwd", "_", LON_string, ".rds"))
   #############################################
 
-
   print(paste0(Sys.time(), ", LON: ", LON_string))
-
-  # load functions that will be applied to time series
-  source("/storage/homefs/ph23v078/cwd_global/R/ERA5Land/get_cwd_withSnow_and_reset_ERA5Land.R")
 
   # read from files that contain tidy data for a single longitudinal band
   # read precipitation file tidy
-  filnam <- file.path(indir_prec, paste0("ERA5Land_UTCDaily_tot_tp_",
+  filnam <- file.path(indir_prec, paste0("ERA5Land_UTCDaily_tot_tp_", # first run: UTCDaily_tottp_
                                          LON_string,".rds"))
   df_prec <- readr::read_rds(filnam)
 
@@ -35,12 +36,12 @@ ERA5Land_compute_pcwd_byLON <- function(
   # df_pev <- readr::read_rds(filnam)
 
   # read precipitation file tidy
-  filnam <- file.path(indir_tas, paste0("ERA5Land_UTCDaily_mean_t2m_",
+  filnam <- file.path(indir_tas, paste0("ERA5Land_UTCDaily_mean_t2m_", # first run: UTCDaily_t2m_
                                          LON_string,".rds"))
   df_tas <- readr::read_rds(filnam)
 
   # read surface Pressure file tidy
-  filnam <- file.path(indir_patm, paste0("ERA5Land_UTCDaily_mean_sp_",
+  filnam <- file.path(indir_patm, paste0("ERA5Land_UTCDaily_mean_sp_", # first run: UTCDaily_sp_
                                          LON_string,".rds"))
   df_patm <- readr::read_rds(filnam)
 

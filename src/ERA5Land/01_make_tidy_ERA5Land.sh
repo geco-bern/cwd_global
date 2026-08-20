@@ -1,11 +1,11 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="01_make_tidy_ERA5Land_2Gx190coresx1jobs"
-#SBATCH --time=4-00:00:00
+#SBATCH --time=0-00:45:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --ntasks=1             # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
-#SBATCH --cpus-per-task=80     # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
-#SBATCH --mem-per-cpu=2G
+#SBATCH --cpus-per-task=8     # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
+#SBATCH --mem-per-cpu=10G
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
 #SBATCH --mail-type=fail       # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
 #SBATCH --output=slurm-%x_%j.out                 # --output relative to working directory (takes into account --chdir)

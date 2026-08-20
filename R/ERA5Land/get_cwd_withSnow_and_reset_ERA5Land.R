@@ -1,16 +1,5 @@
 get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
-#vars_df <- df_pcwd
   # vars_df must contain columns: time, pr, evspsbl, tas
-
-  # loading libraries
-  require(dplyr)
-  require(tidyr)
-  require(cwd)
-  devtools::load_all("~/cwd/R/cwd.R")
-  devtools::load_all("~/cwd_global/R/ERA5Land/ERA5_simulate_snow.R")
-  library(rpmodel)    # Need to reload library on each computation core. When using require() instead of library() inside of `multiplyr` get error message:
-                      #   Error in .External(list(name = "CppMethod__invoke_notvoid", address = <pointer: (nil)>,  :
-                      #   NULL value passed as symbol address
 
   # cwd reset
   ## average monthly P-ET over the first 30 years of the time series
@@ -36,7 +25,7 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
   vars_df <- vars_df |>
     mutate(precipitation = ifelse(tsurf < 0, 0, precip),
            snow = ifelse(tsurf < 0, precip, 0)) |>
-    cwd:::ERA5_simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tsurf")
+    ERA5Land_simulate_snow(varnam_prec = "precipitation", varnam_snow = "snow", varnam_temp = "tsurf")
 
 
   vars_df <- vars_df |>
@@ -46,14 +35,25 @@ get_cwd_withSnow_and_reset_ERA5Land <- function(vars_df){
   # cwd
   ## calculate cumulative water deficit
   ##choose between absolute or relative cwd threshold
-  out_cwd <- cwd:::cwd(vars_df,
-                      varname_wbal = "wbal",
-                      varname_date = "date",
-                      #thresh_terminate = 0.0,
-                      thresh_terminate_absolute = 10,
-                      thresh_drop = 0.0
-                     #doy_reset= day_of_year
-                     )
+  #if (all(is.na(vars_df$wbal))) { There are some sites (-1.875 deg, that have NaN from 1952-11-01 on)
+  if (any(is.na(vars_df$wbal))) {
+    # ocean pixel do return empty stuff
+    out_cwd <- list(
+      inst = tibble(),
+      df = vars_df |> mutate(doy=lubridate::yday(date), iinst=NA_real_, dday=NA_real_, deficit=0)
+    )
+  } else {
+    # land pixel of ERA5Land (can run cwd::cwd without error)
+    out_cwd <- cwd::cwd(vars_df,
+                        varname_wbal = "wbal",
+                        varname_date = "date",
+                        #thresh_terminate = 0.0,
+                        thresh_terminate_absolute = 10,
+                        thresh_drop = 0.0
+                       #doy_reset= day_of_year
+                       )
+  }
+
 
   # return list with two components:
   # - data frame for time series and all variables
