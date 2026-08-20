@@ -2,8 +2,8 @@
 
 # Define input and output directories
 #INPUT_DIR="/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/test/" # first run
-INPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily" # second run
-OUTPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_regridded_1.875deg/Daily_t2m"
+INPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026" # second run
+OUTPUT_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026_regridded_1.875deg/Daily_t2m"
 
 # Ensure the output directory exists
 mkdir -p "$OUTPUT_DIR"

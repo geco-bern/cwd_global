@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
 
-# script is only needed for initial setup. later scripts reuse it by using renv::restore("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/")
+# script is only needed for initial setup. later scripts reuse it by using renv::restore("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/")
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 library(renv)
 
-renv::init(project = "~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/") # ONLY FIRST TIME
+renv::init(project = "~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/") # ONLY FIRST TIME
 # if you get errors on "hasn't been activated yet", possibly do first a source(renv/activate.R):
-source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R")
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R")
 
 renv::install("Rcpp@1.1.2", prompt=FALSE)
 renv::install("RcppParallel@6.2.0", prompt=FALSE)

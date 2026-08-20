@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NETRAD_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_regridded_1.875deg/Monthly_netrad"
+NETRAD_DIR="/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026_regridded_1.875deg/Monthly_netrad"
 
 for year in 2020 2021 2022 2023 2024 2025 2026; do
     file="$NETRAD_DIR"/monthly_era5-land_UTCDaily.netrad.${year}.nc  # TODO or possibly: era5-land__UTCDaily or ERA5Land_UTCDaily

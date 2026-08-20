@@ -24,7 +24,7 @@ args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
 
 library(renv)
-source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R") # somewhat on UBELIX this needs to be done manually
 options(renv.config.pak.enabled = FALSE)
 renv::restore(prompt = FALSE)
 
@@ -37,8 +37,8 @@ library(multidplyr)
 # where your cwd and pcwd data is
 #indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd"
 #outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/03_pcwd_ANNMAX"
-indir   <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/02_daily_pcwd"
-outdir  <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/03_pcwd_ANNMAX"
+indir   <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/02_daily_pcwd"
+outdir  <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/03_pcwd_ANNMAX"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------

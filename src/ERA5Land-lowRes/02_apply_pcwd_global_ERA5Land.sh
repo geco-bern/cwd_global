@@ -9,10 +9,10 @@
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
 #SBATCH --mail-type=fail               # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
 #SBATCH --output=slurm-%x_%j.out                 # --output relative to working directory (takes into account --chdir)
-#SBATCH --chdir=../cwd_global/analysis/ERA5Land  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+#SBATCH --chdir=../cwd_global/analysis/ERA5Land-lowRes  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 
 #### S B A T C H --dependency=afterok:12006778
-# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land/02_apply_pcwd_global_ERA5Land.sh
+# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land-lowRes/02_apply_pcwd_global_ERA5Land.sh
 
 
 echo "Started on: $(date --rfc-3339=seconds)"

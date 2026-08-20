@@ -5,7 +5,7 @@
 Sys.getpid()
 
 library(renv)
-source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually sometimes
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R") # somewhat on UBELIX this needs to be done manually sometimes
 renv::project()
 options(renv.config.pak.enabled = FALSE)
 renv::restore(prompt = FALSE)
@@ -29,10 +29,10 @@ library(ncdf4)
 # cons uses conservative regridding for tp and t2m
 #path_ERA5Land      <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024/ERA5Land_regridded"      #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
 #path_ERA5Land_cons <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024_cons/ERA5Land_regridded" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-path_ERA5Land      <- "/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_regridded_1.875deg" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-path_ERA5Land_cons <- "/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_regridded_1.875deg" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+path_ERA5Land      <- "/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026_regridded_1.875deg" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
+path_ERA5Land_cons <- "/storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026_regridded_1.875deg" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
 
-outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/tidy"
+outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/tidy"
 
 # Precipitation - daily resolution --------------------------------------------------
 #varnam <- "Daily_tp_pev" # TODO: from previous version

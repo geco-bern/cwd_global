@@ -29,7 +29,7 @@ print(sprintf("%s: Starting 02_apply_pcwd_global_ERA5Land_ubelix.R with argument
 
 # When reloading re-install packages from renv.lock by doing:
 library(renv)
-source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually sometimes
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R") # somewhat on UBELIX this needs to be done manually sometimes
 renv::project()
 options(renv.config.pak.enabled = FALSE)
 renv::restore(prompt = FALSE)
@@ -43,17 +43,17 @@ library(tidyr)
 library(cwd)       # using cwd: v2.0 or newer       # 1. Load cwd package first
 library(parallelly)
 
-# Working directory (see main.sh): /storage/homefs/fb24k097/GitHub/geco-bern/cwd_global/analysis/ERA5Land-fullRes
-source("../../R/ERA5Land/ERA5Land_compute_pcwd_byLON.R")
-source("../../R/ERA5Land/get_cwd_withSnow_and_reset_ERA5Land.R")
-source("../../R/ERA5Land/ERA5_simulate_snow.R")
+# Working directory (see main.sh): /storage/homefs/fb24k097/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes
+source("../../R/ERA5Land-lowRes/ERA5Land_compute_pcwd_byLON.R")
+source("../../R/ERA5Land-lowRes/get_cwd_withSnow_and_reset_ERA5Land.R")
+source("../../R/ERA5Land-lowRes/ERA5_simulate_snow.R")
 
 
 
 #indir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/tidy"
 #indir  <- "/storage/capacity/occr_geco/data_2/archive_projects/MSc_2025_phelpap_cwdModESim/ERA5Land_1950-2024/ERA5Land_regridded/" # not stored in archive_projects
-indir  <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/tidy"
-outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/02_daily_pcwd"
+indir  <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/tidy"
+outdir <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/02_daily_pcwd"
 dir.create(outdir, showWarnings = FALSE)
 
 

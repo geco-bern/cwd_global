@@ -8,16 +8,17 @@
 #SBATCH --mem-per-cpu=24G
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
 #SBATCH --mail-type=begin,end,fail            # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
-#SBATCH --chdir=../cwd_global/analysis/ERA5Land  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+#SBATCH --chdir=../cwd_global/analysis/ERA5Land-lowRes  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
 #SBATCH --output=slurm-%x_%j.out        # --output relative to working directory (takes into account --chdir)
 
-# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land/00_CDO_regrid_ERA5Land.sh
+# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land-lowRes/00_CDO_regrid_ERA5Land.sh
 # DEBUG: srun --qos job_icpu-stocker --account=invest -n 1 --cpus-per-task=12 --mem-per-cpu=12G --time=4-00:00:00 --pty bash
 
 echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"   # Is most likely the HOME directory. Allows to check in the log.
 
+module purge
 module load netCDF/4.9.3-gompi-2025a
 module load CDO/2.4.4-gompi-2024a
 # module load CMake/3.31.3-GCCcore-14.2.0
@@ -29,12 +30,12 @@ module load CDO/2.4.4-gompi-2024a
 
 # do first manually aggregation of hourly data to daily:
 # ssh ubelix; cd ~; sbatch ~/GitHub/fabern/download-ECMWF-data/aggregate_ERA5land_UTCdaily.sh
-# # which then should generate: /storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily
+# # which then should generate: /storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026
 
                 # THEN PREPARE THE DATA IN THE INPUT DIRECTORY SPECIFIED IN THE SEPARATE .sh FILES:
                 # #ssh ubelix
                 # #tmux
-                # cd /storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2020-2026
+                # cd /storage/capacity/occr_geco/data_2/scratch/fbernhard/ERA5Land_2025-2026_forPCWDUpdate/aggregated_UTCDaily_2025-2026_2020-2026
                 # rsync -v --info=progress2 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/ERA5Land_UTCDaily.mean_sp.2024.nc .
                 # rsync -v --info=progress2 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/ERA5Land_UTCDaily.mean_t2m.2024.nc .
                 # rsync -v --info=progress2 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/ERA5Land_UTCDaily.tot_ssr.2024.nc .
@@ -63,7 +64,7 @@ module load CDO/2.4.4-gompi-2024a
 
 
 # loop
-for script in ../../src/CDO/ERA5-Land/regrid_*.sh; do
+for script in ../../src/CDO/ERA5Land-lowRes/regrid_*.sh; do
     # parallel version
     # bash "$script" & # & starts it in the background, so that the next script can be started immediately
 
@@ -75,10 +76,10 @@ wait # pauses the main job until every background job has finished
 
 # then do calc_netrad, which uses regridded ssr and str
 printf "$(date --rfc-3339=seconds): Starting script: %s\n" "calc_netrad.sh"
-bash ../../src/CDO/ERA5-Land/calc_netrad.sh
+bash ../../src/CDO/ERA5Land-lowRes/calc_netrad.sh
 
 # then do rename_netrad
 printf "$(date --rfc-3339=seconds): Starting script: %s\n" "rename_netrad.sh"
-bash ../../src/CDO/ERA5-Land/rename_netrad.sh
+bash ../../src/CDO/ERA5Land-lowRes/rename_netrad.sh
 
 echo "Finished on: $(date --rfc-3339=seconds)"

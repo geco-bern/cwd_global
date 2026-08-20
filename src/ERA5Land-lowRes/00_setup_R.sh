@@ -1,17 +1,17 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="01_make_tidy_ERA5Land_2Gx190coresx1jobs"
-#SBATCH --time=0-00:45:00
+#SBATCH --job-name="00_setup_R"
+#SBATCH --time=4-00:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
-#SBATCH --ntasks=1             # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
+#SBATCH --ntasks=1               # nr of tasks (processes), used for MPI jobs that may run distributed on multiple compute nodes
 #SBATCH --cpus-per-task=8     # nr of threads, used for shared memory jobs that run locally on a single compute node (default: 1)
-#SBATCH --mem-per-cpu=10G
+#SBATCH --mem-per-cpu=4G
 #SBATCH --mail-user=fabian.bernhard@unibe.ch
-#SBATCH --mail-type=fail       # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
-#SBATCH --output=slurm-%x_%j.out                 # --output relative to working directory (takes into account --chdir)
-#SBATCH --chdir=../cwd_global/analysis/ERA5Land  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+#SBATCH --mail-type=begin,end,fail            # when do you want to get notified: none, all, begin, end, fail, requeue, array_tasks
+#SBATCH --chdir=../cwd_global/analysis/ERA5Land-lowRes  # define here the working directory which contains your R-script, and where the output will be written to; no tilde ~/ necessary
+#SBATCH --output=slurm-%x_%j.out        # --output relative to working directory (takes into account --chdir)
 
-# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land/01_make_tidy_ERA5Land.sh
+# INSTRUCTIONS: ssh ubelix; cd ~/GitHub/geco-bern/cwd_global; sbatch src/ERA5Land-lowRes/00_setup_R.sh
 
 echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
@@ -35,9 +35,10 @@ module load GEOS/3.13.1-GCC-14.2.0
 module load netCDF/4.9.3-gompi-2025a
 module load R/4.5.1-gfbf-2025a
 
+rm -r renv   # NOTE: be sure that this overwrites these files
+rm renv.lock # NOTE: be sure that this overwrites these files
+rm .Rprofile # NOTE: be sure that this overwrites these files
 
-## Run a small test R script using parallel workers
-##Rscript GitHub/fabern/parallelization-tests/01_example_future.R # If you don't provide a chdir argument to SLURM, provide to full path from your HOME folder.
-Rscript 01_make_tidy_ERA5Land.R   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
+Rscript 00_setup_R.R   # call without any command line arguments, if you overwrite them anyway in the R script with 'args <- c(1,1)'
 
 echo "Finished on: $(date --rfc-3339=seconds)"

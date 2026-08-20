@@ -6,7 +6,7 @@
 
 # When reloading re-install packages from renv.lock by doing:
 library(renv)
-source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land/renv/activate.R") # somewhat on UBELIX this needs to be done manually
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R") # somewhat on UBELIX this needs to be done manually
 renv::project()
 options(renv.config.pak.enabled = FALSE)
 renv::restore(prompt = FALSE)
@@ -16,8 +16,8 @@ library(map2tidy)
 
 # first run indir        <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/03_pcwd_ANNMAX"
 # first run outfile_pcwd <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/04_result/PCWD_ANNMAX" # adjust path to where the file should be written to
-indir        <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/03_pcwd_ANNMAX"
-outfile_pcwd <- "/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/04_result/PCWD_ANNMAX"
+indir        <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/03_pcwd_ANNMAX"
+outfile_pcwd <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/04_result/PCWD_ANNMAX"
 
 dir.create(dirname(outfile_pcwd), showWarnings = FALSE, recursive = TRUE)
 
@@ -119,7 +119,7 @@ rgeco_write_nc2(    # NOTE: this supports arrays with more than 2^31 - 1 element
 # library(tidync)
 # library(ggplot2)
 # #df_check <- tidync::tidync(paste0(outfile_pcwd, ".nc"))
-# #df_check <- tidync::tidync("/storage/scratch/giub_geco/fbernhard/ERA5LandLowRes_2025-2026/04_result/PCWD_ANNMAX.nc")
+# #df_check <- tidync::tidync("/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/04_result/PCWD_ANNMAX.nc")
 # # library(ggplot2)
 # df_check |> tidync::hyper_filter(lat = lat >= 40 & lat <= 50,
 # )
