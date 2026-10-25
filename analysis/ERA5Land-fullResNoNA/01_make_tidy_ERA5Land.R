@@ -35,7 +35,8 @@ library(ncdf4)
 
 # adjust path to where your ERA5Land data is located
 path_ERA5Land <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_00_dailyUTC_v3/" #uses input that has been regridded; original data has dimension names latitude and longitude instead of lat lon
-outdir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024"
+# outdir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024"
+outdir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy2020-2026" # update for 2026 October
 dir.create(outdir, recursive = T)
 
     # What would be available at the input path:
@@ -58,7 +59,7 @@ ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # num
 # Surface net solar radiation (ssr) - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_ssr\\.[0-9]{4}\\.nc$",
+  pattern = ".*tot_ssr\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -84,7 +85,7 @@ res_tot_ssr <- map2tidy:::map2tidy(
 # Surface net thermal radiation (str) - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_str\\.[0-9]{4}\\.nc$",
+  pattern = ".*tot_str\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -110,7 +111,7 @@ res_tot_str <- map2tidy:::map2tidy(
 # Total precipitation (tp) - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_tp\\.[0-9]{4}\\.nc$",
+  pattern = ".*tot_tp\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -136,7 +137,7 @@ res_tot_tp <- map2tidy:::map2tidy(
 # Surface Pressure - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*mean_sp\\.[0-9]{4}\\.nc$",
+  pattern = ".*mean_sp\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -162,7 +163,7 @@ res_mean_sp <- map2tidy:::map2tidy(
 # Temperature - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*mean_t2m\\.[0-9]{4}\\.nc$",
+  pattern = ".*mean_t2m\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -188,7 +189,7 @@ res_mean_t2m <- map2tidy:::map2tidy(
 # Potential evaporation (pev) - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_pev\\.[0-9]{4}\\.nc$",
+  pattern = ".*tot_pev\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...
@@ -214,7 +215,7 @@ res_tot_pev <- map2tidy:::map2tidy(
 # Surface solar radiation downward (ssrd) - daily resolution -------------------------------
 filnam <- list.files(
   path_ERA5Land,
-  pattern = ".*tot_ssrd\\.[0-9]{4}\\.nc$",
+  pattern = ".*tot_ssrd\\.202[0-9]{1}\\.nc$",
   full.names = TRUE
 )
 # check files and naming of dimensions etc...

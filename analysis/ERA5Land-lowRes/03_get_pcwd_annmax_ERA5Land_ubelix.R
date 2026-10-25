@@ -23,6 +23,11 @@
 args = commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
 
+library(renv)
+source("~/GitHub/geco-bern/cwd_global/analysis/ERA5Land-lowRes/renv/activate.R") # somewhat on UBELIX this needs to be done manually
+options(renv.config.pak.enabled = FALSE)
+renv::restore(prompt = FALSE)
+
 library(dplyr)
 library(map2tidy)
 library(multidplyr)
@@ -30,8 +35,10 @@ library(multidplyr)
 
 # adjust the paths of the indirectory and outdirectory to
 # where your cwd and pcwd data is
-indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd"
-outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/03_pcwd_ANNMAX"
+#indir   <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/02_pcwd"
+#outdir  <- "/storage/research/giub_geco/data_2/scratch/phelpap/ERA5Land_1950-2024/03_pcwd_ANNMAX"
+indir   <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/02_daily_pcwd"
+outdir  <- "/storage/scratch/giub_geco/fbernhard/ERA5Land-lowRes_2025-2026/03_pcwd_ANNMAX"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # 1a) Define filenames of files to process:  -------------------------------
@@ -42,8 +49,7 @@ filnams_pcwd <- list.files(indir, pattern = "ERA5Land_pcwd_(LON_[0-9.+-]*).rds",
 # }
 
 # 1b) Define function to apply to each location:  -------------------------------
-source("/storage/homefs/ph23v078/cwd_global/R/get_cwd_annmax_byLON.R")
-
+source("../../R/get_cwd_annmax_byLON.R")
 
 # 2) Setup parallelization ------------------------------------------------
 # 2a) Split job onto multiple nodes
@@ -55,7 +61,8 @@ vec_index <- map2tidy::get_index_by_chunk(
 )
 
 # 2b) Parallelize job across cores on a single node
-ncores <- 50 # parallel::detectCores() # number of cores of parallel threads
+#ncores <- 50 # parallel::detectCores() # number of cores of parallel threads
+ncores <- length(parallelly::availableWorkers()) # parallel::detectCores() # number of cores of parallel threads
 
 cl <- multidplyr::new_cluster(ncores) |>
   # set up the cluster by sending required objects to each core
@@ -87,4 +94,6 @@ out_pcwd <- tibble(in_fname = filnams_pcwd[vec_index]) |>
       outdir          = outdir))
   ) |> collect()
 
+print(out_pcwd)
+print(out_pcwd |> unnest(out))
 

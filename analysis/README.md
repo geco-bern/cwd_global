@@ -35,9 +35,33 @@ The full workflow including pre-processing of data for ModE-Sim and ERA5-Land da
 ![image](https://github.com/user-attachments/assets/062a8469-950a-44fd-a1c4-9345515a6ec1)
 
 Note that the above workflow (from Patricia's thesis) works with regridded ERA5-Land data sets.
-The workflow has been applied again on the full data set with original spatial resolution.
-This was done with the scripts `analysis/ERA5Land-fullRes/01_make_tidy_ERA5Land.R` and `analysis/ERA5Land-fullRes/02_apply_pcwd_global_ERA5Land_ubelix.R`.
-Or with the scripts `analysis/ERA5Land-fullResNoNA/01_make_tidy_ERA5Land.R` and `analysis/ERA5Land-fullResNoNA/02_apply_pcwd_global_ERA5Land_ubelix.R`.
-Easiest is to run it on UBELIX by submitting the bash script `analysis/ERA5Land-fullRes/main.sh`. This can be done with `ssh ubelix; cd ~/GitHub/geco-bern/cwd_global/; sbatch src/ERA5Land-fullRes/main.sh`. Or `sbatch src/ERA5Land-fullResNoNA/main-noNA_01tidy.sh`
-Followed by clean-up of tidy results: `ssh ubelix`,`tmux`, `rsync --dry-run --human-readable -i --info=progress2 -av --no-perms --no-owner --no-group /storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/data/data_dailyUTC_v3/tidy1950-2024 /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_tidy_dailyUTC_v3/tidy1950-2024`
-and clean-up of pcwd results: `ssh ubelix`,`tmux`, `rsync --dry-run --human-readable -i --info=progress2 -avz --no-perms --no-owner --no-group /storage/scratch/giub_geco/fbernhard/era5land_munoz-sabater_2021/02_daily_pcwd/ /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd`
+It has been updated to data up to 2025-2026 in August 2026, by running the scripts `00_CDO_regrid_ERA5Land.sh`,`01_make_tidy_ERA5Land.sh`,`02_apply_pcwd_global_ERA5Land.sh`,`03_annmax_pcwd_global_ERA5Land.sh`,`04_collect_pcwd_results_ERA5Land.sh`. 
+```
+ssh ubelix
+cd ~/GitHub/geco-bern/cwd_global;
+# do once: sbatch src/ERA5Land-lowRes/00_setup_R.sh
+jid01=$(sbatch --parsable src/ERA5Land-lowRes/00_CDO_regrid_ERA5Land.sh)
+jid02=$(sbatch --parsable  --dependency=afterok:$jid01 src/ERA5Land-lowRes/01_make_tidy_ERA5Land.sh)
+jid03=$(sbatch --parsable  --dependency=afterok:$jid02 src/ERA5Land-lowRes/02_apply_pcwd_global_ERA5Land.sh)
+jid04=$(sbatch --parsable  --dependency=afterok:$jid03 src/ERA5Land-lowRes/03_annmax_pcwd_global_ERA5Land.sh)
+jid05=$(sbatch --parsable  --dependency=afterok:$jid04 src/ERA5Land-lowRes/04_collect_pcwd_results_ERA5Land.sh)
+```
+
+The workflow has also been applied again on the full data set with original spatial resolution.
+This was done with the scripts `analysis/ERA5Land-fullResNoNA/01_make_tidy_ERA5Land.R` and `analysis/ERA5Land-fullResNoNA/02_apply_pcwd_global_ERA5Land_ubelix.R`.
+Easiest is to run it on UBELIX by submitting the bash scripts: 
+```
+ssh ubelix
+cd ~/GitHub/geco-bern/cwd_global;
+
+#chmod u+w /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021
+chmod u+w /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3
+
+# do once: sbatch src/ERA5Land-fullResNoNA/main-noNA_00setupR.sh
+jid01=$(sbatch --parsable src/ERA5Land-fullResNoNA/main-noNA_01tidy.sh)
+jid02=$(sbatch --parsable --dependency=afterok:$jid01 src/ERA5Land-fullResNoNA/main-noNA_02pcwd.sh)
+jid03=$(sbatch --parsable --dependency=afterok:$jid02 src/ERA5Land-fullResNoNA/main-noNA_03netcdf.sh)
+
+chmod u-w /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3
+#chmod u-w /storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021
+```

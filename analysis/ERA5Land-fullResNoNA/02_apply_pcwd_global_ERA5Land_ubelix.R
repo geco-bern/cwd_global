@@ -44,8 +44,9 @@ source("../../R/ERA5Land-fullResNoNA/ERA5Land_compute_pcwd_byLON.R")         # 4
 source("../../R/ERA5Land-fullResNoNA/get_cwd_withSnow_and_reset_ERA5Land.R") # 3. Then source the wrapper that uses it
 source("../../R/ERA5Land-fullResNoNA/ERA5Land_simulate_snow.R")              # 2. Source ERA5 simulate snow first
 
-indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024/"
-outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset"
+# indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy1950-2024/"
+indir  <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_01_tidy.narm_dailyUTC_v3/tidy2020-2026/"   # update for 2026 October
+outdir <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v3-2020-2026-doy-reset" # update for 2026 October
 dir.create(outdir, showWarnings = FALSE)
 
 
@@ -132,8 +133,8 @@ print(out)
 print(out |> unnest(out) |> filter(grepl("Failed", out)))
 
 # CHECK:
-# file.info("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset/ERA5Land_pcwd_LON_+007.600.rdsallyears_onlypcwd_mm.rds") |> tibble()
-# readRDS("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset/ERA5Land_pcwd_LON_+007.600.rdsallyears_onlypcwd_mm.rds")
+# file.info("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v3-2020-2026-doy-reset/ERA5Land_pcwd_LON_+007.600.rdsallyears_onlypcwd_mm.rds") |> tibble()
+# readRDS("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v3-2020-2026-doy-reset/ERA5Land_pcwd_LON_+007.600.rdsallyears_onlypcwd_mm.rds")
 # # A tibble: 491,290 × 5
 #      lon   lat date       pcwd_mm  year
 #    <dbl> <dbl> <date>       <dbl> <dbl>
