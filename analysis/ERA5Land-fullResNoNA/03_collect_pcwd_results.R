@@ -18,12 +18,12 @@ curr_year <- as.integer(args[1])
 # options('renv.config.pak.enabled' = TRUE)
 renv::restore()
 
-library(rgeco)
+# library(rgeco)
 library(dplyr)
 library(map2tidy)
 
-indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v2-doy-reset/"
-outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd.narm_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v2-doy_YYYY_r-generated.nc" # adjust path to where the file should be written to
+indir        <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_02_daily_pcwd.narm_v3-2020-2026-doy-reset/"  # update for 2026 October
+outfile_pcwd <- "/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd.narm_v3-2020-2026-doy-reset_netcdf/data_derived_03_daily_pcwd_v3-2020-2026-doy_YYYY_r-generated.nc" # adjust path to where the file should be written to
 
 # 3600 LON slices (for 1 year) use (`seff 46219620_2022`) XXGB memory  runtime Xmin    output NetCDF: XXMB
 # 1000 LON slices (for 1 year) use (`seff xxxxxx_1962`) XXGB memory  runtime Xmin    output NetCDF: XXMB
@@ -169,7 +169,7 @@ rgeco_write_nc2(    # NOTE: this supports arrays with more than 2^31 - 1 element
 # library(tidync)
 # library(ggplot2)
 # #df_check <- tidync::tidync(gsub("YYYY", curr_year, outfile_pcwd))
-# #df_check <- tidync::tidync("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd.narm_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v2-doy_1954_r-generated.nc")
+# #df_check <- tidync::tidync("/storage/capacity/occr_geco/data_2/archive/era5land_munoz-sabater_2021/data_derived_03_daily_pcwd.narm_v2-doy-reset_netcdf/data_derived_03_daily_pcwd_v3-2020-2026_1954_r-generated.nc")
 # # library(ggplot2)
 # df <- df_check |>
 #   tidync::hyper_filter(lat = lat >= 46.9 & lat <= 47.2,
